@@ -1,0 +1,7 @@
+openai
+pixellab
+sounddevice
+numpy
+scipy
+Pillow
+python-dotenv

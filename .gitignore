@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+*.wav
+output.png
+generated_images/
+.venv/
+venv/
