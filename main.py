@@ -124,7 +124,7 @@ class App:
     def _update_preview(self):
         if self.state == PREVIEW:
             try:
-                frame = self.camera.get_frame()
+                frame = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
                 display = frame.resize(self._display_size(), Image.BILINEAR)
                 photo = ImageTk.PhotoImage(display)
                 self.display_label.config(image=photo)
@@ -136,7 +136,7 @@ class App:
     # --- State transitions ---
 
     def _take_photo(self):
-        self.captured_photo = self.camera.get_frame()
+        self.captured_photo = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
         self._show_state(REVIEW)
         display = self.captured_photo.resize(self._display_size(), Image.BILINEAR)
         photo = ImageTk.PhotoImage(display)
