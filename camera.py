@@ -12,7 +12,7 @@ class Camera:
         self.picam2.start()
 
     def get_frame(self) -> Image.Image:
-        return self.picam2.capture_image("main")
+        return self.picam2.capture_image("main").convert("RGB")
 
     def close(self):
         self.picam2.stop()
