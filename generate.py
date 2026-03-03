@@ -9,6 +9,11 @@ from PIL import Image
 # Pixflux max is 400x400 — use full width at label ratio (88:36)
 IMAGE_SIZE = {"width": 400, "height": 164}
 
+# Crush-and-expand: generate full size, downscale to this, then upscale with
+# nearest-neighbor to force chunky visible pixels. Lower = bigger/coarser pixels.
+# At (50, 20) each "pixel" appears as an 8x8 block in the final image.
+PIXEL_ART_SIZE = (50, 20)
+
 # Place your style reference image here (e.g. the event mascot/logo)
 STYLE_REFERENCE_PATH = Path(__file__).parent / "style_reference.png"
 
@@ -120,4 +125,8 @@ def generate_image(photo: Image.Image) -> Image.Image:
         description=prompt,
         image_size=IMAGE_SIZE,
     )
-    return response.image.pil_image().convert("L")
+    image = response.image.pil_image()
+    # Crush to low resolution then scale back up — forces chunky pixel art look
+    image = image.resize(PIXEL_ART_SIZE, Image.BILINEAR)
+    image = image.resize((IMAGE_SIZE["width"], IMAGE_SIZE["height"]), Image.NEAREST)
+    return image.convert("L")
