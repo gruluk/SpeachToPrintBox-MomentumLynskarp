@@ -121,11 +121,16 @@ class App:
         h = self.display_frame.winfo_height() or 480
         return w, h
 
+    def _fit_size(self, image: Image.Image):
+        frame_w, frame_h = self._display_size()
+        scale = min(frame_w / image.width, frame_h / image.height)
+        return int(image.width * scale), int(image.height * scale)
+
     def _update_preview(self):
         if self.state == PREVIEW:
             try:
                 frame = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
-                display = frame.resize(self._display_size(), Image.BILINEAR)
+                display = frame.resize(self._fit_size(frame), Image.BILINEAR)
                 photo = ImageTk.PhotoImage(display)
                 self.display_label.config(image=photo)
                 self.display_label.image = photo
@@ -138,7 +143,7 @@ class App:
     def _take_photo(self):
         self.captured_photo = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
         self._show_state(REVIEW)
-        display = self.captured_photo.resize(self._display_size(), Image.BILINEAR)
+        display = self.captured_photo.resize(self._fit_size(self.captured_photo), Image.BILINEAR)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
@@ -165,7 +170,7 @@ class App:
 
     def _show_result(self, image: Image.Image):
         self._show_state(RESULT)
-        display = image.resize(self._display_size(), Image.NEAREST)
+        display = image.resize(self._fit_size(image), Image.NEAREST)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
