@@ -8,14 +8,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from camera import capture_photo
+from camera import Camera
 from generate import generate_image
 
 # --- Layout ---
 WINDOW_WIDTH = 480
-WINDOW_HEIGHT = 420
-IMAGE_DISPLAY_W = 400
-IMAGE_DISPLAY_H = 164
+WINDOW_HEIGHT = 600
+PREVIEW_W = 440
+PREVIEW_H = 330  # 4:3 ratio
 
 # --- Colors ---
 BG = "#1a1a2e"
@@ -26,140 +26,144 @@ TEXT = "#eaeaea"
 MUTED = "#666680"
 SUCCESS = "#2ed573"
 
-COUNTDOWN_SECONDS = 3
+# --- States ---
+PREVIEW = "preview"
+REVIEW = "review"
+PROCESSING = "processing"
+RESULT = "result"
 
 
 class App:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.current_image: Image.Image | None = None
-        self._is_processing = False
+        self.camera = Camera()
+        self.captured_photo: Image.Image | None = None
+        self.state = PREVIEW
 
         self._setup_window()
         self._build_ui()
         self._poll_printer()
+        self._update_preview()
 
     def _setup_window(self):
         self.root.title("Speech To Print Box")
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
         self.root.resizable(False, False)
         self.root.configure(bg=BG)
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_ui(self):
         # Title
-        tk.Label(
-            self.root,
-            text="Speech To Print Box",
-            font=("Helvetica", 17, "bold"),
-            fg=TEXT,
-            bg=BG,
-        ).pack(pady=(24, 4))
+        tk.Label(self.root, text="Speech To Print Box",
+                 font=("Helvetica", 17, "bold"), fg=TEXT, bg=BG).pack(pady=(16, 2))
 
-        tk.Label(
-            self.root,
-            text="Press the button and look at the camera!",
-            font=("Helvetica", 10),
-            fg=MUTED,
-            bg=BG,
-        ).pack(pady=(0, 8))
-
-        # Printer status indicator
+        # Printer status
         printer_frame = tk.Frame(self.root, bg=BG)
-        printer_frame.pack(pady=(0, 12))
+        printer_frame.pack(pady=(0, 8))
         self.printer_dot = tk.Label(printer_frame, text="●", font=("Helvetica", 10), fg=MUTED, bg=BG)
         self.printer_dot.pack(side=tk.LEFT, padx=(0, 4))
         self.printer_status_var = tk.StringVar(value="Checking printer...")
-        tk.Label(printer_frame, textvariable=self.printer_status_var, font=("Helvetica", 10), fg=MUTED, bg=BG).pack(side=tk.LEFT)
+        tk.Label(printer_frame, textvariable=self.printer_status_var,
+                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack(side=tk.LEFT)
 
-        # Take photo button
-        self.photo_btn = tk.Button(
-            self.root,
-            text="Take Photo",
-            font=("Helvetica", 14, "bold"),
-            fg="white",
-            bg=ACCENT,
-            activebackground=ACCENT_ACTIVE,
-            activeforeground="white",
-            relief=tk.FLAT,
-            padx=32,
-            pady=14,
-            cursor="hand2",
-            borderwidth=0,
-            command=self._on_photo_press,
+        # Camera / image display
+        self.display_frame = tk.Frame(self.root, bg="black", width=PREVIEW_W, height=PREVIEW_H)
+        self.display_frame.pack()
+        self.display_frame.pack_propagate(False)
+
+        self.display_label = tk.Label(self.display_frame, bg="black")
+        self.display_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        # Status label
+        self.status_var = tk.StringVar(value="Look at the camera and press Take Photo!")
+        tk.Label(self.root, textvariable=self.status_var,
+                 font=("Helvetica", 10), fg=MUTED, bg=BG, wraplength=440).pack(pady=(8, 6))
+
+        # Button row
+        self.btn_frame = tk.Frame(self.root, bg=BG)
+        self.btn_frame.pack(pady=4)
+
+        self.take_btn = tk.Button(
+            self.btn_frame, text="Take Photo",
+            font=("Helvetica", 13, "bold"), fg="white", bg=ACCENT,
+            activebackground=ACCENT_ACTIVE, activeforeground="white",
+            relief=tk.FLAT, padx=24, pady=10, cursor="hand2", borderwidth=0,
+            command=self._take_photo,
         )
-        self.photo_btn.pack(pady=(0, 10))
+        self.take_btn.pack(side=tk.LEFT, padx=4)
 
-        # Status
-        self.status_var = tk.StringVar(value="Ready")
-        tk.Label(
-            self.root,
-            textvariable=self.status_var,
-            font=("Helvetica", 10),
-            fg=MUTED,
-            bg=BG,
-        ).pack(pady=(0, 12))
-
-        # Image display
-        img_container = tk.Frame(self.root, bg=PANEL, width=IMAGE_DISPLAY_W, height=IMAGE_DISPLAY_H)
-        img_container.pack(padx=20)
-        img_container.pack_propagate(False)
-
-        self.image_label = tk.Label(
-            img_container,
-            bg=PANEL,
-            text="Image will appear here",
-            fg=MUTED,
-            font=("Helvetica", 11),
+        self.retake_btn = tk.Button(
+            self.btn_frame, text="Retake",
+            font=("Helvetica", 13, "bold"), fg="white", bg=MUTED,
+            activebackground="#555570", activeforeground="white",
+            relief=tk.FLAT, padx=24, pady=10, cursor="hand2", borderwidth=0,
+            command=self._retake,
         )
-        self.image_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        self.generate_btn = tk.Button(
+            self.btn_frame, text="Generate & Print",
+            font=("Helvetica", 13, "bold"), fg="white", bg=SUCCESS,
+            activebackground="#25b560", activeforeground="white",
+            relief=tk.FLAT, padx=24, pady=10, cursor="hand2", borderwidth=0,
+            command=self._generate,
+        )
 
         # Print status
         self.print_var = tk.StringVar(value="")
-        tk.Label(
-            self.root,
-            textvariable=self.print_var,
-            font=("Helvetica", 10),
-            fg=MUTED,
-            bg=BG,
-        ).pack(pady=8)
+        tk.Label(self.root, textvariable=self.print_var,
+                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack(pady=4)
 
-    # --- Button handler ---
+    # --- Preview loop ---
 
-    def _on_photo_press(self):
-        if self._is_processing:
-            return
-        self._is_processing = True
-        self.photo_btn.config(state=tk.DISABLED)
+    def _update_preview(self):
+        if self.state == PREVIEW:
+            try:
+                frame = self.camera.get_frame()
+                display = frame.resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)
+                photo = ImageTk.PhotoImage(display)
+                self.display_label.config(image=photo)
+                self.display_label.image = photo
+            except Exception:
+                pass
+        self.root.after(50, self._update_preview)
+
+    # --- State transitions ---
+
+    def _take_photo(self):
+        self.captured_photo = self.camera.get_frame()
+        self._show_state(REVIEW)
+        display = self.captured_photo.resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)
+        photo = ImageTk.PhotoImage(display)
+        self.display_label.config(image=photo)
+        self.display_label.image = photo
+        self.status_var.set("Happy with the photo?")
+
+    def _retake(self):
+        self.captured_photo = None
+        self._show_state(PREVIEW)
+        self.status_var.set("Look at the camera and press Take Photo!")
+
+    def _generate(self):
+        self._show_state(PROCESSING)
+        self.status_var.set("Generating pixel art...")
         self.print_var.set("")
-        self._countdown(COUNTDOWN_SECONDS)
-
-    def _countdown(self, n: int):
-        if n > 0:
-            self.status_var.set(f"Get ready... {n}")
-            self.root.after(1000, self._countdown, n - 1)
-        else:
-            self.status_var.set("Capturing photo...")
-            threading.Thread(target=self._process, daemon=True).start()
-
-    # --- Background processing ---
+        threading.Thread(target=self._process, daemon=True).start()
 
     def _process(self):
         try:
-            photo = capture_photo()
-            self.root.after(0, self.status_var.set, "Generating pixel art...")
-            image = generate_image(photo)
-            self.root.after(0, self._show_image, image)
+            image = generate_image(self.captured_photo)
+            self.root.after(0, self._show_result, image)
         except Exception as e:
             self.root.after(0, self.status_var.set, f"Error: {e}")
-        finally:
-            self.root.after(0, self._unlock_btn)
+            self.root.after(0, self._show_state, REVIEW)
 
-    def _show_image(self, image: Image.Image):
-        self.current_image = image
-        display = image.resize((IMAGE_DISPLAY_W, IMAGE_DISPLAY_H), Image.NEAREST)
+    def _show_result(self, image: Image.Image):
+        self._show_state(RESULT)
+        # Display the pixel art scaled up to fill the preview area
+        display = image.resize((PREVIEW_W, PREVIEW_H), Image.NEAREST)
         photo = ImageTk.PhotoImage(display)
-        self.image_label.config(image=photo, text="")
-        self.image_label.image = photo
+        self.display_label.config(image=photo)
+        self.display_label.image = photo
         self.status_var.set("Printing...")
         threading.Thread(target=self._print_image, args=(image,), daemon=True).start()
 
@@ -175,17 +179,31 @@ class App:
                  tmp_path],
                 check=True,
             )
-            self.root.after(0, self.status_var.set, "Printed! Press to go again.")
+            self.root.after(0, self.status_var.set, "Printed! Press Retake to go again.")
             self.root.after(0, self.print_var.set, "Label sent to printer.")
         except Exception as e:
-            self.root.after(0, self.status_var.set, "Done! Press to go again.")
+            self.root.after(0, self.status_var.set, "Done! Press Retake to go again.")
             self.root.after(0, self.print_var.set, f"Print failed: {e}")
         finally:
             os.unlink(tmp_path)
+            self.root.after(0, self._show_state, RESULT)
 
-    def _unlock_btn(self):
-        self._is_processing = False
-        self.photo_btn.config(state=tk.NORMAL)
+    def _show_state(self, state: str):
+        self.state = state
+        self.take_btn.pack_forget()
+        self.retake_btn.pack_forget()
+        self.generate_btn.pack_forget()
+
+        if state == PREVIEW:
+            self.take_btn.pack(side=tk.LEFT, padx=4)
+        elif state == REVIEW:
+            self.retake_btn.pack(side=tk.LEFT, padx=4)
+            self.generate_btn.pack(side=tk.LEFT, padx=4)
+        elif state == PROCESSING:
+            pass  # no buttons during processing
+        elif state == RESULT:
+            self.retake_btn.config(text="Try Again")
+            self.retake_btn.pack(side=tk.LEFT, padx=4)
 
     # --- Printer status ---
 
@@ -200,7 +218,7 @@ class App:
                 capture_output=True, text=True, timeout=5,
             )
             connected = result.returncode == 0 and any(
-                state in result.stdout for state in ("idle", "printing")
+                s in result.stdout for s in ("idle", "printing")
             )
         except Exception:
             connected = False
@@ -213,6 +231,10 @@ class App:
         else:
             self.printer_dot.config(fg=ACCENT)
             self.printer_status_var.set("Printer offline")
+
+    def _on_close(self):
+        self.camera.close()
+        self.root.destroy()
 
 
 if __name__ == "__main__":
