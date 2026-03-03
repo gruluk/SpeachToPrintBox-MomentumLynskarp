@@ -1,4 +1,4 @@
-PI ?= pi@speechbox.local
+PI ?= luka@speechtobox.local
 REMOTE_DIR = ~/SpeachToPrintBox
 
 deploy:
