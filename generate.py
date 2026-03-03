@@ -16,7 +16,6 @@ def generate_image(photo: Image.Image) -> Image.Image:
         image_size=IMAGE_SIZE,
         style_image=style,
         style_strength=80,
-        extra_guidance_scale=8.0,
     )
 
     return response.image.pil_image().convert("L")
