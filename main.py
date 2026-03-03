@@ -47,79 +47,85 @@ class App:
 
     def _setup_window(self):
         self.root.title("Speech To Print Box")
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
-        self.root.resizable(False, False)
         self.root.configure(bg=BG)
+        self.root.attributes("-fullscreen", True)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_ui(self):
-        # Title
-        tk.Label(self.root, text="Speech To Print Box",
-                 font=("Helvetica", 17, "bold"), fg=TEXT, bg=BG).pack(pady=(16, 2))
+        # --- Top bar (fixed) ---
+        top_bar = tk.Frame(self.root, bg=BG)
+        top_bar.pack(side=tk.TOP, fill=tk.X, padx=16, pady=(12, 4))
 
-        # Printer status
-        printer_frame = tk.Frame(self.root, bg=BG)
-        printer_frame.pack(pady=(0, 8))
+        tk.Label(top_bar, text="Speech To Print Box",
+                 font=("Helvetica", 16, "bold"), fg=TEXT, bg=BG).pack(side=tk.LEFT)
+
+        printer_frame = tk.Frame(top_bar, bg=BG)
+        printer_frame.pack(side=tk.RIGHT)
         self.printer_dot = tk.Label(printer_frame, text="●", font=("Helvetica", 10), fg=MUTED, bg=BG)
         self.printer_dot.pack(side=tk.LEFT, padx=(0, 4))
         self.printer_status_var = tk.StringVar(value="Checking printer...")
         tk.Label(printer_frame, textvariable=self.printer_status_var,
                  font=("Helvetica", 10), fg=MUTED, bg=BG).pack(side=tk.LEFT)
 
-        # Camera / image display
-        self.display_frame = tk.Frame(self.root, bg="black", width=PREVIEW_W, height=PREVIEW_H)
-        self.display_frame.pack()
-        self.display_frame.pack_propagate(False)
+        # --- Bottom bar (fixed) ---
+        bottom_bar = tk.Frame(self.root, bg=BG)
+        bottom_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=12)
 
-        self.display_label = tk.Label(self.display_frame, bg="black")
-        self.display_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.print_var = tk.StringVar(value="")
+        tk.Label(bottom_bar, textvariable=self.print_var,
+                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack()
 
-        # Status label
         self.status_var = tk.StringVar(value="Look at the camera and press Take Photo!")
-        tk.Label(self.root, textvariable=self.status_var,
-                 font=("Helvetica", 10), fg=MUTED, bg=BG, wraplength=440).pack(pady=(8, 6))
+        tk.Label(bottom_bar, textvariable=self.status_var,
+                 font=("Helvetica", 11), fg=MUTED, bg=BG).pack(pady=(0, 8))
 
-        # Button row
-        self.btn_frame = tk.Frame(self.root, bg=BG)
-        self.btn_frame.pack(pady=4)
+        self.btn_frame = tk.Frame(bottom_bar, bg=BG)
+        self.btn_frame.pack()
 
         self.take_btn = tk.Button(
             self.btn_frame, text="Take Photo",
-            font=("Helvetica", 13, "bold"), fg="white", bg=ACCENT,
+            font=("Helvetica", 14, "bold"), fg="white", bg=ACCENT,
             activebackground=ACCENT_ACTIVE, activeforeground="white",
-            relief=tk.FLAT, padx=24, pady=10, cursor="hand2", borderwidth=0,
+            relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
             command=self._take_photo,
         )
-        self.take_btn.pack(side=tk.LEFT, padx=4)
+        self.take_btn.pack(side=tk.LEFT, padx=6)
 
         self.retake_btn = tk.Button(
             self.btn_frame, text="Retake",
-            font=("Helvetica", 13, "bold"), fg="white", bg=MUTED,
+            font=("Helvetica", 14, "bold"), fg="white", bg=MUTED,
             activebackground="#555570", activeforeground="white",
-            relief=tk.FLAT, padx=24, pady=10, cursor="hand2", borderwidth=0,
+            relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
             command=self._retake,
         )
 
         self.generate_btn = tk.Button(
             self.btn_frame, text="Generate & Print",
-            font=("Helvetica", 13, "bold"), fg="white", bg=SUCCESS,
+            font=("Helvetica", 14, "bold"), fg="white", bg=SUCCESS,
             activebackground="#25b560", activeforeground="white",
-            relief=tk.FLAT, padx=24, pady=10, cursor="hand2", borderwidth=0,
+            relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
             command=self._generate,
         )
 
-        # Print status
-        self.print_var = tk.StringVar(value="")
-        tk.Label(self.root, textvariable=self.print_var,
-                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack(pady=4)
+        # --- Preview area (fills remaining space) ---
+        self.display_frame = tk.Frame(self.root, bg="black")
+        self.display_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        self.display_label = tk.Label(self.display_frame, bg="black")
+        self.display_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
     # --- Preview loop ---
+
+    def _display_size(self):
+        w = self.display_frame.winfo_width() or 640
+        h = self.display_frame.winfo_height() or 480
+        return w, h
 
     def _update_preview(self):
         if self.state == PREVIEW:
             try:
                 frame = self.camera.get_frame()
-                display = frame.resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)
+                display = frame.resize(self._display_size(), Image.BILINEAR)
                 photo = ImageTk.PhotoImage(display)
                 self.display_label.config(image=photo)
                 self.display_label.image = photo
@@ -132,7 +138,7 @@ class App:
     def _take_photo(self):
         self.captured_photo = self.camera.get_frame()
         self._show_state(REVIEW)
-        display = self.captured_photo.resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)
+        display = self.captured_photo.resize(self._display_size(), Image.BILINEAR)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
@@ -159,8 +165,7 @@ class App:
 
     def _show_result(self, image: Image.Image):
         self._show_state(RESULT)
-        # Display the pixel art scaled up to fill the preview area
-        display = image.resize((PREVIEW_W, PREVIEW_H), Image.NEAREST)
+        display = image.resize(self._display_size(), Image.NEAREST)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
