@@ -94,4 +94,4 @@ def generate_image(photo: Image.Image) -> Image.Image:
     # Snap to clean pixel grid so edges are hard, not anti-aliased
     image = _snap_to_grid(image, PIXEL_GRID)
 
-    return image.convert("L")
+    return image
