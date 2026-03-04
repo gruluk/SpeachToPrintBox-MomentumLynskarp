@@ -10,12 +10,7 @@ load_dotenv()
 
 from camera import Camera
 from generate import generate_image
-
-# --- Layout ---
-WINDOW_WIDTH = 480
-WINDOW_HEIGHT = 600
-PREVIEW_W = 440
-PREVIEW_H = 330  # 4:3 ratio
+from validate import validate_photo
 
 # --- Colors ---
 BG = "#1a1a2e"
@@ -25,9 +20,11 @@ ACCENT_ACTIVE = "#c73652"
 TEXT = "#eaeaea"
 MUTED = "#666680"
 SUCCESS = "#2ed573"
+WARNING = "#ffa502"
 
 # --- States ---
 PREVIEW = "preview"
+VALIDATING = "validating"
 REVIEW = "review"
 PROCESSING = "processing"
 RESULT = "result"
@@ -76,8 +73,9 @@ class App:
                  font=("Helvetica", 10), fg=MUTED, bg=BG).pack()
 
         self.status_var = tk.StringVar(value="Look at the camera and press Take Photo!")
-        tk.Label(bottom_bar, textvariable=self.status_var,
-                 font=("Helvetica", 11), fg=MUTED, bg=BG).pack(pady=(0, 8))
+        self.status_label = tk.Label(bottom_bar, textvariable=self.status_var,
+                 font=("Helvetica", 11), fg=MUTED, bg=BG)
+        self.status_label.pack(pady=(0, 8))
 
         self.btn_frame = tk.Frame(bottom_bar, bg=BG)
         self.btn_frame.pack()
@@ -142,17 +140,45 @@ class App:
 
     def _take_photo(self):
         self.captured_photo = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
-        self._show_state(REVIEW)
+
+        # Show the captured photo immediately
         display = self.captured_photo.resize(self._fit_size(self.captured_photo), Image.BILINEAR)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
+
+        # Transition to VALIDATING — shows only Retake, runs check in background
+        self._show_state(VALIDATING)
+        self.status_var.set("Checking photo...")
+        threading.Thread(target=self._run_validation, daemon=True).start()
+
+    def _run_validation(self):
+        try:
+            result = validate_photo(self.captured_photo)
+        except Exception:
+            # If validation fails (e.g. no network), silently pass through
+            result = None
+
+        if result is None or result.ok:
+            self.root.after(0, self._on_validation_ok)
+        else:
+            self.root.after(0, self._on_validation_fail, result.message)
+
+    def _on_validation_ok(self):
+        self._show_state(REVIEW)
         self.status_var.set("Happy with the photo?")
+        self.status_label.config(fg=MUTED)
+
+    def _on_validation_fail(self, message: str):
+        # Stay in VALIDATING (only Retake visible), highlight the problem
+        self.status_var.set(f"{message} — try again")
+        self.status_label.config(fg=WARNING)
 
     def _retake(self):
         self.captured_photo = None
         self._show_state(PREVIEW)
         self.status_var.set("Look at the camera and press Take Photo!")
+        self.status_label.config(fg=MUTED)
 
     def _generate(self):
         self._show_state(PROCESSING)
@@ -206,7 +232,11 @@ class App:
 
         if state == PREVIEW:
             self.take_btn.pack(side=tk.LEFT, padx=4)
+        elif state == VALIDATING:
+            self.retake_btn.config(text="Retake")
+            self.retake_btn.pack(side=tk.LEFT, padx=4)
         elif state == REVIEW:
+            self.retake_btn.config(text="Retake")
             self.retake_btn.pack(side=tk.LEFT, padx=4)
             self.generate_btn.pack(side=tk.LEFT, padx=4)
         elif state == PROCESSING:

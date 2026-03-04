@@ -1,5 +1,6 @@
 Pillow
 opencv-python-headless
 numpy
+openai
 python-dotenv
 # picamera2 is pre-installed on Raspberry Pi OS — do not pip install
