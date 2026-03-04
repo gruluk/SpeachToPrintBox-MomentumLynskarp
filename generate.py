@@ -19,8 +19,9 @@ from pathlib import Path
 import openai
 from PIL import Image
 
-STYLE_REFERENCE_PATH = Path(__file__).parent / "style_reference.png"
-LOGO_PATH = Path(__file__).parent / "logo.png"
+ASSETS = Path(__file__).parent / "assets"
+STYLE_REFERENCE_PATH = ASSETS / "style_reference.png"
+LOGO_PATH = ASSETS / "logo.png"
 
 # Snap the 1024px output to a clean pixel grid.
 # 1024 / PIXEL_GRID = how many display pixels per "pixel block".
