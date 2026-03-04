@@ -1,16 +1,19 @@
+import base64
 import tkinter as tk
+from io import BytesIO
 from PIL import Image, ImageTk
 import threading
 import os
 import subprocess
 import tempfile
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from camera import Camera
-from generate import generate_image
-from validate import validate_photo
+
+SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000")
 
 # --- Colors ---
 BG = "#1a1a2e"
@@ -138,31 +141,42 @@ class App:
 
     # --- State transitions ---
 
+    def _photo_to_jpeg_bytes(self) -> bytes:
+        buf = BytesIO()
+        self.captured_photo.save(buf, format="JPEG", quality=90)
+        buf.seek(0)
+        return buf.getvalue()
+
     def _take_photo(self):
         self.captured_photo = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
 
-        # Show the captured photo immediately
         display = self.captured_photo.resize(self._fit_size(self.captured_photo), Image.BILINEAR)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
 
-        # Transition to VALIDATING — shows only Retake, runs check in background
         self._show_state(VALIDATING)
         self.status_var.set("Checking photo...")
         threading.Thread(target=self._run_validation, daemon=True).start()
 
     def _run_validation(self):
         try:
-            result = validate_photo(self.captured_photo)
+            resp = requests.post(
+                f"{SERVER_URL}/validate",
+                files={"image": ("photo.jpg", self._photo_to_jpeg_bytes(), "image/jpeg")},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            ok, message = data["ok"], data.get("message", "")
         except Exception:
-            # If validation fails (e.g. no network), silently pass through
-            result = None
+            # Server unreachable — let the user proceed
+            ok, message = True, ""
 
-        if result is None or result.ok:
+        if ok:
             self.root.after(0, self._on_validation_ok)
         else:
-            self.root.after(0, self._on_validation_fail, result.message)
+            self.root.after(0, self._on_validation_fail, message)
 
     def _on_validation_ok(self):
         self._show_state(REVIEW)
@@ -170,7 +184,6 @@ class App:
         self.status_label.config(fg=MUTED)
 
     def _on_validation_fail(self, message: str):
-        # Stay in VALIDATING (only Retake visible), highlight the problem
         self.status_var.set(f"{message} — try again")
         self.status_label.config(fg=WARNING)
 
@@ -188,7 +201,14 @@ class App:
 
     def _process(self):
         try:
-            image = generate_image(self.captured_photo)
+            resp = requests.post(
+                f"{SERVER_URL}/generate",
+                files={"image": ("photo.jpg", self._photo_to_jpeg_bytes(), "image/jpeg")},
+                timeout=120,
+            )
+            resp.raise_for_status()
+            img_bytes = base64.b64decode(resp.json()["image_b64"])
+            image = Image.open(BytesIO(img_bytes))
             self.root.after(0, self._show_result, image)
         except Exception as e:
             self.root.after(0, self.status_var.set, f"Error: {e}")
@@ -207,7 +227,7 @@ class App:
         try:
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
                 tmp_path = f.name
-            image.save(tmp_path, dpi=(300, 300))
+            image.convert("RGB").save(tmp_path, dpi=(300, 300))
             subprocess.run(
                 ["lp", "-d", "Leitz_Icon_Wi-Fi",
                  "-o", "media=Multipurpose70030001",
@@ -240,7 +260,7 @@ class App:
             self.retake_btn.pack(side=tk.LEFT, padx=4)
             self.generate_btn.pack(side=tk.LEFT, padx=4)
         elif state == PROCESSING:
-            pass  # no buttons during processing
+            pass
         elif state == RESULT:
             self.retake_btn.config(text="Try Again")
             self.retake_btn.pack(side=tk.LEFT, padx=4)

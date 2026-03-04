@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bytefest '26</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0d0d1a;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Press Start 2P', monospace;
+      cursor: none;
+    }
+
+    /* Subtle pixel grid overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(91, 200, 232, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91, 200, 232, 0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding: 24px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 100;
+      background: linear-gradient(to bottom, #0d0d1a 40%, transparent);
+      pointer-events: none;
+    }
+
+    #title {
+      color: #5bc8e8;
+      font-size: 22px;
+      letter-spacing: 3px;
+      text-shadow:
+        0 0 20px rgba(91, 200, 232, 0.8),
+        0 0 60px rgba(91, 200, 232, 0.3);
+    }
+
+    #subtitle {
+      color: #2a4a5a;
+      font-size: 9px;
+      letter-spacing: 2px;
+      margin-top: 6px;
+    }
+
+    #count {
+      color: #2a4a5a;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-align: right;
+      transition: color 0.5s;
+    }
+
+    #count.active {
+      color: #5bc8e8;
+    }
+
+    #world {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    .character {
+      position: absolute;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      width: var(--size, 144px);
+      height: var(--size, 144px);
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
+      animation:
+        arrive 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
+        float var(--float-dur) ease-in-out var(--float-delay) infinite;
+      opacity: 0; /* arrive animation starts from 0 */
+    }
+
+    @keyframes arrive {
+      0%   { opacity: 0; transform: translateY(40px) scale(0.7); }
+      100% { opacity: 1; transform: translateY(0)    scale(1);   }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px);   }
+      50%       { transform: translateY(-12px); }
+    }
+
+    /* Scanline effect — subtle CRT vibe */
+    #scanlines {
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.06) 2px,
+        rgba(0, 0, 0, 0.06) 4px
+      );
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    #empty {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    #empty-title {
+      color: #1a1a3a;
+      font-size: 13px;
+      letter-spacing: 2px;
+      line-height: 2.5;
+    }
+
+    #empty-sub {
+      color: #141428;
+      font-size: 9px;
+      letter-spacing: 1px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="header">
+    <div>
+      <div id="title">BYTEFEST '26</div>
+      <div id="subtitle">+ VENNER</div>
+    </div>
+    <div id="count">WAITING FOR PLAYERS...</div>
+  </div>
+
+  <div id="world"></div>
+  <div id="scanlines"></div>
+
+  <div id="empty">
+    <div id="empty-title">NO CHARACTERS YET</div>
+    <div id="empty-sub">HEAD TO A BOOTH TO JOIN THE WALL</div>
+  </div>
+
+  <script>
+    const world    = document.getElementById('world');
+    const countEl  = document.getElementById('count');
+    const emptyEl  = document.getElementById('empty');
+
+    const CHAR_SIZE   = 144;  // px — tweak for your TV size
+    const HEADER_H    = 100;
+    const MARGIN      = 24;
+    const placed      = [];   // { x, y, w, h }
+
+    function findPosition() {
+      const w = CHAR_SIZE, h = CHAR_SIZE;
+      const maxX = window.innerWidth  - w - MARGIN;
+      const maxY = window.innerHeight - h - MARGIN;
+      const minY = HEADER_H;
+
+      for (let attempt = 0; attempt < 80; attempt++) {
+        const x = MARGIN + Math.random() * (maxX - MARGIN);
+        const y = minY   + Math.random() * (maxY - minY);
+
+        const gap = 12;
+        const overlaps = placed.some(r =>
+          x < r.x + r.w + gap && x + w + gap > r.x &&
+          y < r.y + r.h + gap && y + h + gap > r.y
+        );
+
+        if (!overlaps) {
+          placed.push({ x, y, w, h });
+          return { x, y };
+        }
+      }
+
+      // Screen is full — place randomly anyway (characters will overlap a little)
+      const x = MARGIN + Math.random() * (maxX - MARGIN);
+      const y = minY   + Math.random() * (maxY - minY);
+      placed.push({ x, y, w, h });
+      return { x, y };
+    }
+
+    function addCharacter(imageB64) {
+      emptyEl.style.display = 'none';
+
+      const img = document.createElement('img');
+      img.src = `data:image/png;base64,${imageB64}`;
+      img.className = 'character';
+
+      const { x, y } = findPosition();
+      img.style.left = x + 'px';
+      img.style.top  = y + 'px';
+      img.style.setProperty('--size',       CHAR_SIZE + 'px');
+      img.style.setProperty('--float-dur',  (2.8 + Math.random() * 2.4) + 's');
+      img.style.setProperty('--float-delay',(Math.random() * 3) + 's');
+
+      world.appendChild(img);
+
+      const n = world.children.length;
+      countEl.textContent = `${n} PLAYER${n !== 1 ? 'S' : ''} JOINED`;
+      countEl.classList.add('active');
+      setTimeout(() => countEl.classList.remove('active'), 2000);
+    }
+
+    // WebSocket with auto-reconnect
+    function connect() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+      ws.onmessage = ({ data }) => {
+        const msg = JSON.parse(data);
+        if (msg.type === 'new_character') addCharacter(msg.image_b64);
+      };
+
+      ws.onclose = () => setTimeout(connect, 3000);
+    }
+
+    connect();
+  </script>
+</body>
+</html>
