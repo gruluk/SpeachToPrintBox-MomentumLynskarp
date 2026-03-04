@@ -15,15 +15,16 @@ from camera import Camera
 
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000")
 
-# --- Colors ---
-BG = "#1a1a2e"
-PANEL = "#16213e"
-ACCENT = "#e94560"
-ACCENT_ACTIVE = "#c73652"
-TEXT = "#eaeaea"
-MUTED = "#666680"
-SUCCESS = "#2ed573"
-WARNING = "#ffa502"
+# --- Colors (Bytefest '26 palette) ---
+BG = "#c2e8f7"           # light blue sky — matches logo background
+DISPLAY_BG = "#96cfe0"   # slightly deeper blue for the camera/image area
+TEXT = "#2d5c6a"         # dark teal — matches "BYTEFEST" logo text
+MUTED = "#4a8a9e"        # medium teal — secondary labels
+ACCENT = "#2d5c6a"       # dark teal — Take Photo button
+ACCENT_ACTIVE = "#1e3f4a"
+SUCCESS = "#5b8c3e"      # olive green — matches '26 badge — Generate button
+SUCCESS_ACTIVE = "#4a7533"
+WARNING = "#a05c10"      # dark amber — readable on light background
 
 # --- States ---
 PREVIEW = "preview"
@@ -56,8 +57,8 @@ class App:
         top_bar = tk.Frame(self.root, bg=BG)
         top_bar.pack(side=tk.TOP, fill=tk.X, padx=16, pady=(12, 4))
 
-        tk.Label(top_bar, text="Speech To Print Box",
-                 font=("Helvetica", 16, "bold"), fg=TEXT, bg=BG).pack(side=tk.LEFT)
+        tk.Label(top_bar, text="BYTEFEST '26",
+                 font=("Helvetica", 18, "bold"), fg=TEXT, bg=BG).pack(side=tk.LEFT)
 
         printer_frame = tk.Frame(top_bar, bg=BG)
         printer_frame.pack(side=tk.RIGHT)
@@ -95,7 +96,7 @@ class App:
         self.retake_btn = tk.Button(
             self.btn_frame, text="Retake",
             font=("Helvetica", 14, "bold"), fg="white", bg=MUTED,
-            activebackground="#555570", activeforeground="white",
+            activebackground="#3a7080", activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
             command=self._retake,
         )
@@ -103,16 +104,16 @@ class App:
         self.generate_btn = tk.Button(
             self.btn_frame, text="Generate & Print",
             font=("Helvetica", 14, "bold"), fg="white", bg=SUCCESS,
-            activebackground="#25b560", activeforeground="white",
+            activebackground=SUCCESS_ACTIVE, activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
             command=self._generate,
         )
 
         # --- Preview area (fills remaining space) ---
-        self.display_frame = tk.Frame(self.root, bg="black")
+        self.display_frame = tk.Frame(self.root, bg=DISPLAY_BG)
         self.display_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        self.display_label = tk.Label(self.display_frame, bg="black")
+        self.display_label = tk.Label(self.display_frame, bg=DISPLAY_BG)
         self.display_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
     # --- Preview loop ---
