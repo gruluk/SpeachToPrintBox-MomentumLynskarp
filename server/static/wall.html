@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Bytefest '26</title>
+  <title>Bytefest '26 — The Wall</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      background: #0d0d1a;
+      /* Sky gradient matching the logo's light blue background */
+      background: linear-gradient(180deg, #c2e8f7 0%, #96cfe0 100%);
       width: 100vw;
       height: 100vh;
       overflow: hidden;
@@ -17,63 +18,125 @@
       cursor: none;
     }
 
-    /* Subtle pixel grid overlay */
+    /* Subtle 8px pixel grid overlay */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       background-image:
-        linear-gradient(rgba(91, 200, 232, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(91, 200, 232, 0.03) 1px, transparent 1px);
-      background-size: 32px 32px;
+        linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+      background-size: 8px 8px;
       pointer-events: none;
       z-index: 0;
     }
 
+    /* ── Header ─────────────────────────────────────────── */
     #header {
       position: fixed;
       top: 0; left: 0; right: 0;
-      padding: 24px 40px;
+      padding: 28px 48px 0;
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
-      z-index: 100;
-      background: linear-gradient(to bottom, #0d0d1a 40%, transparent);
+      align-items: flex-start;
+      z-index: 300;
       pointer-events: none;
     }
 
+    #title-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
     #title {
-      color: #5bc8e8;
-      font-size: 22px;
-      letter-spacing: 3px;
-      text-shadow:
-        0 0 20px rgba(91, 200, 232, 0.8),
-        0 0 60px rgba(91, 200, 232, 0.3);
+      color: #2d5c6a;          /* dark teal from the logo */
+      font-size: 42px;
+      letter-spacing: 4px;
+      line-height: 1;
+      text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    /* Olive-green circle badge — matches logo's '26 badge */
+    #badge {
+      background: #5b8c3e;
+      color: #fff;
+      font-size: 11px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: -6px;
+      flex-shrink: 0;
+      text-shadow: none;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.15);
     }
 
     #subtitle {
-      color: #2a4a5a;
-      font-size: 9px;
-      letter-spacing: 2px;
-      margin-top: 6px;
+      color: #4a8a9e;
+      font-size: 10px;
+      letter-spacing: 5px;
+      margin-top: 10px;
     }
 
+    /* Player count — white pill in top-right */
     #count {
-      color: #2a4a5a;
+      color: #2d5c6a;
       font-size: 9px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      padding: 10px 16px;
       letter-spacing: 1px;
-      text-align: right;
-      transition: color 0.5s;
+      transition: background 0.4s, color 0.4s;
     }
 
-    #count.active {
-      color: #5bc8e8;
+    #count.pulse {
+      background: rgba(255, 255, 255, 0.9);
+      color: #5b8c3e;
     }
 
+    /* ── Pixel clouds ───────────────────────────────────── */
+    .cloud {
+      position: absolute;
+      pointer-events: none;
+      z-index: 1;
+      animation: drift linear infinite;
+    }
+
+    .cb {   /* cloud block */
+      position: absolute;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    @keyframes drift {
+      from { transform: translateX(-320px); }
+      to   { transform: translateX(calc(100vw + 320px)); }
+    }
+
+    /* ── Ground strip ───────────────────────────────────── */
+    #ground {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 20px;
+      background: #5ba4c0;   /* teal, like the dino */
+      z-index: 200;
+    }
+
+    #ground::before {
+      content: '';
+      position: absolute;
+      top: -8px; left: 0; right: 0;
+      height: 8px;
+      background: #7bbdd4;
+    }
+
+    /* ── Characters ─────────────────────────────────────── */
     #world {
       position: absolute;
       inset: 0;
-      z-index: 1;
+      z-index: 10;
     }
 
     .character {
@@ -82,59 +145,58 @@
       image-rendering: crisp-edges;
       width: var(--size, 144px);
       height: var(--size, 144px);
-      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
+      /* teal-tinted shadow to match brand */
+      filter: drop-shadow(3px 8px 0 rgba(45, 92, 106, 0.2));
+      opacity: 0;
       animation:
-        arrive 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
-        float var(--float-dur) ease-in-out var(--float-delay) infinite;
-      opacity: 0; /* arrive animation starts from 0 */
+        arrive     0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
+        float  var(--float-dur) ease-in-out var(--float-delay) infinite;
     }
 
     @keyframes arrive {
-      0%   { opacity: 0; transform: translateY(40px) scale(0.7); }
+      0%   { opacity: 0; transform: translateY(40px) scale(0.75); }
       100% { opacity: 1; transform: translateY(0)    scale(1);   }
     }
 
     @keyframes float {
-      0%, 100% { transform: translateY(0px);   }
+      0%, 100% { transform: translateY(0);    }
       50%       { transform: translateY(-12px); }
     }
 
-    /* Scanline effect — subtle CRT vibe */
-    #scanlines {
-      position: fixed;
-      inset: 0;
-      background: repeating-linear-gradient(
-        to bottom,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.06) 2px,
-        rgba(0, 0, 0, 0.06) 4px
-      );
+    /* ── Scattered pixel squares (decoration) ───────────── */
+    .deco {
+      position: absolute;
       pointer-events: none;
-      z-index: 200;
+      z-index: 2;
+      animation: twinkle ease-in-out infinite;
     }
 
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.15; transform: scale(1);   }
+      50%       { opacity: 0.45; transform: scale(1.4); }
+    }
+
+    /* ── Empty state ────────────────────────────────────── */
     #empty {
       position: fixed;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      z-index: 50;
+      z-index: 5;
       pointer-events: none;
     }
 
-    #empty-title {
-      color: #1a1a3a;
+    #empty-main {
+      color: rgba(45, 92, 106, 0.22);
       font-size: 13px;
-      letter-spacing: 2px;
       line-height: 2.5;
     }
 
     #empty-sub {
-      color: #141428;
-      font-size: 9px;
-      letter-spacing: 1px;
+      color: rgba(45, 92, 106, 0.14);
+      font-size: 8px;
       margin-top: 8px;
+      letter-spacing: 1px;
     }
   </style>
 </head>
@@ -142,56 +204,105 @@
 
   <div id="header">
     <div>
-      <div id="title">BYTEFEST '26</div>
+      <div id="title-row">
+        <span id="title">BYTEFEST</span>
+        <span id="badge">'26</span>
+      </div>
       <div id="subtitle">+ VENNER</div>
     </div>
     <div id="count">WAITING FOR PLAYERS...</div>
   </div>
 
   <div id="world"></div>
-  <div id="scanlines"></div>
+  <div id="ground"></div>
 
   <div id="empty">
-    <div id="empty-title">NO CHARACTERS YET</div>
+    <div id="empty-main">NO CHARACTERS YET</div>
     <div id="empty-sub">HEAD TO A BOOTH TO JOIN THE WALL</div>
   </div>
 
   <script>
-    const world    = document.getElementById('world');
-    const countEl  = document.getElementById('count');
-    const emptyEl  = document.getElementById('empty');
+    const world   = document.getElementById('world');
+    const countEl = document.getElementById('count');
+    const emptyEl = document.getElementById('empty');
 
-    const CHAR_SIZE   = 144;  // px — tweak for your TV size
-    const HEADER_H    = 100;
-    const MARGIN      = 24;
-    const placed      = [];   // { x, y, w, h }
+    const CHAR_SIZE = 144;
+    const HEADER_H  = 120;
+    const GROUND_H  = 28;
+    const MARGIN    = 24;
+    const placed    = [];
 
+    // ── Pixel clouds ─────────────────────────────────────
+    // Cloud silhouette: 1 = filled pixel block
+    const CLOUD_SHAPE = [
+      [0,0,1,1,1,1,0,0],
+      [0,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1],
+    ];
+
+    function spawnCloud(yPx, scale, durationSec, delayFrac) {
+      const px = 8 * scale;
+      const el = document.createElement('div');
+      el.className = 'cloud';
+      el.style.top = yPx + 'px';
+      el.style.animationDuration = durationSec + 's';
+      el.style.animationDelay   = `-${durationSec * delayFrac}s`;
+
+      CLOUD_SHAPE.forEach((row, ri) =>
+        row.forEach((cell, ci) => {
+          if (!cell) return;
+          const b = document.createElement('div');
+          b.className = 'cb';
+          b.style.cssText = `left:${ci*px}px;top:${ri*px}px;width:${px}px;height:${px}px`;
+          el.appendChild(b);
+        })
+      );
+      document.body.appendChild(el);
+    }
+
+    spawnCloud( 35, 2.2, 55, 0.15);
+    spawnCloud( 90, 1.4, 75, 0.60);
+    spawnCloud(145, 1.8, 65, 0.40);
+
+    // ── Scattered pixel decorations ───────────────────────
+    const DECO_COLORS = ['#2d5c6a', '#5ba4c0', '#5b8c3e', '#7bbdd4', '#4a8a9e'];
+    for (let i = 0; i < 22; i++) {
+      const d = document.createElement('div');
+      d.className = 'deco';
+      const sz = [4, 6, 8, 8][Math.floor(Math.random() * 4)];
+      d.style.cssText = `
+        width:${sz}px; height:${sz}px;
+        background:${DECO_COLORS[Math.floor(Math.random() * DECO_COLORS.length)]};
+        left:${2 + Math.random() * 96}vw;
+        top:${HEADER_H + Math.random() * (window.innerHeight - HEADER_H - GROUND_H - 20)}px;
+        animation-delay:${Math.random() * 3}s;
+        animation-duration:${1.5 + Math.random() * 2.5}s;
+      `;
+      document.body.appendChild(d);
+    }
+
+    // ── Character placement ───────────────────────────────
     function findPosition() {
-      const w = CHAR_SIZE, h = CHAR_SIZE;
-      const maxX = window.innerWidth  - w - MARGIN;
-      const maxY = window.innerHeight - h - MARGIN;
-      const minY = HEADER_H;
+      const maxX = window.innerWidth  - CHAR_SIZE - MARGIN;
+      const maxY = window.innerHeight - CHAR_SIZE - GROUND_H - MARGIN;
 
-      for (let attempt = 0; attempt < 80; attempt++) {
+      for (let i = 0; i < 80; i++) {
         const x = MARGIN + Math.random() * (maxX - MARGIN);
-        const y = minY   + Math.random() * (maxY - minY);
-
-        const gap = 12;
-        const overlaps = placed.some(r =>
-          x < r.x + r.w + gap && x + w + gap > r.x &&
-          y < r.y + r.h + gap && y + h + gap > r.y
-        );
-
-        if (!overlaps) {
-          placed.push({ x, y, w, h });
+        const y = HEADER_H + Math.random() * (maxY - HEADER_H);
+        const gap = 16;
+        if (!placed.some(r =>
+          x < r.x + CHAR_SIZE + gap && x + CHAR_SIZE + gap > r.x &&
+          y < r.y + CHAR_SIZE + gap && y + CHAR_SIZE + gap > r.y
+        )) {
+          placed.push({ x, y });
           return { x, y };
         }
       }
-
-      // Screen is full — place randomly anyway (characters will overlap a little)
+      // Screen full — allow a little overlap
       const x = MARGIN + Math.random() * (maxX - MARGIN);
-      const y = minY   + Math.random() * (maxY - minY);
-      placed.push({ x, y, w, h });
+      const y = HEADER_H + Math.random() * (maxY - HEADER_H);
+      placed.push({ x, y });
       return { x, y };
     }
 
@@ -205,28 +316,26 @@
       const { x, y } = findPosition();
       img.style.left = x + 'px';
       img.style.top  = y + 'px';
-      img.style.setProperty('--size',       CHAR_SIZE + 'px');
-      img.style.setProperty('--float-dur',  (2.8 + Math.random() * 2.4) + 's');
-      img.style.setProperty('--float-delay',(Math.random() * 3) + 's');
+      img.style.setProperty('--size',        CHAR_SIZE + 'px');
+      img.style.setProperty('--float-dur',  (2.5 + Math.random() * 2.5) + 's');
+      img.style.setProperty('--float-delay',(Math.random() * 4) + 's');
 
       world.appendChild(img);
 
       const n = world.children.length;
       countEl.textContent = `${n} PLAYER${n !== 1 ? 'S' : ''} JOINED`;
-      countEl.classList.add('active');
-      setTimeout(() => countEl.classList.remove('active'), 2000);
+      countEl.classList.add('pulse');
+      setTimeout(() => countEl.classList.remove('pulse'), 1500);
     }
 
-    // WebSocket with auto-reconnect
+    // ── WebSocket with auto-reconnect ─────────────────────
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${proto}//${location.host}/ws`);
-
       ws.onmessage = ({ data }) => {
         const msg = JSON.parse(data);
         if (msg.type === 'new_character') addCharacter(msg.image_b64);
       };
-
       ws.onclose = () => setTimeout(connect, 3000);
     }
 
