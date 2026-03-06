@@ -4,10 +4,12 @@ from io import BytesIO
 from PIL import Image, ImageTk
 import threading
 import os
-import subprocess
-import tempfile
 import requests
+import usb.core
 from dotenv import load_dotenv
+from brother_ql.raster import BrotherQLRaster
+from brother_ql.conversion import convert
+from brother_ql.backends.helpers import send
 
 load_dotenv()
 
@@ -25,6 +27,11 @@ ACCENT_ACTIVE = "#1e3f4a"
 SUCCESS = "#5b8c3e"      # olive green — matches '26 badge — Generate button
 SUCCESS_ACTIVE = "#4a7533"
 WARNING = "#a05c10"      # dark amber — readable on light background
+
+# --- Printer ---
+PRINTER_MODEL = "QL-1110NWB"
+PRINTER_URI   = "usb://0x04f9:0x20a8"
+LABEL         = "62"   # 62 mm continuous tape — change for event roll (e.g. "62x100")
 
 # --- States ---
 PREVIEW = "preview"
@@ -226,15 +233,13 @@ class App:
 
     def _print_image(self, image: Image.Image):
         try:
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
-                tmp_path = f.name
-            image.convert("RGB").save(tmp_path, dpi=(300, 300))
-            subprocess.run(
-                ["lp", "-d", "Leitz_Icon_Wi-Fi",
-                 "-o", "media=Multipurpose70030001",
-                 "-o", "fit-to-page",
-                 tmp_path],
-                check=True,
+            qlr = BrotherQLRaster(PRINTER_MODEL)
+            convert(qlr, [image.convert("RGB")], LABEL, cut=True, rotate="0", dpi_600=False)
+            send(
+                instructions=qlr.data,
+                printer_identifier=PRINTER_URI,
+                backend_identifier="pyusb",
+                blocking=True,
             )
             self.root.after(0, self.status_var.set, "Printed! Press Retake to go again.")
             self.root.after(0, self.print_var.set, "Label sent to printer.")
@@ -242,7 +247,6 @@ class App:
             self.root.after(0, self.status_var.set, "Done! Press Retake to go again.")
             self.root.after(0, self.print_var.set, f"Print failed: {e}")
         finally:
-            os.unlink(tmp_path)
             self.root.after(0, self._show_state, RESULT)
 
     def _show_state(self, state: str):
@@ -274,13 +278,7 @@ class App:
 
     def _check_printer(self):
         try:
-            result = subprocess.run(
-                ["lpstat", "-p", "Leitz_Icon_Wi-Fi"],
-                capture_output=True, text=True, timeout=5,
-            )
-            connected = result.returncode == 0 and any(
-                s in result.stdout for s in ("idle", "printing")
-            )
+            connected = usb.core.find(idVendor=0x04f9, idProduct=0x20a8) is not None
         except Exception:
             connected = False
         self.root.after(0, self._update_printer_indicator, connected)

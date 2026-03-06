@@ -1,4 +1,6 @@
 Pillow
 requests
 python-dotenv
+pyusb
+brother_ql
 # picamera2 is pre-installed on Raspberry Pi OS — do not pip install
