@@ -29,7 +29,7 @@ SUCCESS_ACTIVE = "#4a7533"
 WARNING = "#a05c10"      # dark amber — readable on light background
 
 # --- Printer ---
-PRINTER_MODEL = "QL-1060N"
+PRINTER_MODEL = "QL-1110NWB"
 PRINTER_URI   = "usb://0x04f9:0x20a8"
 LABEL         = "62"   # 62 mm continuous tape — change for event roll (e.g. "62x100")
 
