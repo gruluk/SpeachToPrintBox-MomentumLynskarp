@@ -235,6 +235,9 @@ class App:
         try:
             if not hasattr(Image, "ANTIALIAS"):
                 Image.ANTIALIAS = Image.LANCZOS
+            dev = usb.core.find(idVendor=0x04f9, idProduct=0x20a8)
+            if dev:
+                dev.reset()
             qlr = BrotherQLRaster(PRINTER_MODEL)
             convert(qlr, [image.convert("RGB")], LABEL, cut=True, rotate="0", dpi_600=False)
             send(
