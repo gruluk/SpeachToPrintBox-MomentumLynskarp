@@ -32,7 +32,8 @@ WARNING = "#a05c10"      # dark amber — readable on light background
 # --- Printer ---
 PRINTER_MODEL = "QL-1110NWB"
 PRINTER_URI   = "usb://0x04f9:0x20a8"
-LABEL         = "103x164"  # 103mm x 164mm die-cut (testing) — change to "103" for event roll
+LABEL            = "103"   # tape width — "103" for event roll, "62" for 62mm roll
+PRINT_HEIGHT_MM  = 45      # print length in mm for continuous tape
 
 # --- States ---
 PREVIEW = "preview"
@@ -248,13 +249,13 @@ class App:
             if dev:
                 dev.reset()
             label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
-            target_w, target_h = label_info.dots_printable
+            print_w = label_info.dots_printable[0]
+            print_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
             img = image.convert("RGB")
-            if target_h > 0:  # die-cut: resize to fit, center on white canvas
-                img.thumbnail((target_w, target_h), Image.LANCZOS)
-                canvas = Image.new("RGB", (target_w, target_h), "white")
-                canvas.paste(img, ((target_w - img.width) // 2, (target_h - img.height) // 2))
-                img = canvas
+            img.thumbnail((print_w, print_h), Image.LANCZOS)
+            canvas = Image.new("RGB", (print_w, print_h), "white")
+            canvas.paste(img, ((print_w - img.width) // 2, (print_h - img.height) // 2))
+            img = canvas
             qlr = BrotherQLRaster(PRINTER_MODEL)
             convert(qlr, [img], LABEL, cut=True, rotate="0", dpi_600=False)
             send(
