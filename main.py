@@ -292,11 +292,25 @@ class App:
         scale = min(frame_w / image.width, frame_h / image.height)
         return int(image.width * scale), int(image.height * scale)
 
+    def _fill_display(self, image: Image.Image) -> Image.Image:
+        """Scale and crop image to fill the full screen (no letterbox)."""
+        w, h = self._display_size()
+        scale = max(w / image.width, h / image.height)
+        new_w, new_h = int(image.width * scale), int(image.height * scale)
+        resized = image.resize((new_w, new_h), Image.BILINEAR)
+        left = (new_w - w) // 2
+        top = (new_h - h) // 2
+        return resized.crop((left, top, left + w, top + h))
+
     def _update_preview(self):
         if self.state == PREVIEW:
             try:
-                frame = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
-                display = frame.resize(self._fit_size(frame), Image.BILINEAR)
+                frame = self.camera.get_frame()
+                if frame is None:
+                    self.root.after(50, self._update_preview)
+                    return
+                frame = frame.transpose(Image.FLIP_LEFT_RIGHT)
+                display = self._fill_display(frame)
                 if self._countdown_n > 0:
                     draw = ImageDraw.Draw(display)
                     txt = str(self._countdown_n)
@@ -350,8 +364,11 @@ class App:
 
     def _actually_take_photo(self):
         self.take_btn.config(state=tk.NORMAL)
-        self.captured_photo = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
-        display = self.captured_photo.resize(self._fit_size(self.captured_photo), Image.BILINEAR)
+        frame = self.camera.get_frame()
+        if frame is None:
+            return
+        self.captured_photo = frame.transpose(Image.FLIP_LEFT_RIGHT)
+        display = self._fill_display(self.captured_photo)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
