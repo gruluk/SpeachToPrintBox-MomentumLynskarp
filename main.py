@@ -36,7 +36,7 @@ WARNING      = "#a05c10"
 PRINTER_MODEL   = "QL-1110NWB"
 PRINTER_URI     = "usb://0x04f9:0x20a8"
 LABEL           = "103" if PRODUCTION_MODE else "103x164"
-PRINT_HEIGHT_MM = 100   # content height for both continuous and die-cut
+PRINT_HEIGHT_MM = 45    # content height for both continuous and die-cut
 
 # --- States ---
 PREVIEW       = "preview"
@@ -476,17 +476,16 @@ class App:
 
     def _composite_label(self, character: Image.Image) -> Image.Image:
         label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
-        target_w, target_h_raw = label_info.dots_printable
-        content_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
-        total_h = target_h_raw if target_h_raw > 0 else content_h
+        target_w, _ = label_info.dots_printable
+        content_h = round(PRINT_HEIGHT_MM * 300 / 25.4)  # always use exact target height
 
-        canvas = Image.new("RGB", (target_w, total_h), "white")
+        canvas = Image.new("RGB", (target_w, content_h), "white")
         draw = ImageDraw.Draw(canvas)
-        PAD = 40
+        PAD = 14
 
-        # Left column: character image
-        split_x = int(target_w * 0.45)
-        char_size = min(split_x - PAD, content_h - PAD * 2)
+        # Left column: character image (square, full height)
+        split_x = int(target_w * 0.40)
+        char_size = min(split_x - PAD * 2, content_h - PAD * 2)
         char = character.convert("RGBA")
         char = char.resize((char_size, char_size), Image.NEAREST)
         char_x = (split_x - char_size) // 2
@@ -497,13 +496,15 @@ class App:
         right_x = split_x + PAD
         right_w = target_w - right_x - PAD
 
-        # Logo (top right)
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+        # Logo (top right, small)
         logo_bottom = PAD
         try:
             logo = Image.open(
                 os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
             ).convert("RGBA")
-            logo_h = content_h // 6
+            logo_h = content_h // 5
             logo_w = int(logo.width * logo_h / logo.height)
             if logo_w > right_w:
                 logo_w = right_w
@@ -514,52 +515,38 @@ class App:
         except Exception:
             pass
 
-        # Dino sprite (bottom right)
-        dino_top = content_h - PAD
+        # Dino name label (bottom right, small text)
+        dino_label_size = max(16, content_h // 16)
         try:
-            dino = Image.open(
-                os.path.join(ASSETS_DIR, "Figma assets", f"dino_{self.dino_type}.png")
-            ).convert("RGBA")
-            dino_size = content_h // 4
-            dino.thumbnail((dino_size, dino_size), Image.LANCZOS)
-            dino_x = target_w - PAD - dino.width
-            dino_y = content_h - PAD - dino.height
-            canvas.paste(dino, (dino_x, dino_y), dino)
-            dino_top = dino_y
+            small_font = ImageFont.truetype(font_path, dino_label_size)
         except Exception:
-            pass
+            small_font = ImageFont.load_default()
+        dino_label = DINO_NAMES[self.dino_type]
+        draw.text(
+            (right_x, content_h - PAD - dino_label_size),
+            dino_label,
+            fill="#4a8a9e",
+            font=small_font,
+        )
+        dino_label_top = content_h - PAD - dino_label_size
 
-        # Name (right middle, scaled to fit)
+        # Name (right middle, fills space between logo and dino label)
         name_area_top = logo_bottom + PAD
-        name_area_h = dino_top - name_area_top - PAD
-        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font_size = min(int(name_area_h * 0.55), 200)
+        name_area_h = dino_label_top - name_area_top - PAD
+        font_size = min(int(name_area_h * 0.80), 200)
         try:
             font = ImageFont.truetype(font_path, font_size)
-            while font_size > 30:
+            while font_size > 12:
                 font = ImageFont.truetype(font_path, font_size)
                 bbox = font.getbbox(self.user_name)
                 if (bbox[2] - bbox[0]) <= right_w:
                     break
-                font_size -= 8
+                font_size -= 4
         except Exception:
             font = ImageFont.load_default()
 
         name_y = name_area_top + (name_area_h - font_size) // 2
         draw.text((right_x, name_y), self.user_name, fill="#2d5c6a", font=font)
-
-        # Dino type label (below name)
-        dino_label_size = max(28, font_size // 4)
-        try:
-            small_font = ImageFont.truetype(font_path, dino_label_size)
-        except Exception:
-            small_font = ImageFont.load_default()
-        draw.text(
-            (right_x, name_y + font_size + 10),
-            DINO_NAMES[self.dino_type],
-            fill="#4a8a9e",
-            font=small_font,
-        )
 
         return canvas
 
@@ -585,16 +572,19 @@ class App:
                 dev.reset()
 
             label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
-            target_w, target_h = label_info.dots_printable
-            if target_h == 0:
-                target_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
+            target_w, target_h_label = label_info.dots_printable
+            content_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
+            # For continuous tape target_h_label==0; for die-cut use content_h centred on label
+            target_h = content_h if target_h_label == 0 else target_h_label
 
             img = image.convert("RGB")
-            if img.size != (target_w, target_h):
-                img.thumbnail((target_w, target_h), Image.LANCZOS)
-                canvas = Image.new("RGB", (target_w, target_h), "white")
-                canvas.paste(img, ((target_w - img.width) // 2, (target_h - img.height) // 2))
-                img = canvas
+            # Fit composite into the target width × content_h, then centre on full label
+            if img.width != target_w or img.height != content_h:
+                img.thumbnail((target_w, content_h), Image.LANCZOS)
+            canvas = Image.new("RGB", (target_w, target_h), "white")
+            paste_y = (target_h - img.height) // 2
+            canvas.paste(img, ((target_w - img.width) // 2, paste_y))
+            img = canvas
 
             qlr = BrotherQLRaster(PRINTER_MODEL)
             convert(qlr, [img], LABEL, cut=True, rotate="0", dpi_600=False)
