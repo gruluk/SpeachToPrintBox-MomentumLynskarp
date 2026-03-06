@@ -108,6 +108,7 @@ class App:
 
         self._setup_window()
         self._build_ui()
+        self._show_state(PREVIEW)
         self._poll_printer()
         self._update_preview()
 
