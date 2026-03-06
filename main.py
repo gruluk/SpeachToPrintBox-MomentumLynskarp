@@ -630,17 +630,20 @@ class App:
         threading.Thread(target=self._print_image, args=(composited,), daemon=True).start()
 
     def _print_image(self, image: Image.Image):
+        import gc
         try:
             if not hasattr(Image, "ANTIALIAS"):
                 Image.ANTIALIAS = Image.LANCZOS
+            # Force-close any stale USB handles (e.g. from printer poll or previous send())
+            gc.collect()
             dev = usb.core.find(idVendor=0x04f9, idProduct=0x20a8)
             if dev:
                 try:
                     dev.reset()
                 except Exception:
                     pass
-                usb.util.dispose_resources(dev)  # fully drop the handle so brother_ql can claim it
-            time.sleep(0.5)
+                usb.util.dispose_resources(dev)
+            time.sleep(1.0)  # give device time to settle after reset
 
             label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
             target_w, target_h_label = label_info.dots_printable
@@ -731,10 +734,14 @@ class App:
         self.root.after(10000, self._poll_printer)
 
     def _check_printer(self):
+        connected = False
         try:
-            connected = usb.core.find(idVendor=0x04f9, idProduct=0x20a8) is not None
+            dev = usb.core.find(idVendor=0x04f9, idProduct=0x20a8)
+            connected = dev is not None
+            if dev is not None:
+                usb.util.dispose_resources(dev)  # always close the handle
         except Exception:
-            connected = False
+            pass
         self.root.after(0, self._update_printer_indicator, connected)
 
     def _update_printer_indicator(self, connected: bool):
