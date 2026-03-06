@@ -1,7 +1,8 @@
 import base64
 import tkinter as tk
+from collections import Counter
 from io import BytesIO
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageFont, ImageTk
 import threading
 import os
 import requests
@@ -16,31 +17,74 @@ load_dotenv()
 
 from camera import Camera
 
-SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000")
+SERVER_URL      = os.getenv("SERVER_URL", "http://localhost:8000")
+PRODUCTION_MODE = os.getenv("PRODUCTION_MODE", "false").lower() == "true"
+ASSETS_DIR      = os.path.join(os.path.dirname(__file__), "assets")
 
 # --- Colors (Bytefest '26 palette) ---
-BG = "#c2e8f7"           # light blue sky — matches logo background
-DISPLAY_BG = "#96cfe0"   # slightly deeper blue for the camera/image area
-TEXT = "#2d5c6a"         # dark teal — matches "BYTEFEST" logo text
-MUTED = "#4a8a9e"        # medium teal — secondary labels
-ACCENT = "#2d5c6a"       # dark teal — Take Photo button
+BG           = "#c2e8f7"
+DISPLAY_BG   = "#96cfe0"
+TEXT         = "#2d5c6a"
+MUTED        = "#4a8a9e"
+ACCENT       = "#2d5c6a"
 ACCENT_ACTIVE = "#1e3f4a"
-SUCCESS = "#5b8c3e"      # olive green — matches '26 badge — Generate button
+SUCCESS      = "#5b8c3e"
 SUCCESS_ACTIVE = "#4a7533"
-WARNING = "#a05c10"      # dark amber — readable on light background
+WARNING      = "#a05c10"
 
 # --- Printer ---
-PRINTER_MODEL = "QL-1110NWB"
-PRINTER_URI   = "usb://0x04f9:0x20a8"
-LABEL            = "103"   # tape width — "103" for event roll, "62" for 62mm roll
-PRINT_HEIGHT_MM  = 45      # print length in mm for continuous tape
+PRINTER_MODEL   = "QL-1110NWB"
+PRINTER_URI     = "usb://0x04f9:0x20a8"
+LABEL           = "103" if PRODUCTION_MODE else "103x164"
+PRINT_HEIGHT_MM = 100   # content height for both continuous and die-cut
 
 # --- States ---
-PREVIEW = "preview"
-VALIDATING = "validating"
-REVIEW = "review"
-PROCESSING = "processing"
-RESULT = "result"
+PREVIEW       = "preview"
+VALIDATING    = "validating"
+REVIEW        = "review"
+NAME_INPUT    = "name_input"
+QUESTIONNAIRE = "questionnaire"
+WAITING       = "waiting"
+PROCESSING    = "processing"
+RESULT        = "result"
+
+# --- Questionnaire ---
+QUESTIONS = [
+    {
+        "q": "Production is on fire 🔥. You...",
+        "a": [
+            ("Blame the intern", "1"),
+            ("Open 3 incidents, close 2 immediately", "2"),
+            ("Push a hotfix without testing", "3"),
+            ("Already left for vacation", "4"),
+        ],
+    },
+    {
+        "q": "Your README is...",
+        "a": [
+            ("A detailed 40-page novel", "1"),
+            ("A strongly-worded warning", "2"),
+            ("Three emojis and a broken badge", "3"),
+            ("What's a README?", "4"),
+        ],
+    },
+    {
+        "q": "You at a hackathon:",
+        "a": [
+            ("Planning the perfect architecture", "1"),
+            ("Defending your tech choices loudly", "2"),
+            ("Rewriting in a new framework at 2am", "3"),
+            ("Pitching 5 ideas to anyone nearby", "4"),
+        ],
+    },
+]
+
+DINO_NAMES = {
+    "1": "Brachiosaurus",
+    "2": "Triceratops",
+    "3": "Stegosaurus",
+    "4": "Pterodactyl",
+}
 
 
 class App:
@@ -49,6 +93,18 @@ class App:
         self.camera = Camera()
         self.captured_photo: Image.Image | None = None
         self.state = PREVIEW
+
+        # User session data
+        self.user_name = ""
+        self.dino_type = "1"
+        self._answers: list[str] = []
+        self._question_idx = 0
+
+        # Background generation state
+        self._gen_result: Image.Image | None = None
+        self._gen_ready = False
+        self._gen_error = ""
+        self._gen_char_id = ""
 
         self._setup_window()
         self._build_ui()
@@ -62,7 +118,7 @@ class App:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_ui(self):
-        # --- Top bar (fixed) ---
+        # --- Top bar ---
         top_bar = tk.Frame(self.root, bg=BG)
         top_bar.pack(side=tk.TOP, fill=tk.X, padx=16, pady=(12, 4))
 
@@ -77,7 +133,7 @@ class App:
         tk.Label(printer_frame, textvariable=self.printer_status_var,
                  font=("Helvetica", 10), fg=MUTED, bg=BG).pack(side=tk.LEFT)
 
-        # --- Bottom bar (fixed) ---
+        # --- Bottom bar ---
         bottom_bar = tk.Frame(self.root, bg=BG)
         bottom_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=12)
 
@@ -100,16 +156,6 @@ class App:
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
             command=self._take_photo,
         )
-        self.take_btn.pack(side=tk.LEFT, padx=6)
-
-        self.retake_btn = tk.Button(
-            self.btn_frame, text="Retake",
-            font=("Helvetica", 14, "bold"), fg="white", bg=MUTED,
-            activebackground="#3a7080", activeforeground="white",
-            relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
-            command=self._retake,
-        )
-
         self.debug_btn = tk.Button(
             self.btn_frame, text="Debug Print",
             font=("Helvetica", 14, "bold"), fg="white", bg=WARNING,
@@ -117,21 +163,65 @@ class App:
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
             command=self._debug_print,
         )
-
-        self.generate_btn = tk.Button(
-            self.btn_frame, text="Generate & Print",
+        self.retake_btn = tk.Button(
+            self.btn_frame, text="Retake",
+            font=("Helvetica", 14, "bold"), fg="white", bg=MUTED,
+            activebackground="#3a7080", activeforeground="white",
+            relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
+            command=self._retake,
+        )
+        self.next_btn = tk.Button(
+            self.btn_frame, text="Next →",
             font=("Helvetica", 14, "bold"), fg="white", bg=SUCCESS,
             activebackground=SUCCESS_ACTIVE, activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
-            command=self._generate,
+            command=self._proceed_to_name,
         )
 
-        # --- Preview area (fills remaining space) ---
+        # --- Display area (fills middle) ---
         self.display_frame = tk.Frame(self.root, bg=DISPLAY_BG)
         self.display_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         self.display_label = tk.Label(self.display_frame, bg=DISPLAY_BG)
         self.display_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        # --- Name input screen ---
+        self.name_frame = tk.Frame(self.display_frame, bg=BG)
+        tk.Label(self.name_frame, text="What's your name?",
+                 font=("Helvetica", 28, "bold"), fg=TEXT, bg=BG).pack(pady=(80, 24))
+        self.name_entry = tk.Entry(
+            self.name_frame, font=("Helvetica", 32), fg=TEXT,
+            justify=tk.CENTER, relief=tk.FLAT,
+            bg="white", insertbackground=TEXT, width=18,
+        )
+        self.name_entry.pack(pady=8, ipady=14)
+        self.name_entry.bind("<Return>", lambda e: self._on_name_next())
+        tk.Button(
+            self.name_frame, text="Next →",
+            font=("Helvetica", 16, "bold"), fg="white", bg=SUCCESS,
+            activebackground=SUCCESS_ACTIVE, activeforeground="white",
+            relief=tk.FLAT, padx=40, pady=14, cursor="hand2", borderwidth=0,
+            command=self._on_name_next,
+        ).pack(pady=24)
+
+        # --- Questionnaire screen ---
+        self.quiz_frame = tk.Frame(self.display_frame, bg=BG)
+        self.quiz_counter_var = tk.StringVar()
+        tk.Label(self.quiz_frame, textvariable=self.quiz_counter_var,
+                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack(pady=(24, 4))
+        self.quiz_q_var = tk.StringVar()
+        tk.Label(self.quiz_frame, textvariable=self.quiz_q_var,
+                 font=("Helvetica", 20, "bold"), fg=TEXT, bg=BG,
+                 wraplength=720).pack(pady=(0, 20))
+        self.quiz_btns_frame = tk.Frame(self.quiz_frame, bg=BG)
+        self.quiz_btns_frame.pack(fill=tk.X, padx=80)
+
+        # --- Waiting screen ---
+        self.waiting_frame = tk.Frame(self.display_frame, bg=BG)
+        tk.Label(self.waiting_frame, text="✨ Almost ready...",
+                 font=("Helvetica", 28, "bold"), fg=TEXT, bg=BG).pack(expand=True)
+        tk.Label(self.waiting_frame, text="Generating your character",
+                 font=("Helvetica", 14), fg=MUTED, bg=BG).pack(pady=(0, 80))
 
     # --- Preview loop ---
 
@@ -167,12 +257,10 @@ class App:
 
     def _take_photo(self):
         self.captured_photo = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
-
         display = self.captured_photo.resize(self._fit_size(self.captured_photo), Image.BILINEAR)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
-
         self._show_state(VALIDATING)
         self.status_var.set("Checking photo...")
         threading.Thread(target=self._run_validation, daemon=True).start()
@@ -188,7 +276,6 @@ class App:
             data = resp.json()
             ok, message = data["ok"], data.get("message", "")
         except Exception:
-            # Server unreachable — let the user proceed
             ok, message = True, ""
 
         if ok:
@@ -197,6 +284,13 @@ class App:
             self.root.after(0, self._on_validation_fail, message)
 
     def _on_validation_ok(self):
+        # Start generation immediately while user fills in name + quiz
+        self._gen_result = None
+        self._gen_ready = False
+        self._gen_error = ""
+        self._gen_char_id = ""
+        threading.Thread(target=self._process, daemon=True).start()
+
         self._show_state(REVIEW)
         self.status_var.set("Happy with the photo?")
         self.status_label.config(fg=MUTED)
@@ -207,15 +301,83 @@ class App:
 
     def _retake(self):
         self.captured_photo = None
+        self.user_name = ""
+        self.dino_type = "1"
+        self._answers = []
+        self._question_idx = 0
+        self._gen_result = None
+        self._gen_ready = False
+        self._gen_error = ""
         self._show_state(PREVIEW)
         self.status_var.set("Look at the camera and press Take Photo!")
         self.status_label.config(fg=MUTED)
 
-    def _generate(self):
-        self._show_state(PROCESSING)
-        self.status_var.set("Generating pixel art...")
-        self.print_var.set("")
-        threading.Thread(target=self._process, daemon=True).start()
+    def _proceed_to_name(self):
+        self.name_entry.delete(0, tk.END)
+        self._show_state(NAME_INPUT)
+        self.status_var.set("Enter your name")
+
+    def _on_name_next(self):
+        name = self.name_entry.get().strip()
+        if not name:
+            return
+        self.user_name = name
+        self._question_idx = 0
+        self._answers = []
+        self._show_question()
+        self._show_state(QUESTIONNAIRE)
+        self.status_var.set("")
+
+    def _show_question(self):
+        q = QUESTIONS[self._question_idx]
+        self.quiz_q_var.set(q["q"])
+        self.quiz_counter_var.set(f"Question {self._question_idx + 1} of {len(QUESTIONS)}")
+        for w in self.quiz_btns_frame.winfo_children():
+            w.destroy()
+        colors  = [ACCENT, SUCCESS, WARNING, MUTED]
+        actives = [ACCENT_ACTIVE, SUCCESS_ACTIVE, "#7a4508", "#3a7080"]
+        for i, (text, dino) in enumerate(q["a"]):
+            tk.Button(
+                self.quiz_btns_frame, text=text,
+                font=("Helvetica", 13), fg="white",
+                bg=colors[i], activebackground=actives[i], activeforeground="white",
+                relief=tk.FLAT, padx=20, pady=14, cursor="hand2", borderwidth=0,
+                wraplength=500,
+                command=lambda d=dino: self._on_answer(d),
+            ).pack(fill=tk.X, pady=5)
+
+    def _on_answer(self, dino: str):
+        self._answers.append(dino)
+        self._question_idx += 1
+        if self._question_idx < len(QUESTIONS):
+            self._show_question()
+        else:
+            self.dino_type = Counter(self._answers).most_common(1)[0][0]
+            threading.Thread(target=self._publish, daemon=True).start()
+            self._on_questionnaire_done()
+
+    def _on_questionnaire_done(self):
+        if self._gen_ready:
+            if self._gen_result is not None:
+                self.root.after(0, self._show_result, self._gen_result)
+            else:
+                self.root.after(0, self.status_var.set, f"Error: {self._gen_error}")
+                self.root.after(0, self.status_label.config, {"fg": WARNING})
+                self.root.after(0, self._show_state, REVIEW)
+        else:
+            self._show_state(WAITING)
+            self._check_gen_ready()
+
+    def _check_gen_ready(self):
+        if not self._gen_ready:
+            self.root.after(500, self._check_gen_ready)
+            return
+        if self._gen_result is not None:
+            self._show_result(self._gen_result)
+        else:
+            self.status_var.set(f"Error: {self._gen_error}")
+            self.status_label.config(fg=WARNING)
+            self._show_state(REVIEW)
 
     def _process(self):
         try:
@@ -225,21 +387,144 @@ class App:
                 timeout=120,
             )
             resp.raise_for_status()
-            img_bytes = base64.b64decode(resp.json()["image_b64"])
-            image = Image.open(BytesIO(img_bytes))
-            self.root.after(0, self._show_result, image)
+            data = resp.json()
+            img_bytes = base64.b64decode(data["image_b64"])
+            self._gen_char_id = data.get("id", "")
+            self._gen_result = Image.open(BytesIO(img_bytes))
         except Exception as e:
-            self.root.after(0, self.status_var.set, f"Error: {e}")
-            self.root.after(0, self._show_state, REVIEW)
+            self._gen_error = str(e)
+            import traceback; traceback.print_exc()
+        finally:
+            self._gen_ready = True
+            if self.state == WAITING:
+                self.root.after(0, self._check_gen_ready)
+
+    def _publish(self):
+        """Send name + dino_type to server so character appears on the TV wall."""
+        if not self._gen_char_id:
+            return
+        try:
+            requests.post(
+                f"{SERVER_URL}/publish/{self._gen_char_id}",
+                data={"name": self.user_name, "dino_type": self.dino_type},
+                timeout=10,
+            )
+        except Exception:
+            pass
+
+    # --- Print ---
 
     def _show_result(self, image: Image.Image):
         self._show_state(RESULT)
-        display = image.resize(self._fit_size(image), Image.NEAREST)
+        composited = self._composite_label(image)
+        display = composited.resize(self._fit_size(composited), Image.NEAREST)
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
         self.status_var.set("Printing...")
-        threading.Thread(target=self._print_image, args=(image,), daemon=True).start()
+        threading.Thread(target=self._print_image, args=(composited,), daemon=True).start()
+
+    def _composite_label(self, character: Image.Image) -> Image.Image:
+        label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
+        target_w, target_h_raw = label_info.dots_printable
+        content_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
+        total_h = target_h_raw if target_h_raw > 0 else content_h
+
+        canvas = Image.new("RGB", (target_w, total_h), "white")
+        draw = ImageDraw.Draw(canvas)
+        PAD = 40
+
+        # Left column: character image
+        split_x = int(target_w * 0.45)
+        char_size = min(split_x - PAD, content_h - PAD * 2)
+        char = character.convert("RGBA")
+        char = char.resize((char_size, char_size), Image.NEAREST)
+        char_x = (split_x - char_size) // 2
+        char_y = (content_h - char_size) // 2
+        canvas.paste(char, (char_x, char_y), char)
+
+        # Right column bounds
+        right_x = split_x + PAD
+        right_w = target_w - right_x - PAD
+
+        # Logo (top right)
+        logo_bottom = PAD
+        try:
+            logo = Image.open(
+                os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
+            ).convert("RGBA")
+            logo_h = content_h // 6
+            logo_w = int(logo.width * logo_h / logo.height)
+            if logo_w > right_w:
+                logo_w = right_w
+                logo_h = int(logo.height * logo_w / logo.width)
+            logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
+            canvas.paste(logo, (right_x, PAD), logo)
+            logo_bottom = PAD + logo_h
+        except Exception:
+            pass
+
+        # Dino sprite (bottom right)
+        dino_top = content_h - PAD
+        try:
+            dino = Image.open(
+                os.path.join(ASSETS_DIR, "Figma assets", f"dino_{self.dino_type}.png")
+            ).convert("RGBA")
+            dino_size = content_h // 4
+            dino.thumbnail((dino_size, dino_size), Image.LANCZOS)
+            dino_x = target_w - PAD - dino.width
+            dino_y = content_h - PAD - dino.height
+            canvas.paste(dino, (dino_x, dino_y), dino)
+            dino_top = dino_y
+        except Exception:
+            pass
+
+        # Name (right middle, scaled to fit)
+        name_area_top = logo_bottom + PAD
+        name_area_h = dino_top - name_area_top - PAD
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        font_size = min(int(name_area_h * 0.55), 200)
+        try:
+            font = ImageFont.truetype(font_path, font_size)
+            while font_size > 30:
+                font = ImageFont.truetype(font_path, font_size)
+                bbox = font.getbbox(self.user_name)
+                if (bbox[2] - bbox[0]) <= right_w:
+                    break
+                font_size -= 8
+        except Exception:
+            font = ImageFont.load_default()
+
+        name_y = name_area_top + (name_area_h - font_size) // 2
+        draw.text((right_x, name_y), self.user_name, fill="#2d5c6a", font=font)
+
+        # Dino type label (below name)
+        dino_label_size = max(28, font_size // 4)
+        try:
+            small_font = ImageFont.truetype(font_path, dino_label_size)
+        except Exception:
+            small_font = ImageFont.load_default()
+        draw.text(
+            (right_x, name_y + font_size + 10),
+            DINO_NAMES[self.dino_type],
+            fill="#4a8a9e",
+            font=small_font,
+        )
+
+        return canvas
+
+    def _debug_print(self):
+        self._show_state(PROCESSING)
+        self.status_var.set("Debug printing...")
+        saved_name = self.user_name
+        saved_dino = self.dino_type
+        self.user_name = self.user_name or "Debug User"
+        self.dino_type = self.dino_type or "1"
+        image = Image.open(os.path.join(ASSETS_DIR, "style_reference.PNG"))
+        composited = self._composite_label(image)
+        self.user_name = saved_name
+        self.dino_type = saved_dino
+        threading.Thread(target=self._print_image, args=(composited,), daemon=True).start()
 
     def _print_image(self, image: Image.Image):
         try:
@@ -248,14 +533,19 @@ class App:
             dev = usb.core.find(idVendor=0x04f9, idProduct=0x20a8)
             if dev:
                 dev.reset()
+
             label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
-            print_w = label_info.dots_printable[0]
-            print_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
+            target_w, target_h = label_info.dots_printable
+            if target_h == 0:
+                target_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
+
             img = image.convert("RGB")
-            img.thumbnail((print_w, print_h), Image.LANCZOS)
-            canvas = Image.new("RGB", (print_w, print_h), "white")
-            canvas.paste(img, ((print_w - img.width) // 2, (print_h - img.height) // 2))
-            img = canvas
+            if img.size != (target_w, target_h):
+                img.thumbnail((target_w, target_h), Image.LANCZOS)
+                canvas = Image.new("RGB", (target_w, target_h), "white")
+                canvas.paste(img, ((target_w - img.width) // 2, (target_h - img.height) // 2))
+                img = canvas
+
             qlr = BrotherQLRaster(PRINTER_MODEL)
             convert(qlr, [img], LABEL, cut=True, rotate="0", dpi_600=False)
             send(
@@ -264,28 +554,40 @@ class App:
                 backend_identifier="pyusb",
                 blocking=True,
             )
-            self.root.after(0, self.status_var.set, "Printed! Press Retake to go again.")
+            self.root.after(0, self.status_var.set, "Printed! Press Try Again to go again.")
             self.root.after(0, self.print_var.set, "Label sent to printer.")
         except Exception as e:
             import traceback; traceback.print_exc()
             print(f"[print error] {e}", flush=True)
-            self.root.after(0, self.status_var.set, "Done! Press Retake to go again.")
+            self.root.after(0, self.status_var.set, "Done! Press Try Again to go again.")
             self.root.after(0, self.print_var.set, f"Print failed: {e}")
         finally:
             self.root.after(0, self._show_state, RESULT)
 
-    def _debug_print(self):
-        self._show_state(PROCESSING)
-        self.status_var.set("Debug printing...")
-        image = Image.open(os.path.join(os.path.dirname(__file__), "assets", "style_reference.PNG"))
-        threading.Thread(target=self._print_image, args=(image,), daemon=True).start()
-
     def _show_state(self, state: str):
         self.state = state
+
+        # Show/hide main content area
+        self.display_label.place_forget()
+        self.name_frame.place_forget()
+        self.quiz_frame.place_forget()
+        self.waiting_frame.place_forget()
+
+        if state in (PREVIEW, VALIDATING, REVIEW, PROCESSING, RESULT):
+            self.display_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        elif state == NAME_INPUT:
+            self.name_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+            self.root.after(100, self.name_entry.focus_set)
+        elif state == QUESTIONNAIRE:
+            self.quiz_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        elif state == WAITING:
+            self.waiting_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+        # Show/hide buttons
         self.take_btn.pack_forget()
         self.retake_btn.pack_forget()
         self.debug_btn.pack_forget()
-        self.generate_btn.pack_forget()
+        self.next_btn.pack_forget()
 
         if state == PREVIEW:
             self.take_btn.pack(side=tk.LEFT, padx=4)
@@ -296,9 +598,10 @@ class App:
         elif state == REVIEW:
             self.retake_btn.config(text="Retake")
             self.retake_btn.pack(side=tk.LEFT, padx=4)
-            self.generate_btn.pack(side=tk.LEFT, padx=4)
-        elif state == PROCESSING:
-            pass
+            self.next_btn.pack(side=tk.LEFT, padx=4)
+        elif state in (NAME_INPUT, QUESTIONNAIRE, WAITING):
+            self.retake_btn.config(text="Retake")
+            self.retake_btn.pack(side=tk.LEFT, padx=4)
         elif state == RESULT:
             self.retake_btn.config(text="Try Again")
             self.retake_btn.pack(side=tk.LEFT, padx=4)

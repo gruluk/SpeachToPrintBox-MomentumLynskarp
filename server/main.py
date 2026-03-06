@@ -18,7 +18,7 @@ import uuid
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, Form, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from PIL import Image
 
@@ -89,12 +89,26 @@ async def generate(image: UploadFile = File(...)):
     img_b64 = base64.b64encode(buf.getvalue()).decode()
 
     char_id = str(uuid.uuid4())
-    character = {"id": char_id, "image_b64": img_b64}
+    # Store without name/dino_type — Pi will call /publish once user fills them in
+    character = {"id": char_id, "image_b64": img_b64, "name": "", "dino_type": ""}
     characters.append(character)
 
-    await broadcast({"type": "new_character", **character})
-
     return {"id": char_id, "image_b64": img_b64}
+
+
+@app.post("/publish/{char_id}")
+async def publish_character(
+    char_id: str,
+    name: str = Form(""),
+    dino_type: str = Form(""),
+):
+    char = next((c for c in characters if c["id"] == char_id), None)
+    if not char:
+        return {"error": "not found"}
+    char["name"] = name
+    char["dino_type"] = dino_type
+    await broadcast({"type": "new_character", **char})
+    return {"ok": True}
 
 
 @app.get("/characters")
