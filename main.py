@@ -12,7 +12,6 @@ import usb.util
 from dotenv import load_dotenv
 from brother_ql.raster import BrotherQLRaster
 from brother_ql.conversion import convert
-from brother_ql.backends.helpers import send
 from brother_ql.labels import ALL_LABELS
 
 load_dotenv()
@@ -629,30 +628,71 @@ class App:
         self.dino_type = saved_dino
         threading.Thread(target=self._print_image, args=(composited,), daemon=True).start()
 
-    def _print_image(self, image: Image.Image):
+    def _usb_write(self, data: bytes) -> None:
+        """Send raw raster bytes directly to the printer, bypassing brother_ql's backend."""
         import gc
+        gc.collect()
+
+        dev = usb.core.find(idVendor=0x04f9, idProduct=0x20a8)
+        if dev is None:
+            raise RuntimeError("Printer not found")
+
+        try:
+            # Detach any kernel driver that may have (re-)claimed the device
+            try:
+                if dev.is_kernel_driver_active(0):
+                    dev.detach_kernel_driver(0)
+            except (usb.core.USBError, NotImplementedError):
+                pass
+
+            # Set configuration — if EBUSY, release the interface first and retry
+            try:
+                dev.set_configuration()
+            except usb.core.USBError as e:
+                if e.errno != 16:
+                    raise
+                try:
+                    usb.util.release_interface(dev, 0)
+                except Exception:
+                    pass
+                dev.set_configuration()
+
+            usb.util.claim_interface(dev, 0)
+
+            # Find the bulk-OUT endpoint dynamically
+            cfg = dev.get_active_configuration()
+            intf = cfg[(0, 0)]
+            ep_out = usb.util.find_descriptor(
+                intf,
+                custom_match=lambda e: usb.util.endpoint_direction(
+                    e.bEndpointAddress
+                ) == usb.util.ENDPOINT_OUT,
+            )
+            if ep_out is None:
+                raise RuntimeError("Bulk OUT endpoint not found")
+
+            # Stream data in 512-byte chunks
+            for offset in range(0, len(data), 512):
+                ep_out.write(data[offset : offset + 512], timeout=15000)
+
+        finally:
+            try:
+                usb.util.release_interface(dev, 0)
+            except Exception:
+                pass
+            usb.util.dispose_resources(dev)
+
+    def _print_image(self, image: Image.Image):
         try:
             if not hasattr(Image, "ANTIALIAS"):
                 Image.ANTIALIAS = Image.LANCZOS
-            # Force-close any stale USB handles (e.g. from printer poll or previous send())
-            gc.collect()
-            dev = usb.core.find(idVendor=0x04f9, idProduct=0x20a8)
-            if dev:
-                try:
-                    dev.reset()
-                except Exception:
-                    pass
-                usb.util.dispose_resources(dev)
-            time.sleep(1.0)  # give device time to settle after reset
 
             label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
             target_w, target_h_label = label_info.dots_printable
             content_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
-            # For continuous tape target_h_label==0; for die-cut use content_h centred on label
             target_h = content_h if target_h_label == 0 else target_h_label
 
             img = image.convert("RGB")
-            # Fit composite into the target width × content_h, then centre on full label
             if img.width != target_w or img.height != content_h:
                 img.thumbnail((target_w, content_h), Image.LANCZOS)
             canvas = Image.new("RGB", (target_w, target_h), "white")
@@ -662,12 +702,9 @@ class App:
 
             qlr = BrotherQLRaster(PRINTER_MODEL)
             convert(qlr, [img], LABEL, cut=True, rotate="0", dpi_600=False)
-            send(
-                instructions=qlr.data,
-                printer_identifier=PRINTER_URI,
-                backend_identifier="pyusb",
-                blocking=True,
-            )
+
+            self._usb_write(qlr.data)
+
             self.root.after(0, self.status_var.set, "Printed! Press Try Again to go again.")
             self.root.after(0, self.print_var.set, "Label sent to printer.")
         except Exception as e:
