@@ -115,8 +115,14 @@ class App:
     def _setup_window(self):
         self.root.title("Speech To Print Box")
         self.root.configure(bg=BG)
-        self.root.attributes("-fullscreen", True)
-        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.root.overrideredirect(True)          # remove window decorations
+        self.root.after(50, self._set_geometry)   # set geometry after first render
+        self.root.bind("<Escape>", lambda e: self._on_close())
+
+    def _set_geometry(self):
+        w = self.root.winfo_screenwidth()
+        h = self.root.winfo_screenheight()
+        self.root.geometry(f"{w}x{h}+0+0")
 
     def _build_ui(self):
         # --- Top bar ---
@@ -189,21 +195,53 @@ class App:
         # --- Name input screen ---
         self.name_frame = tk.Frame(self.display_frame, bg=BG)
         tk.Label(self.name_frame, text="What's your name?",
-                 font=("Helvetica", 28, "bold"), fg=TEXT, bg=BG).pack(pady=(80, 24))
+                 font=("Helvetica", 22, "bold"), fg=TEXT, bg=BG).pack(pady=(28, 12))
         self.name_entry = tk.Entry(
-            self.name_frame, font=("Helvetica", 32), fg=TEXT,
+            self.name_frame, font=("Helvetica", 26), fg=TEXT,
             justify=tk.CENTER, relief=tk.FLAT,
-            bg="white", insertbackground=TEXT, width=18,
+            bg="white", insertbackground=TEXT, width=20,
         )
-        self.name_entry.pack(pady=8, ipady=14)
-        self.name_entry.bind("<Return>", lambda e: self._on_name_next())
+        self.name_entry.pack(pady=4, ipady=10)
+        self.name_entry.bind("<Return>", lambda _e: self._on_name_next())
         tk.Button(
             self.name_frame, text="Next →",
-            font=("Helvetica", 16, "bold"), fg="white", bg=SUCCESS,
+            font=("Helvetica", 14, "bold"), fg="white", bg=SUCCESS,
             activebackground=SUCCESS_ACTIVE, activeforeground="white",
-            relief=tk.FLAT, padx=40, pady=14, cursor="hand2", borderwidth=0,
+            relief=tk.FLAT, padx=32, pady=10, cursor="hand2", borderwidth=0,
             command=self._on_name_next,
-        ).pack(pady=24)
+        ).pack(pady=10)
+
+        # On-screen QWERTY keyboard
+        kb_frame = tk.Frame(self.name_frame, bg=BG)
+        kb_frame.pack(pady=(6, 12))
+        KEY_ROWS = [list("QWERTYUIOP"), list("ASDFGHJKL"), list("ZXCVBNM")]
+        for row in KEY_ROWS:
+            rf = tk.Frame(kb_frame, bg=BG)
+            rf.pack(pady=2)
+            for ch in row:
+                tk.Button(
+                    rf, text=ch,
+                    font=("Helvetica", 13, "bold"), fg=TEXT, bg="white",
+                    activebackground="#c8dde8", activeforeground=TEXT,
+                    relief=tk.FLAT, width=3, pady=9, borderwidth=0,
+                    command=lambda c=ch: self._key_press(c),
+                ).pack(side=tk.LEFT, padx=2)
+        bot_row = tk.Frame(kb_frame, bg=BG)
+        bot_row.pack(pady=2)
+        tk.Button(
+            bot_row, text="⌫",
+            font=("Helvetica", 13, "bold"), fg="white", bg=MUTED,
+            activebackground="#3a7080", activeforeground="white",
+            relief=tk.FLAT, padx=18, pady=9, borderwidth=0,
+            command=self._key_backspace,
+        ).pack(side=tk.LEFT, padx=4)
+        tk.Button(
+            bot_row, text="SPACE",
+            font=("Helvetica", 13, "bold"), fg=TEXT, bg="white",
+            activebackground="#c8dde8", activeforeground=TEXT,
+            relief=tk.FLAT, padx=60, pady=9, borderwidth=0,
+            command=lambda: self._key_press(" "),
+        ).pack(side=tk.LEFT, padx=4)
 
         # --- Questionnaire screen ---
         self.quiz_frame = tk.Frame(self.display_frame, bg=BG)
@@ -317,6 +355,14 @@ class App:
         self.name_entry.delete(0, tk.END)
         self._show_state(NAME_INPUT)
         self.status_var.set("Enter your name")
+
+    def _key_press(self, char: str):
+        self.name_entry.insert(tk.END, char)
+
+    def _key_backspace(self):
+        current = self.name_entry.get()
+        if current:
+            self.name_entry.delete(len(current) - 1, tk.END)
 
     def _on_name_next(self):
         name = self.name_entry.get().strip()
