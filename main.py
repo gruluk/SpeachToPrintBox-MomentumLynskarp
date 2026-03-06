@@ -39,6 +39,7 @@ LABEL           = "103" if PRODUCTION_MODE else "103x164"
 PRINT_HEIGHT_MM = 45    # content height for both continuous and die-cut
 
 # --- States ---
+START         = "start"
 PREVIEW       = "preview"
 VALIDATING    = "validating"
 REVIEW        = "review"
@@ -106,9 +107,11 @@ class App:
         self._gen_error = ""
         self._gen_char_id = ""
 
+        self._countdown_n = 0  # >0 while countdown is active
+
         self._setup_window()
         self._build_ui()
-        self._show_state(PREVIEW)
+        self._show_state(START)
         self._poll_printer()
         self._update_preview()
 
@@ -125,36 +128,128 @@ class App:
         self.root.geometry(f"{w}x{h}+0+0")
 
     def _build_ui(self):
-        # --- Top bar ---
-        top_bar = tk.Frame(self.root, bg=BG)
-        top_bar.pack(side=tk.TOP, fill=tk.X, padx=16, pady=(12, 4))
+        # ── Layer 0: full-screen camera / image (behind everything) ──────
+        self.display_label = tk.Label(self.root, bg="black")
+        self.display_label.place(x=0, y=0, relwidth=1, relheight=1)
 
-        tk.Label(top_bar, text="BYTEFEST '26",
-                 font=("Helvetica", 18, "bold"), fg=TEXT, bg=BG).pack(side=tk.LEFT)
+        # ── Layer 1a: Start screen ────────────────────────────────────────
+        self.start_frame = tk.Frame(self.root, bg=BG)
+        self._start_logo_photo = None
+        try:
+            logo_img = Image.open(
+                os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
+            ).convert("RGBA")
+            logo_img.thumbnail((420, 420), Image.LANCZOS)
+            self._start_logo_photo = ImageTk.PhotoImage(logo_img)
+            tk.Label(
+                self.start_frame, image=self._start_logo_photo, bg=BG
+            ).pack(expand=True, pady=(0, 16))
+        except Exception:
+            tk.Label(
+                self.start_frame, text="BYTEFEST '26",
+                font=("Helvetica", 48, "bold"), fg=TEXT, bg=BG,
+            ).pack(expand=True)
+        tk.Button(
+            self.start_frame, text="START",
+            font=("Helvetica", 28, "bold"), fg="white", bg=ACCENT,
+            activebackground=ACCENT_ACTIVE, activeforeground="white",
+            relief=tk.FLAT, padx=60, pady=20, cursor="hand2", borderwidth=0,
+            command=self._on_start,
+        ).pack(pady=(0, 80))
 
-        printer_frame = tk.Frame(top_bar, bg=BG)
-        printer_frame.pack(side=tk.RIGHT)
-        self.printer_dot = tk.Label(printer_frame, text="●", font=("Helvetica", 10), fg=MUTED, bg=BG)
+        # ── Layer 1b: Name input screen ───────────────────────────────────
+        self.name_frame = tk.Frame(self.root, bg=BG)
+        tk.Label(self.name_frame, text="What's your name?",
+                 font=("Helvetica", 22, "bold"), fg=TEXT, bg=BG).pack(pady=(28, 12))
+        self.name_entry = tk.Entry(
+            self.name_frame, font=("Helvetica", 26), fg=TEXT,
+            justify=tk.CENTER, relief=tk.FLAT,
+            bg="white", insertbackground=TEXT, width=20,
+        )
+        self.name_entry.pack(pady=4, ipady=10)
+        self.name_entry.bind("<Return>", lambda _e: self._on_name_next())
+        tk.Button(
+            self.name_frame, text="Next →",
+            font=("Helvetica", 14, "bold"), fg="white", bg=SUCCESS,
+            activebackground=SUCCESS_ACTIVE, activeforeground="white",
+            relief=tk.FLAT, padx=32, pady=10, cursor="hand2", borderwidth=0,
+            command=self._on_name_next,
+        ).pack(pady=10)
+        kb_frame = tk.Frame(self.name_frame, bg=BG)
+        kb_frame.pack(pady=(6, 12))
+        KEY_ROWS = [list("QWERTYUIOPÅ"), list("ASDFGHJKLØÆ"), list("ZXCVBNM")]
+        for row in KEY_ROWS:
+            rf = tk.Frame(kb_frame, bg=BG)
+            rf.pack(pady=2)
+            for ch in row:
+                tk.Button(
+                    rf, text=ch,
+                    font=("Helvetica", 13, "bold"), fg=TEXT, bg="white",
+                    activebackground="#c8dde8", activeforeground=TEXT,
+                    relief=tk.FLAT, width=3, pady=9, borderwidth=0,
+                    command=lambda c=ch: self._key_press(c),
+                ).pack(side=tk.LEFT, padx=2)
+        bot_row = tk.Frame(kb_frame, bg=BG)
+        bot_row.pack(pady=2)
+        tk.Button(
+            bot_row, text="BKSP",
+            font=("Helvetica", 13, "bold"), fg="white", bg=MUTED,
+            activebackground="#3a7080", activeforeground="white",
+            relief=tk.FLAT, padx=18, pady=9, borderwidth=0,
+            command=self._key_backspace,
+        ).pack(side=tk.LEFT, padx=4)
+        tk.Button(
+            bot_row, text="SPACE",
+            font=("Helvetica", 13, "bold"), fg=TEXT, bg="white",
+            activebackground="#c8dde8", activeforeground=TEXT,
+            relief=tk.FLAT, padx=60, pady=9, borderwidth=0,
+            command=lambda: self._key_press(" "),
+        ).pack(side=tk.LEFT, padx=4)
+
+        # ── Layer 1c: Questionnaire screen ────────────────────────────────
+        self.quiz_frame = tk.Frame(self.root, bg=BG)
+        self.quiz_counter_var = tk.StringVar()
+        tk.Label(self.quiz_frame, textvariable=self.quiz_counter_var,
+                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack(pady=(24, 4))
+        self.quiz_q_var = tk.StringVar()
+        tk.Label(self.quiz_frame, textvariable=self.quiz_q_var,
+                 font=("Helvetica", 20, "bold"), fg=TEXT, bg=BG,
+                 wraplength=720).pack(pady=(0, 20))
+        self.quiz_btns_frame = tk.Frame(self.quiz_frame, bg=BG)
+        self.quiz_btns_frame.pack(fill=tk.X, padx=80)
+
+        # ── Layer 1d: Waiting screen ──────────────────────────────────────
+        self.waiting_frame = tk.Frame(self.root, bg=BG)
+        tk.Label(self.waiting_frame, text="Almost ready...",
+                 font=("Helvetica", 28, "bold"), fg=TEXT, bg=BG).pack(expand=True)
+        tk.Label(self.waiting_frame, text="Generating your character",
+                 font=("Helvetica", 14), fg=MUTED, bg=BG).pack(pady=(0, 80))
+
+        # ── Layer 2: Top bar overlay ──────────────────────────────────────
+        self.top_bar = tk.Frame(self.root, bg=BG)
+        tk.Label(self.top_bar, text="BYTEFEST '26",
+                 font=("Helvetica", 18, "bold"), fg=TEXT, bg=BG).pack(
+                 side=tk.LEFT, padx=16, pady=10)
+        printer_frame = tk.Frame(self.top_bar, bg=BG)
+        printer_frame.pack(side=tk.RIGHT, padx=16, pady=10)
+        self.printer_dot = tk.Label(printer_frame, text="●",
+                                    font=("Helvetica", 10), fg=MUTED, bg=BG)
         self.printer_dot.pack(side=tk.LEFT, padx=(0, 4))
         self.printer_status_var = tk.StringVar(value="Checking printer...")
         tk.Label(printer_frame, textvariable=self.printer_status_var,
                  font=("Helvetica", 10), fg=MUTED, bg=BG).pack(side=tk.LEFT)
 
-        # --- Bottom bar ---
-        bottom_bar = tk.Frame(self.root, bg=BG)
-        bottom_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=12)
-
+        # ── Layer 3: Bottom bar overlay ───────────────────────────────────
+        self.bottom_bar = tk.Frame(self.root, bg=BG)
         self.print_var = tk.StringVar(value="")
-        tk.Label(bottom_bar, textvariable=self.print_var,
+        tk.Label(self.bottom_bar, textvariable=self.print_var,
                  font=("Helvetica", 10), fg=MUTED, bg=BG).pack()
-
-        self.status_var = tk.StringVar(value="Look at the camera and press Take Photo!")
-        self.status_label = tk.Label(bottom_bar, textvariable=self.status_var,
+        self.status_var = tk.StringVar(value="")
+        self.status_label = tk.Label(self.bottom_bar, textvariable=self.status_var,
                  font=("Helvetica", 11), fg=MUTED, bg=BG)
         self.status_label.pack(pady=(0, 8))
-
-        self.btn_frame = tk.Frame(bottom_bar, bg=BG)
-        self.btn_frame.pack()
+        self.btn_frame = tk.Frame(self.bottom_bar, bg=BG)
+        self.btn_frame.pack(pady=(0, 12))
 
         self.take_btn = tk.Button(
             self.btn_frame, text="Take Photo",
@@ -185,88 +280,11 @@ class App:
             command=self._proceed_to_name,
         )
 
-        # --- Display area (fills middle) ---
-        self.display_frame = tk.Frame(self.root, bg=DISPLAY_BG)
-        self.display_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
-        self.display_label = tk.Label(self.display_frame, bg=DISPLAY_BG)
-        self.display_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-
-        # --- Name input screen ---
-        self.name_frame = tk.Frame(self.display_frame, bg=BG)
-        tk.Label(self.name_frame, text="What's your name?",
-                 font=("Helvetica", 22, "bold"), fg=TEXT, bg=BG).pack(pady=(28, 12))
-        self.name_entry = tk.Entry(
-            self.name_frame, font=("Helvetica", 26), fg=TEXT,
-            justify=tk.CENTER, relief=tk.FLAT,
-            bg="white", insertbackground=TEXT, width=20,
-        )
-        self.name_entry.pack(pady=4, ipady=10)
-        self.name_entry.bind("<Return>", lambda _e: self._on_name_next())
-        tk.Button(
-            self.name_frame, text="Next →",
-            font=("Helvetica", 14, "bold"), fg="white", bg=SUCCESS,
-            activebackground=SUCCESS_ACTIVE, activeforeground="white",
-            relief=tk.FLAT, padx=32, pady=10, cursor="hand2", borderwidth=0,
-            command=self._on_name_next,
-        ).pack(pady=10)
-
-        # On-screen QWERTY keyboard
-        kb_frame = tk.Frame(self.name_frame, bg=BG)
-        kb_frame.pack(pady=(6, 12))
-        KEY_ROWS = [list("QWERTYUIOPÅ"), list("ASDFGHJKLØÆ"), list("ZXCVBNM")]
-        for row in KEY_ROWS:
-            rf = tk.Frame(kb_frame, bg=BG)
-            rf.pack(pady=2)
-            for ch in row:
-                tk.Button(
-                    rf, text=ch,
-                    font=("Helvetica", 13, "bold"), fg=TEXT, bg="white",
-                    activebackground="#c8dde8", activeforeground=TEXT,
-                    relief=tk.FLAT, width=3, pady=9, borderwidth=0,
-                    command=lambda c=ch: self._key_press(c),
-                ).pack(side=tk.LEFT, padx=2)
-        bot_row = tk.Frame(kb_frame, bg=BG)
-        bot_row.pack(pady=2)
-        tk.Button(
-            bot_row, text="⌫",
-            font=("Helvetica", 13, "bold"), fg="white", bg=MUTED,
-            activebackground="#3a7080", activeforeground="white",
-            relief=tk.FLAT, padx=18, pady=9, borderwidth=0,
-            command=self._key_backspace,
-        ).pack(side=tk.LEFT, padx=4)
-        tk.Button(
-            bot_row, text="SPACE",
-            font=("Helvetica", 13, "bold"), fg=TEXT, bg="white",
-            activebackground="#c8dde8", activeforeground=TEXT,
-            relief=tk.FLAT, padx=60, pady=9, borderwidth=0,
-            command=lambda: self._key_press(" "),
-        ).pack(side=tk.LEFT, padx=4)
-
-        # --- Questionnaire screen ---
-        self.quiz_frame = tk.Frame(self.display_frame, bg=BG)
-        self.quiz_counter_var = tk.StringVar()
-        tk.Label(self.quiz_frame, textvariable=self.quiz_counter_var,
-                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack(pady=(24, 4))
-        self.quiz_q_var = tk.StringVar()
-        tk.Label(self.quiz_frame, textvariable=self.quiz_q_var,
-                 font=("Helvetica", 20, "bold"), fg=TEXT, bg=BG,
-                 wraplength=720).pack(pady=(0, 20))
-        self.quiz_btns_frame = tk.Frame(self.quiz_frame, bg=BG)
-        self.quiz_btns_frame.pack(fill=tk.X, padx=80)
-
-        # --- Waiting screen ---
-        self.waiting_frame = tk.Frame(self.display_frame, bg=BG)
-        tk.Label(self.waiting_frame, text="✨ Almost ready...",
-                 font=("Helvetica", 28, "bold"), fg=TEXT, bg=BG).pack(expand=True)
-        tk.Label(self.waiting_frame, text="Generating your character",
-                 font=("Helvetica", 14), fg=MUTED, bg=BG).pack(pady=(0, 80))
-
     # --- Preview loop ---
 
     def _display_size(self):
-        w = self.display_frame.winfo_width() or 640
-        h = self.display_frame.winfo_height() or 480
+        w = self.root.winfo_width() or 640
+        h = self.root.winfo_height() or 480
         return w, h
 
     def _fit_size(self, image: Image.Image):
@@ -279,6 +297,23 @@ class App:
             try:
                 frame = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
                 display = frame.resize(self._fit_size(frame), Image.BILINEAR)
+                if self._countdown_n > 0:
+                    draw = ImageDraw.Draw(display)
+                    txt = str(self._countdown_n)
+                    font_size = min(display.width, display.height) // 2
+                    try:
+                        fnt = ImageFont.truetype(
+                            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                            font_size,
+                        )
+                    except Exception:
+                        fnt = ImageFont.load_default()
+                    bbox = fnt.getbbox(txt)
+                    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                    x = (display.width - tw) // 2 - bbox[0]
+                    y = (display.height - th) // 2 - bbox[1]
+                    draw.text((x + 4, y + 4), txt, fill=(0, 0, 0), font=fnt)
+                    draw.text((x, y), txt, fill=(255, 255, 255), font=fnt)
                 photo = ImageTk.PhotoImage(display)
                 self.display_label.config(image=photo)
                 self.display_label.image = photo
@@ -294,7 +329,27 @@ class App:
         buf.seek(0)
         return buf.getvalue()
 
+    def _on_start(self):
+        self._show_state(PREVIEW)
+        self.status_var.set("Look at the camera and press Take Photo!")
+        self.status_label.config(fg=MUTED)
+
     def _take_photo(self):
+        self._countdown_n = 3
+        self.take_btn.config(state=tk.DISABLED)
+        self.status_var.set("Get ready...")
+        self.root.after(1000, self._countdown_tick)
+
+    def _countdown_tick(self):
+        self._countdown_n -= 1
+        if self._countdown_n > 0:
+            self.root.after(1000, self._countdown_tick)
+        else:
+            self._countdown_n = 0
+            self._actually_take_photo()
+
+    def _actually_take_photo(self):
+        self.take_btn.config(state=tk.NORMAL)
         self.captured_photo = self.camera.get_frame().transpose(Image.FLIP_LEFT_RIGHT)
         display = self.captured_photo.resize(self._fit_size(self.captured_photo), Image.BILINEAR)
         photo = ImageTk.PhotoImage(display)
@@ -350,9 +405,11 @@ class App:
         self._gen_result = None
         self._gen_ready = False
         self._gen_error = ""
+        self._countdown_n = 0
         self._show_state(PREVIEW)
         self.status_var.set("Look at the camera and press Take Photo!")
         self.status_label.config(fg=MUTED)
+        self.take_btn.config(state=tk.NORMAL)
 
     def _proceed_to_name(self):
         self.name_entry.delete(0, tk.END)
@@ -607,23 +664,30 @@ class App:
     def _show_state(self, state: str):
         self.state = state
 
-        # Show/hide main content area
-        self.display_label.place_forget()
-        self.name_frame.place_forget()
-        self.quiz_frame.place_forget()
-        self.waiting_frame.place_forget()
+        # Hide all content overlays
+        for w in (self.start_frame, self.name_frame, self.quiz_frame, self.waiting_frame):
+            w.place_forget()
+        self.top_bar.place_forget()
+        self.bottom_bar.place_forget()
 
-        if state in (PREVIEW, VALIDATING, REVIEW, PROCESSING, RESULT):
-            self.display_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-        elif state == NAME_INPUT:
-            self.name_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        if state == START:
+            self.start_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+            return
+
+        # All non-start states show the top & bottom bar overlaid on the camera/image
+        self.top_bar.place(x=0, y=0, relwidth=1)
+        self.bottom_bar.place(relx=0, rely=1.0, anchor="sw", relwidth=1)
+
+        # Content overlays for non-camera screens
+        if state == NAME_INPUT:
+            self.name_frame.place(relx=0, rely=0, relwidth=1, relheight=0.86)
             self.root.after(100, self.name_entry.focus_set)
         elif state == QUESTIONNAIRE:
-            self.quiz_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+            self.quiz_frame.place(relx=0, rely=0, relwidth=1, relheight=0.86)
         elif state == WAITING:
             self.waiting_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-        # Show/hide buttons
+        # Buttons
         self.take_btn.pack_forget()
         self.retake_btn.pack_forget()
         self.debug_btn.pack_forget()
