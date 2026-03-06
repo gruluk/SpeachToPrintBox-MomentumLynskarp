@@ -267,7 +267,7 @@ class App:
     def _debug_print(self):
         self._show_state(PROCESSING)
         self.status_var.set("Debug printing...")
-        image = Image.open(os.path.join(os.path.dirname(__file__), "assets", "style_reference.png"))
+        image = Image.open(os.path.join(os.path.dirname(__file__), "assets", "style_reference.PNG"))
         threading.Thread(target=self._print_image, args=(image,), daemon=True).start()
 
     def _show_state(self, state: str):
