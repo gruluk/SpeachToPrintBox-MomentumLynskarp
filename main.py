@@ -227,30 +227,20 @@ class App:
         tk.Label(self.waiting_frame, text="Generating your character",
                  font=("Helvetica", 14), fg=MUTED, bg=BG).pack(pady=(0, 80))
 
-        # ── Layer 2: Top bar overlay ──────────────────────────────────────
-        self.top_bar = tk.Frame(self.root, bg=BG)
-        tk.Label(self.top_bar, text="BYTEFEST '26",
-                 font=("Helvetica", 18, "bold"), fg=TEXT, bg=BG).pack(
-                 side=tk.LEFT, padx=16, pady=10)
-        printer_frame = tk.Frame(self.top_bar, bg=BG)
-        printer_frame.pack(side=tk.RIGHT, padx=16, pady=10)
-        self.printer_dot = tk.Label(printer_frame, text="●",
-                                    font=("Helvetica", 10), fg=MUTED, bg=BG)
-        self.printer_dot.pack(side=tk.LEFT, padx=(0, 4))
-        self.printer_status_var = tk.StringVar(value="Checking printer...")
-        tk.Label(printer_frame, textvariable=self.printer_status_var,
-                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack(side=tk.LEFT)
+        # ── Layer 2: Printer dot (floating, top-right corner) ────────────
+        self.printer_dot = tk.Label(self.root, text="●",
+                                    font=("Helvetica", 10), fg=MUTED, bg="black")
 
-        # ── Layer 3: Bottom bar overlay ───────────────────────────────────
-        self.bottom_bar = tk.Frame(self.root, bg=BG)
+        # ── Layer 3: Bottom overlay (compact, centered) ───────────────────
+        self.bottom_bar = tk.Frame(self.root, bg="black")
         self.print_var = tk.StringVar(value="")
         tk.Label(self.bottom_bar, textvariable=self.print_var,
-                 font=("Helvetica", 10), fg=MUTED, bg=BG).pack()
+                 font=("Helvetica", 10), fg="#888888", bg="black").pack()
         self.status_var = tk.StringVar(value="")
         self.status_label = tk.Label(self.bottom_bar, textvariable=self.status_var,
-                 font=("Helvetica", 11), fg=MUTED, bg=BG)
-        self.status_label.pack(pady=(0, 8))
-        self.btn_frame = tk.Frame(self.bottom_bar, bg=BG)
+                 font=("Helvetica", 11), fg="white", bg="black")
+        self.status_label.pack(pady=(4, 4))
+        self.btn_frame = tk.Frame(self.bottom_bar, bg="black")
         self.btn_frame.pack(pady=(0, 12))
 
         self.take_btn = tk.Button(
@@ -691,16 +681,16 @@ class App:
         # Hide all content overlays
         for w in (self.start_frame, self.name_frame, self.quiz_frame, self.waiting_frame):
             w.place_forget()
-        self.top_bar.place_forget()
         self.bottom_bar.place_forget()
+        self.printer_dot.place_forget()
 
         if state == START:
             self.start_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
             return
 
-        # All non-start states show the top & bottom bar overlaid on the camera/image
-        self.top_bar.place(x=0, y=0, relwidth=1)
-        self.bottom_bar.place(relx=0, rely=1.0, anchor="sw", relwidth=1)
+        # All non-start states show the bottom overlay and printer dot
+        self.bottom_bar.place(relx=0.5, rely=1.0, anchor="s")
+        self.printer_dot.place(relx=1.0, rely=0.0, anchor="ne", x=-8, y=8)
 
         # Content overlays for non-camera screens
         if state == NAME_INPUT:
@@ -748,12 +738,7 @@ class App:
         self.root.after(0, self._update_printer_indicator, connected)
 
     def _update_printer_indicator(self, connected: bool):
-        if connected:
-            self.printer_dot.config(fg=SUCCESS)
-            self.printer_status_var.set("Printer connected")
-        else:
-            self.printer_dot.config(fg=ACCENT)
-            self.printer_status_var.set("Printer offline")
+        self.printer_dot.config(fg=SUCCESS if connected else MUTED)
 
     def _on_close(self):
         self.camera.close()

@@ -7,7 +7,7 @@ class Camera:
     def __init__(self):
         self.picam2 = Picamera2()
         config = self.picam2.create_video_configuration(
-            main={"size": (640, 480), "format": "RGB888"}
+            main={"size": (640, 480)}
         )
         self.picam2.configure(config)
         self._latest: Image.Image | None = None
@@ -19,8 +19,7 @@ class Camera:
     def _loop(self):
         while self._running:
             try:
-                arr = self.picam2.capture_array("main")
-                img = Image.fromarray(arr).convert("RGB")
+                img = self.picam2.capture_image("main").convert("RGB")
                 with self._lock:
                     self._latest = img
             except Exception:
