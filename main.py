@@ -214,7 +214,7 @@ class App:
         # On-screen QWERTY keyboard
         kb_frame = tk.Frame(self.name_frame, bg=BG)
         kb_frame.pack(pady=(6, 12))
-        KEY_ROWS = [list("QWERTYUIOP"), list("ASDFGHJKL"), list("ZXCVBNM")]
+        KEY_ROWS = [list("QWERTYUIOPÅ"), list("ASDFGHJKLØÆ"), list("ZXCVBNM")]
         for row in KEY_ROWS:
             rf = tk.Frame(kb_frame, bg=BG)
             rf.pack(pady=2)
@@ -323,12 +323,15 @@ class App:
             self.root.after(0, self._on_validation_fail, message)
 
     def _on_validation_ok(self):
+        if self.captured_photo is None:
+            return
         # Start generation immediately while user fills in name + quiz
         self._gen_result = None
         self._gen_ready = False
         self._gen_error = ""
         self._gen_char_id = ""
-        threading.Thread(target=self._process, daemon=True).start()
+        photo_bytes = self._photo_to_jpeg_bytes()  # capture before thread starts
+        threading.Thread(target=self._process, args=(photo_bytes,), daemon=True).start()
 
         self._show_state(REVIEW)
         self.status_var.set("Happy with the photo?")
@@ -426,11 +429,11 @@ class App:
             self.status_label.config(fg=WARNING)
             self._show_state(REVIEW)
 
-    def _process(self):
+    def _process(self, photo_bytes: bytes):
         try:
             resp = requests.post(
                 f"{SERVER_URL}/generate",
-                files={"image": ("photo.jpg", self._photo_to_jpeg_bytes(), "image/jpeg")},
+                files={"image": ("photo.jpg", photo_bytes, "image/jpeg")},
                 timeout=120,
             )
             resp.raise_for_status()
