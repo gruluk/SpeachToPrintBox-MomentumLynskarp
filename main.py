@@ -4,9 +4,11 @@ from collections import Counter
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 import threading
+import time
 import os
 import requests
 import usb.core
+import usb.util
 from dotenv import load_dotenv
 from brother_ql.raster import BrotherQLRaster
 from brother_ql.conversion import convert
@@ -643,7 +645,12 @@ class App:
                 Image.ANTIALIAS = Image.LANCZOS
             dev = usb.core.find(idVendor=0x04f9, idProduct=0x20a8)
             if dev:
-                dev.reset()
+                try:
+                    dev.reset()
+                except Exception:
+                    pass
+                usb.util.dispose_resources(dev)  # fully drop the handle so brother_ql can claim it
+            time.sleep(0.5)
 
             label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
             target_w, target_h_label = label_info.dots_printable
