@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from brother_ql.raster import BrotherQLRaster
 from brother_ql.conversion import convert
 from brother_ql.backends.helpers import send
+from brother_ql.labels import ALL_LABELS
 
 load_dotenv()
 
@@ -246,8 +247,16 @@ class App:
             dev = usb.core.find(idVendor=0x04f9, idProduct=0x20a8)
             if dev:
                 dev.reset()
+            label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
+            target_w, target_h = label_info.dots_printable
+            img = image.convert("RGB")
+            if target_h > 0:  # die-cut: resize to fit, center on white canvas
+                img.thumbnail((target_w, target_h), Image.LANCZOS)
+                canvas = Image.new("RGB", (target_w, target_h), "white")
+                canvas.paste(img, ((target_w - img.width) // 2, (target_h - img.height) // 2))
+                img = canvas
             qlr = BrotherQLRaster(PRINTER_MODEL)
-            convert(qlr, [image.convert("RGB")], LABEL, cut=True, rotate="0", dpi_600=False)
+            convert(qlr, [img], LABEL, cut=True, rotate="0", dpi_600=False)
             send(
                 instructions=qlr.data,
                 printer_identifier=PRINTER_URI,
