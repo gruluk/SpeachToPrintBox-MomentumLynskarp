@@ -108,6 +108,14 @@ class App:
             command=self._retake,
         )
 
+        self.debug_btn = tk.Button(
+            self.btn_frame, text="Debug Print",
+            font=("Helvetica", 14, "bold"), fg="white", bg=WARNING,
+            activebackground="#7a4508", activeforeground="white",
+            relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
+            command=self._debug_print,
+        )
+
         self.generate_btn = tk.Button(
             self.btn_frame, text="Generate & Print",
             font=("Helvetica", 14, "bold"), fg="white", bg=SUCCESS,
@@ -256,14 +264,22 @@ class App:
         finally:
             self.root.after(0, self._show_state, RESULT)
 
+    def _debug_print(self):
+        self._show_state(PROCESSING)
+        self.status_var.set("Debug printing...")
+        image = Image.open(os.path.join(os.path.dirname(__file__), "assets", "style_reference.png"))
+        threading.Thread(target=self._print_image, args=(image,), daemon=True).start()
+
     def _show_state(self, state: str):
         self.state = state
         self.take_btn.pack_forget()
         self.retake_btn.pack_forget()
+        self.debug_btn.pack_forget()
         self.generate_btn.pack_forget()
 
         if state == PREVIEW:
             self.take_btn.pack(side=tk.LEFT, padx=4)
+            self.debug_btn.pack(side=tk.LEFT, padx=4)
         elif state == VALIDATING:
             self.retake_btn.config(text="Retake")
             self.retake_btn.pack(side=tk.LEFT, padx=4)
