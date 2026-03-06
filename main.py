@@ -233,6 +233,8 @@ class App:
 
     def _print_image(self, image: Image.Image):
         try:
+            if not hasattr(Image, "ANTIALIAS"):
+                Image.ANTIALIAS = Image.LANCZOS
             qlr = BrotherQLRaster(PRINTER_MODEL)
             convert(qlr, [image.convert("RGB")], LABEL, cut=True, rotate="0", dpi_600=False)
             send(
