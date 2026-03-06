@@ -31,7 +31,7 @@ WARNING = "#a05c10"      # dark amber — readable on light background
 # --- Printer ---
 PRINTER_MODEL = "QL-1110NWB"
 PRINTER_URI   = "usb://0x04f9:0x20a8"
-LABEL         = "103"  # 103 mm continuous tape — change to "62" for 62mm roll
+LABEL         = "103x164"  # 103mm x 164mm die-cut (testing) — change to "103" for event roll
 
 # --- States ---
 PREVIEW = "preview"
