@@ -244,6 +244,7 @@ class App:
             self.root.after(0, self.status_var.set, "Printed! Press Retake to go again.")
             self.root.after(0, self.print_var.set, "Label sent to printer.")
         except Exception as e:
+            print(f"[print error] {e}", flush=True)
             self.root.after(0, self.status_var.set, "Done! Press Retake to go again.")
             self.root.after(0, self.print_var.set, f"Print failed: {e}")
         finally:
