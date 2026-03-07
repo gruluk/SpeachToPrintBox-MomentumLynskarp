@@ -503,6 +503,37 @@ h2 {
   box-shadow: var(--pixel-shadow);
 }
 
+/* --- Dino intro --- */
+
+.dino-intro-title {
+  font-family: var(--pixel-font);
+  font-size: 1.4rem;
+  color: var(--blue-dark);
+  line-height: 1.5;
+}
+
+.dino-intro-sub {
+  font-family: var(--pixel-font);
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.9;
+  max-width: 520px;
+}
+
+.dino-intro-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-end;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.dino-intro-img {
+  width: min(130px, 18vw);
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 4px 0 rgba(0,0,0,0.12));
+}
+
 /* --- Questionnaire --- */
 
 .q-progress {

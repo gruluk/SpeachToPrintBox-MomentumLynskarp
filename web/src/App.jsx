@@ -9,6 +9,7 @@ import QuestionnaireScreen from './components/QuestionnaireScreen'
 import WaitingScreen from './components/WaitingScreen'
 import ResultScreen from './components/ResultScreen'
 import DinoRevealScreen from './components/DinoRevealScreen'
+import DinoIntroScreen from './components/DinoIntroScreen'
 
 const QUESTIONS = [
   {
@@ -127,7 +128,7 @@ export default function App() {
 
   const handleNameSubmit = useCallback((n) => {
     setName(n)
-    setState('QUESTIONNAIRE')
+    setState('DINO_INTRO')
   }, [])
 
   const handleQuestionsDone = useCallback((ans) => {
@@ -193,8 +194,11 @@ export default function App() {
       {state === 'NAME_INPUT' && (
         <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('REVIEW')} />
       )}
+      {state === 'DINO_INTRO' && (
+        <DinoIntroScreen onContinue={() => setState('QUESTIONNAIRE')} />
+      )}
       {state === 'QUESTIONNAIRE' && (
-        <QuestionnaireScreen questions={QUESTIONS} onDone={handleQuestionsDone} onBack={() => setState('NAME_INPUT')} />
+        <QuestionnaireScreen questions={QUESTIONS} onDone={handleQuestionsDone} onBack={() => setState('DINO_INTRO')} />
       )}
       {state === 'DINO_REVEAL' && (
         <DinoRevealScreen dinoKey={dinoKey} dinoName={dinoName} onContinue={() => setState('WAITING')} />
