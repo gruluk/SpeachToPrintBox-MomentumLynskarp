@@ -1,6 +1,9 @@
+import SceneDecorations from './SceneDecorations'
+
 export default function ReviewScreen({ photoUrl, validating, onOk, onRetake }) {
   return (
     <div className="screen center">
+      <SceneDecorations seed={2} />
       <h2>How's this?</h2>
       <div className="camera-circle">
         <img src={photoUrl} alt="Your photo" className="review-photo" />

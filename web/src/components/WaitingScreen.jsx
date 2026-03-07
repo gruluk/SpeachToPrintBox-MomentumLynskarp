@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import SceneDecorations from './SceneDecorations'
 
 export default function WaitingScreen({ genReadyRef, genResultRef, genErrorRef, onReady, onError }) {
   useEffect(() => {
@@ -16,6 +17,7 @@ export default function WaitingScreen({ genReadyRef, genResultRef, genErrorRef, 
 
   return (
     <div className="screen center">
+      <SceneDecorations seed={6} />
       <div className="spinner" />
       <p className="status-text">Creating your pixel art portrait...</p>
       <p className="status-sub">This takes about 30–60 seconds</p>

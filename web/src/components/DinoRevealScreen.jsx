@@ -1,3 +1,5 @@
+import SceneDecorations from './SceneDecorations'
+
 const base = import.meta.env.BASE_URL
 
 const DINO_IMAGES = {
@@ -10,6 +12,7 @@ const DINO_IMAGES = {
 export default function DinoRevealScreen({ dinoKey, dinoName, onContinue }) {
   return (
     <div className="screen center">
+      <SceneDecorations seed={5} />
       <p className="dino-reveal-label">You are a...</p>
       <img
         src={`${base}${DINO_IMAGES[dinoKey]}`}

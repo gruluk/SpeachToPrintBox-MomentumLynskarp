@@ -333,6 +333,14 @@ h2 {
   50%       { transform: translateY(-18px); }
 }
 
+/* Scene decorations (random dinos/bushes on non-start screens) */
+.scene-deco {
+  position: absolute;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Meteor */
 .meteor {
   position: absolute;

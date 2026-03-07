@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import SceneDecorations from './SceneDecorations'
 
 export default function ResultScreen({ resultData, name, dinoName, answers, onPublish, onDone }) {
   const publishedRef = useRef(false)
@@ -16,6 +17,7 @@ export default function ResultScreen({ resultData, name, dinoName, answers, onPu
 
   return (
     <div className="screen center">
+      <SceneDecorations seed={7} />
       <h2>Your portrait is ready!</h2>
       <p className="result-name">{name} — the {dinoName}</p>
       {imgSrc && (
