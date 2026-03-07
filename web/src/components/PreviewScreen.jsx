@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function PreviewScreen({ onCapture, errorMsg }) {
+export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [countdown, setCountdown] = useState(null)
@@ -78,13 +78,22 @@ export default function PreviewScreen({ onCapture, errorMsg }) {
         <div className="countdown">{countdown}</div>
       )}
       {errorMsg && <p className="error overlay-error">{errorMsg}</p>}
-      <button
-        className="btn-capture"
-        onClick={capture}
-        disabled={capturing}
-      >
-        {capturing ? '...' : '📸 Take Photo'}
-      </button>
+      <div className="capture-bar">
+        <button
+          className="btn-secondary btn-cancel"
+          onClick={onCancel}
+          disabled={capturing}
+        >
+          Cancel
+        </button>
+        <button
+          className="btn-capture"
+          onClick={capture}
+          disabled={capturing}
+        >
+          {capturing ? '...' : '📸 Take Photo'}
+        </button>
+      </div>
     </div>
   )
 }

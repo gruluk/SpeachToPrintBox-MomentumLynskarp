@@ -263,11 +263,22 @@ h2 {
   white-space: nowrap;
 }
 
-.btn-capture {
+.capture-bar {
   position: relative;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 2.5rem;
-  background: var(--orange-brand);
+}
+
+.btn-cancel {
+  font-size: 1.1rem;
+  padding: 1rem 1.75rem;
+}
+
+.btn-capture {
+  background: var(--green-brand);
   color: white;
   border: none;
   border-radius: 50px;
@@ -277,7 +288,7 @@ h2 {
   cursor: pointer;
   transition: background 0.12s;
 }
-.btn-capture:active { background: #d97c10; }
+.btn-capture:active { background: var(--green-dark); }
 .btn-capture:disabled { opacity: 0.5; cursor: default; }
 
 /* --- Review --- */
@@ -288,6 +299,7 @@ h2 {
   border-radius: 12px;
   object-fit: contain;
   border: 3px solid var(--blue-brand);
+  transform: scaleX(-1);
 }
 
 /* --- Spinner --- */

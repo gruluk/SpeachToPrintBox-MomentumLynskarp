@@ -177,7 +177,7 @@ export default function App() {
         <StartScreen onStart={() => { setErrorMsg(''); setState('PREVIEW') }} errorMsg={errorMsg} />
       )}
       {state === 'PREVIEW' && (
-        <PreviewScreen onCapture={handleCapture} errorMsg={errorMsg} />
+        <PreviewScreen onCapture={handleCapture} onCancel={() => { setErrorMsg(''); setState('START') }} errorMsg={errorMsg} />
       )}
       {state === 'VALIDATING' && (
         <ValidatingScreen />
