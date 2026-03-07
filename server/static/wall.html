@@ -9,7 +9,6 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      /* Sky gradient matching the logo's light blue background */
       background: linear-gradient(180deg, #c2e8f7 0%, #96cfe0 100%);
       width: 100vw;
       height: 100vh;
@@ -18,7 +17,6 @@
       cursor: none;
     }
 
-    /* Subtle 8px pixel grid overlay */
     body::before {
       content: '';
       position: fixed;
@@ -43,76 +41,79 @@
       pointer-events: none;
     }
 
-    #title-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
+    #title-row { display: flex; align-items: flex-start; gap: 10px; }
 
     #title {
-      color: #2d5c6a;          /* dark teal from the logo */
+      color: #2d5c6a;
       font-size: 42px;
       letter-spacing: 4px;
       line-height: 1;
-      text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.1);
     }
 
-    /* Olive-green circle badge — matches logo's '26 badge */
     #badge {
       background: #5b8c3e;
       color: #fff;
       font-size: 11px;
-      width: 36px;
-      height: 36px;
+      width: 36px; height: 36px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       margin-top: -6px;
       flex-shrink: 0;
-      text-shadow: none;
       box-shadow: 2px 2px 0 rgba(0,0,0,0.15);
     }
 
-    #subtitle {
-      color: #4a8a9e;
-      font-size: 10px;
-      letter-spacing: 5px;
-      margin-top: 10px;
-    }
+    #subtitle { color: #4a8a9e; font-size: 10px; letter-spacing: 5px; margin-top: 10px; }
 
-    /* Player count — white pill in top-right */
     #count {
       color: #2d5c6a;
       font-size: 9px;
-      background: rgba(255, 255, 255, 0.55);
-      border: 2px solid rgba(255, 255, 255, 0.85);
+      background: rgba(255,255,255,0.55);
+      border: 2px solid rgba(255,255,255,0.85);
       padding: 10px 16px;
       letter-spacing: 1px;
       transition: background 0.4s, color 0.4s;
     }
+    #count.pulse { background: rgba(255,255,255,0.9); color: #5b8c3e; }
 
-    #count.pulse {
-      background: rgba(255, 255, 255, 0.9);
-      color: #5b8c3e;
+    /* Only show header on screen 0 */
+    body.not-screen-0 #header { display: none; }
+
+    /* ── Screen indicator (small, bottom-right) ─────────── */
+    #screen-label {
+      position: fixed;
+      bottom: 26px; right: 12px;
+      font-size: 7px;
+      color: rgba(45,92,106,0.25);
+      z-index: 400;
+      pointer-events: none;
+      letter-spacing: 1px;
     }
 
     /* ── Pixel clouds ───────────────────────────────────── */
-    .cloud {
-      position: absolute;
-      pointer-events: none;
-      z-index: 1;
-      animation: drift linear infinite;
-    }
-
-    .cb {   /* cloud block */
-      position: absolute;
-      background: rgba(255, 255, 255, 0.72);
-    }
+    .cloud { position: absolute; pointer-events: none; z-index: 1; animation: drift linear infinite; }
+    .cb    { position: absolute; background: rgba(255,255,255,0.72); }
 
     @keyframes drift {
       from { transform: translateX(-320px); }
       to   { transform: translateX(calc(100vw + 320px)); }
+    }
+
+    /* ── Meteor ─────────────────────────────────────────── */
+    .wall-meteor {
+      position: fixed;
+      right: -12vw;
+      width: 7vw;
+      min-width: 80px;
+      image-rendering: pixelated;
+      pointer-events: none;
+      z-index: 3;
+      animation: meteor-wall 2.6s linear forwards;
+    }
+
+    @keyframes meteor-wall {
+      from { transform: translate(0, 0); }
+      to   { transform: translate(-130vw, 80vh); }
     }
 
     /* ── Ground strip ───────────────────────────────────── */
@@ -120,10 +121,9 @@
       position: fixed;
       bottom: 0; left: 0; right: 0;
       height: 20px;
-      background: #5ba4c0;   /* teal, like the dino */
+      background: #5ba4c0;
       z-index: 200;
     }
-
     #ground::before {
       content: '';
       position: absolute;
@@ -132,17 +132,22 @@
       background: #7bbdd4;
     }
 
-    /* ── Characters ─────────────────────────────────────── */
-    #world {
-      position: absolute;
-      inset: 0;
-      z-index: 10;
+    /* ── Ground scene ───────────────────────────────────── */
+    .ground-dino, .ground-bush {
+      position: fixed;
+      bottom: 20px;
+      image-rendering: pixelated;
+      pointer-events: none;
+      z-index: 205;
     }
+
+    /* ── Characters ─────────────────────────────────────── */
+    #world { position: fixed; inset: 0; z-index: 10; overflow: visible; }
 
     .char-wrap {
       position: absolute;
       text-align: center;
-      filter: drop-shadow(3px 8px 0 rgba(45, 92, 106, 0.2));
+      filter: drop-shadow(3px 8px 0 rgba(45,92,106,0.2));
       opacity: 0;
       animation:
         arrive     0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
@@ -167,15 +172,15 @@
 
     @keyframes arrive {
       0%   { opacity: 0; transform: translateY(40px) scale(0.75); }
-      100% { opacity: 1; transform: translateY(0)    scale(1);   }
+      100% { opacity: 1; transform: translateY(0)    scale(1);    }
     }
 
     @keyframes float {
       0%, 100% { transform: translateY(0);    }
-      50%       { transform: translateY(-12px); }
+      50%       { transform: translateY(-14px); }
     }
 
-    /* ── Scattered pixel squares (decoration) ───────────── */
+    /* ── Scattered pixel decorations ────────────────────── */
     .deco {
       position: absolute;
       pointer-events: none;
@@ -188,7 +193,7 @@
       50%       { opacity: 0.45; transform: scale(1.4); }
     }
 
-    /* ── Empty state ────────────────────────────────────── */
+    /* ── Empty state (screen 0 only) ────────────────────── */
     #empty {
       position: fixed;
       top: 50%; left: 50%;
@@ -197,19 +202,9 @@
       z-index: 5;
       pointer-events: none;
     }
-
-    #empty-main {
-      color: rgba(45, 92, 106, 0.22);
-      font-size: 13px;
-      line-height: 2.5;
-    }
-
-    #empty-sub {
-      color: rgba(45, 92, 106, 0.14);
-      font-size: 8px;
-      margin-top: 8px;
-      letter-spacing: 1px;
-    }
+    body.not-screen-0 #empty { display: none; }
+    #empty-main { color: rgba(45,92,106,0.22); font-size: 13px; line-height: 2.5; }
+    #empty-sub  { color: rgba(45,92,106,0.14); font-size: 8px; margin-top: 8px; letter-spacing: 1px; }
   </style>
 </head>
 <body>
@@ -228,24 +223,45 @@
   <div id="world"></div>
   <div id="ground"></div>
 
+  <!-- Ground scene: sits on top of the ground strip -->
+  <img src="/booth/bush_4.png"  class="ground-bush" style="left:0;         width:10vw;">
+  <img src="/booth/dino_3.png"  class="ground-dino" style="left:6vw;        width:12vw;">
+  <img src="/booth/bush_2.png"  class="ground-bush" style="left:18vw;       width:7vw;">
+  <img src="/booth/dino_1.png"  class="ground-dino" style="left:50%;transform:translateX(-50%); width:9vw;">
+  <img src="/booth/bush_1.png"  class="ground-bush" style="left:57vw;       width:11vw;">
+  <img src="/booth/dino_2.png"  class="ground-dino" style="right:6vw;       width:12vw;">
+  <img src="/booth/bush_3.png"  class="ground-bush" style="right:0;         width:9vw;">
+
   <div id="empty">
     <div id="empty-main">NO CHARACTERS YET</div>
     <div id="empty-sub">HEAD TO A BOOTH TO JOIN THE WALL</div>
   </div>
 
+  <div id="screen-label"></div>
+
   <script>
+    // ── Screen configuration ──────────────────────────────
+    // Each Pi opens /wall?screen=N  (N = 0, 1, 2, 3 left→right)
+    // The server works in world coordinates: 0–7680 wide × 0–1080 tall.
+    // This screen renders world X from [OFFSET, OFFSET + 1920).
+    const PARAMS         = new URLSearchParams(location.search);
+    const SCREEN_INDEX   = parseInt(PARAMS.get('screen') ?? '0', 10);
+    const LOGICAL_W      = 1920;   // logical pixels per screen — set Pi output to 1920×1080
+    const SCREEN_OFFSET  = SCREEN_INDEX * LOGICAL_W;
+
+    // Mark body so CSS can hide header / empty state on non-primary screens
+    if (SCREEN_INDEX !== 0) document.body.classList.add('not-screen-0');
+    document.getElementById('screen-label').textContent = `S${SCREEN_INDEX}`;
+
     const world   = document.getElementById('world');
     const countEl = document.getElementById('count');
     const emptyEl = document.getElementById('empty');
 
-    const CHAR_SIZE = 144;
-    const HEADER_H  = 120;
-    const GROUND_H  = 28;
-    const MARGIN    = 24;
-    const placed    = [];
+    const CHAR_SIZE  = 144;
+    const HEADER_H   = 120;
+    const GROUND_H   = Math.round(window.innerHeight * 0.22);
 
     // ── Pixel clouds ─────────────────────────────────────
-    // Cloud silhouette: 1 = filled pixel block
     const CLOUD_SHAPE = [
       [0,0,1,1,1,1,0,0],
       [0,1,1,1,1,1,1,0],
@@ -260,7 +276,6 @@
       el.style.top = yPx + 'px';
       el.style.animationDuration = durationSec + 's';
       el.style.animationDelay   = `-${durationSec * delayFrac}s`;
-
       CLOUD_SHAPE.forEach((row, ri) =>
         row.forEach((cell, ci) => {
           if (!cell) return;
@@ -278,89 +293,60 @@
     spawnCloud(145, 1.8, 65, 0.40);
 
     // ── Scattered pixel decorations ───────────────────────
-    const DECO_COLORS = ['#2d5c6a', '#5ba4c0', '#5b8c3e', '#7bbdd4', '#4a8a9e'];
+    const DECO_COLORS = ['#2d5c6a','#5ba4c0','#5b8c3e','#7bbdd4','#4a8a9e'];
     for (let i = 0; i < 22; i++) {
       const d = document.createElement('div');
       d.className = 'deco';
-      const sz = [4, 6, 8, 8][Math.floor(Math.random() * 4)];
+      const sz = [4,6,8,8][Math.floor(Math.random() * 4)];
       d.style.cssText = `
         width:${sz}px; height:${sz}px;
         background:${DECO_COLORS[Math.floor(Math.random() * DECO_COLORS.length)]};
         left:${2 + Math.random() * 96}vw;
-        top:${HEADER_H + Math.random() * (window.innerHeight - HEADER_H - GROUND_H - 20)}px;
+        top:${HEADER_H + Math.random() * (window.innerHeight - HEADER_H - GROUND_H)}px;
         animation-delay:${Math.random() * 3}s;
         animation-duration:${1.5 + Math.random() * 2.5}s;
       `;
       document.body.appendChild(d);
     }
 
-    // ── Character placement ───────────────────────────────
-    function findPosition() {
-      const maxX = window.innerWidth  - CHAR_SIZE - MARGIN;
-      const maxY = window.innerHeight - CHAR_SIZE - GROUND_H - MARGIN;
-
-      for (let i = 0; i < 80; i++) {
-        const x = MARGIN + Math.random() * (maxX - MARGIN);
-        const y = HEADER_H + Math.random() * (maxY - HEADER_H);
-        const gap = 16;
-        if (!placed.some(r =>
-          x < r.x + CHAR_SIZE + gap && x + CHAR_SIZE + gap > r.x &&
-          y < r.y + CHAR_SIZE + gap && y + CHAR_SIZE + gap > r.y
-        )) {
-              placed.push({ x, y, el: null });
-          return placed[placed.length - 1];
-        }
-      }
-      // Screen full — allow a little overlap
-      const x = MARGIN + Math.random() * (maxX - MARGIN);
-      const y = HEADER_H + Math.random() * (maxY - HEADER_H);
-      placed.push({ x, y, el: null });
-      return placed[placed.length - 1];
+    // ── Meteor ────────────────────────────────────────────
+    // Each screen runs its own meteor — they won't align across screens,
+    // but the effect is ambient decoration so that's fine.
+    function spawnMeteor() {
+      const el = document.createElement('img');
+      el.src = '/booth/meteor_1.png';
+      el.className = 'wall-meteor';
+      el.style.top = `${Math.random() * 30 - 5}vh`;
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove(), { once: true });
+      setTimeout(spawnMeteor, 12000 + Math.random() * 18000);
     }
+    setTimeout(spawnMeteor, 8000 + Math.random() * 12000);
 
+    // ── Character management ──────────────────────────────
     function updateCount() {
       const n = world.querySelectorAll('.char-wrap').length;
       if (n === 0) {
         emptyEl.style.display = '';
         countEl.textContent = 'WAITING FOR PLAYERS...';
       } else {
+        emptyEl.style.display = 'none';
         countEl.textContent = `${n} PLAYER${n !== 1 ? 'S' : ''} JOINED`;
       }
     }
 
-    function removeCharacter(id) {
-      const el = world.querySelector(`[data-id="${id}"]`);
-      if (el) {
-        el.style.transition = 'opacity 0.4s, transform 0.4s';
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(30px) scale(0.8)';
-        setTimeout(() => {
-          const idx = placed.findIndex(p => p.el === el);
-          if (idx !== -1) placed.splice(idx, 1);
-          el.remove();
-          updateCount();
-        }, 400);
-      }
-    }
-
-    function patchCharacter(id, name) {
-      const el = world.querySelector(`[data-id="${id}"]`);
-      if (!el) return;
-      const nameEl = el.querySelector('.char-name');
-      if (nameEl && name !== undefined) nameEl.textContent = name.toUpperCase();
-    }
-
-    function addCharacter(imageB64, name, id) {
-      emptyEl.style.display = 'none';
+    function addCharacter(imageB64, name, id, worldX, worldY) {
+      // localX is the position on THIS screen; may be negative or beyond viewport
+      // (browser clips it — that's how seamless edge-crossing works)
+      const localX = (worldX ?? Math.random() * LOGICAL_W) - SCREEN_OFFSET;
+      const localY = worldY ?? (HEADER_H + Math.random() * (window.innerHeight - CHAR_SIZE - GROUND_H - HEADER_H));
 
       const wrap = document.createElement('div');
       wrap.className = 'char-wrap';
       if (id) wrap.dataset.id = id;
 
-      const pos = findPosition();
-      pos.el = wrap;
-      wrap.style.left = pos.x + 'px';
-      wrap.style.top  = pos.y + 'px';
+      wrap.style.left = localX + 'px';
+      wrap.style.top  = localY + 'px';
       wrap.style.setProperty('--size',        CHAR_SIZE + 'px');
       wrap.style.setProperty('--float-dur',  (2.5 + Math.random() * 2.5) + 's');
       wrap.style.setProperty('--float-delay',(Math.random() * 4) + 's');
@@ -377,10 +363,42 @@
       }
 
       world.appendChild(wrap);
-
       updateCount();
-      countEl.classList.add('pulse');
-      setTimeout(() => countEl.classList.remove('pulse'), 1500);
+
+      if (SCREEN_INDEX === 0) {
+        countEl.classList.add('pulse');
+        setTimeout(() => countEl.classList.remove('pulse'), 1500);
+      }
+
+      // Enable position transitions after the arrive animation completes
+      setTimeout(() => {
+        wrap.style.transition = 'left 8s ease-in-out, top 8s ease-in-out';
+      }, 800);
+    }
+
+    function moveCharacter(id, worldX, worldY, dur) {
+      const el = world.querySelector(`[data-id="${id}"]`);
+      if (!el) return;
+      const localX = worldX - SCREEN_OFFSET;
+      el.style.transition = `left ${dur}s ease-in-out, top ${dur}s ease-in-out`;
+      el.style.left = localX + 'px';
+      el.style.top  = worldY + 'px';
+    }
+
+    function removeCharacter(id) {
+      const el = world.querySelector(`[data-id="${id}"]`);
+      if (!el) return;
+      el.style.transition = 'opacity 0.4s, transform 0.4s';
+      el.style.opacity    = '0';
+      el.style.transform  = 'translateY(30px) scale(0.8)';
+      setTimeout(() => { el.remove(); updateCount(); }, 400);
+    }
+
+    function patchCharacter(id, name) {
+      const el = world.querySelector(`[data-id="${id}"]`);
+      if (!el) return;
+      const nameEl = el.querySelector('.char-name');
+      if (nameEl && name !== undefined) nameEl.textContent = name.toUpperCase();
     }
 
     // ── WebSocket with auto-reconnect ─────────────────────
@@ -389,7 +407,8 @@
       const ws = new WebSocket(`${proto}//${location.host}/ws`);
       ws.onmessage = ({ data }) => {
         const msg = JSON.parse(data);
-        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id);
+        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id, msg.wpos_x, msg.wpos_y);
+        if (msg.type === 'move_character')   moveCharacter(msg.id, msg.x, msg.y, msg.dur);
         if (msg.type === 'remove_character') removeCharacter(msg.id);
         if (msg.type === 'update_character') patchCharacter(msg.id, msg.name);
       };

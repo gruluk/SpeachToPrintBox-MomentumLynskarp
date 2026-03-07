@@ -15,7 +15,9 @@ import base64
 import io
 import json
 import os
+import random
 import secrets
+import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -46,6 +48,45 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(_security)):
 characters: List[dict] = []
 connections: List[WebSocket] = []
 
+# ── TV wall world coordinates ─────────────────────────────────────────────────
+# The wall is 4 screens side-by-side. Each Pi opens /wall?screen=N and offsets
+# its rendering by N × _LOGICAL_SCREEN_W pixels.
+_LOGICAL_SCREEN_W = 1920   # configure each Pi to output 1920×1080
+_WORLD_W          = _LOGICAL_SCREEN_W * 4   # 7680 — full 4-screen width
+_WORLD_H          = 1080
+_WALL_HEADER_H    = 120    # keep characters below the header
+_WALL_GROUND_H    = 220    # keep characters above the ground-dino scene
+_WALL_CHAR_SIZE   = 144
+_WALL_MARGIN      = 24
+
+
+def _assign_world_pos(char: dict) -> None:
+    """Assign a random world-coordinate position (in-memory only, not persisted)."""
+    char['wpos_x'] = random.randint(_WALL_MARGIN,
+                                    _WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN)
+    char['wpos_y'] = random.randint(_WALL_HEADER_H,
+                                    _WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H)
+    char['next_move'] = time.time() + random.uniform(2, 12)
+
+
+async def _character_movement_loop() -> None:
+    """Pick new wander targets for each character and broadcast to all screens."""
+    while True:
+        await asyncio.sleep(0.5)
+        now = time.time()
+        for char in list(characters):
+            if char.get('next_move', 0) <= now:
+                x   = random.randint(_WALL_MARGIN,
+                                     _WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN)
+                y   = random.randint(_WALL_HEADER_H,
+                                     _WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H)
+                dur = round(random.uniform(5, 10), 1)
+                char['wpos_x']    = x
+                char['wpos_y']    = y
+                char['next_move'] = now + dur + random.uniform(3, 8)
+                await broadcast({'type': 'move_character',
+                                 'id': char['id'], 'x': x, 'y': y, 'dur': dur})
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,11 +94,20 @@ async def lifespan(app: FastAPI):
     try:
         loop = asyncio.get_event_loop()
         existing = await loop.run_in_executor(None, instant_db.get_all_characters)
+        for char in existing:
+            _assign_world_pos(char)
         characters.extend(existing)
         print(f"[startup] Restored {len(existing)} characters from InstantDB")
     except Exception as e:
         print(f"[startup] Could not restore characters from InstantDB: {e}")
+    # Start the wall movement loop
+    move_task = asyncio.create_task(_character_movement_loop())
     yield
+    move_task.cancel()
+    try:
+        await move_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(lifespan=lifespan)
@@ -122,6 +172,7 @@ async def generate(image: UploadFile = File(...)):
     char_id = str(uuid.uuid4())
     # Store without name/dino_type — Pi will call /publish once user fills them in
     character = {"id": char_id, "image_b64": img_b64, "name": "", "dino_type": ""}
+    _assign_world_pos(character)
     characters.append(character)
 
     return {"id": char_id, "image_b64": img_b64}
