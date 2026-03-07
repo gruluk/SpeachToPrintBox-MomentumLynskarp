@@ -2,36 +2,40 @@
 """
 Bytefest '26 — Mac print client
 
-Connects to the event server WebSocket and prints a label whenever
-a new character is published.
+Polls InstantDB for unprinted characters and prints them on the Brother
+QL-1110NWB label printer.
 
 Setup (one-time):
-  pip install websocket-client Pillow
+  pip install requests Pillow python-dotenv
   Install the official Brother QL-1110NWB driver from Brother's website
   Add the printer in System Settings → Printers
   Run `lpstat -p` to find the exact printer name, set PRINTER_NAME below
+  Add INSTANT_APP_ID and INSTANT_ADMIN_TOKEN to your .env file
 
 Run:
   python3 mac_print_client.py
 """
 
-import base64
-import json
 import os
 import subprocess
 import tempfile
 import time
 from io import BytesIO
+import base64
 
-import websocket
+import requests
 from PIL import Image, ImageDraw, ImageFont
+from dotenv import load_dotenv
 
-# ── Configuration ────────────────────────────────────────────────────────────
-SERVER_WS_URL = "wss://speachtoprintbox-production.up.railway.app/ws"
+load_dotenv()
+
+# ── Configuration ─────────────────────────────────────────────────────────────
 
 # Run `lpstat -p` to find the exact name — usually something like:
 #   Brother_QL-1110NWB  or  Brother_QL_1110NWB
 PRINTER_NAME = "Brother_QL_1110NWB"
+
+POLL_INTERVAL = 5  # seconds between InstantDB polls
 
 ASSETS_DIR    = os.path.join(os.path.dirname(__file__), "assets")
 LABEL_W_MM    = 103
@@ -43,8 +47,36 @@ DINO_NAMES = {
     "3": "Stegosaurus",
     "4": "Pterodactyl",
 }
-# ─────────────────────────────────────────────────────────────────────────────
 
+# ── InstantDB ─────────────────────────────────────────────────────────────────
+
+_INSTANT_BASE  = "https://api.instantdb.com"
+_APP_ID        = os.getenv("INSTANT_APP_ID", "")
+_ADMIN_TOKEN   = os.getenv("INSTANT_ADMIN_TOKEN", "")
+
+
+def _headers() -> dict:
+    return {
+        "Authorization": f"Bearer {_ADMIN_TOKEN}",
+        "App-Id": _APP_ID,
+        "Content-Type": "application/json",
+    }
+
+
+def get_unprinted() -> list[dict]:
+    payload = {"query": {"characters": {"$": {"where": {"printed": False}}}}}
+    r = requests.post(f"{_INSTANT_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+    return r.json().get("characters", [])
+
+
+def mark_printed(char_id: str) -> None:
+    payload = {"steps": [["update", "characters", char_id, {"printed": True}]]}
+    r = requests.post(f"{_INSTANT_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+# ── Label compositing ─────────────────────────────────────────────────────────
 
 def _find_font(size: int) -> ImageFont.FreeTypeFont:
     candidates = [
@@ -123,6 +155,8 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
     return canvas
 
 
+# ── Printing ──────────────────────────────────────────────────────────────────
+
 def print_label(image: Image.Image) -> None:
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         image.save(f, format="PNG")
@@ -145,54 +179,45 @@ def print_label(image: Image.Image) -> None:
         os.unlink(tmp_path)
 
 
-# ── WebSocket handlers ────────────────────────────────────────────────────────
+# ── Poll loop ─────────────────────────────────────────────────────────────────
 
-def on_message(ws, message):
-    try:
-        msg = json.loads(message)
-        if msg.get("type") != "new_character":
-            return
-        name = msg.get("name", "").strip()
-        if not name:
-            return  # character not yet published (no name yet)
-        dino_type = msg.get("dino_type", "1")
-        image_b64 = msg.get("image_b64", "")
-        if not image_b64:
-            return
+def process_character(char: dict) -> None:
+    char_id   = char["id"]
+    name      = char.get("name", "").strip()
+    dino_type = char.get("dino_type", "1")
+    image_b64 = char.get("image_b64", "")
 
-        print(f"[ws] printing: {name} ({DINO_NAMES.get(dino_type, dino_type)})")
-        img   = Image.open(BytesIO(base64.b64decode(image_b64)))
-        label = composite_label(img, name, dino_type)
-        print_label(label)
-    except Exception as e:
-        print(f"[error] {e}")
+    if not name or not image_b64:
+        print(f"[skip] {char_id} — missing name or image")
+        return
+
+    print(f"[print] {name} ({DINO_NAMES.get(dino_type, dino_type)})")
+    img   = Image.open(BytesIO(base64.b64decode(image_b64)))
+    label = composite_label(img, name, dino_type)
+    print_label(label)
+    mark_printed(char_id)
+    print(f"[db]    marked {char_id} as printed")
 
 
-def on_error(ws, error):
-    print(f"[ws] error: {error}")
+def poll_loop() -> None:
+    if not _APP_ID or not _ADMIN_TOKEN:
+        print("[error] INSTANT_APP_ID and INSTANT_ADMIN_TOKEN must be set in .env")
+        return
 
+    print(f"Bytefest '26 print client — printer: {PRINTER_NAME}")
+    print(f"Polling InstantDB every {POLL_INTERVAL}s for unprinted characters...")
 
-def on_close(ws, code, msg):
-    print(f"[ws] closed ({code}), reconnecting in 5s...")
-    time.sleep(5)
-    connect()
-
-
-def on_open(ws):
-    print(f"[ws] connected to {SERVER_WS_URL}")
-
-
-def connect():
-    ws = websocket.WebSocketApp(
-        SERVER_WS_URL,
-        on_open=on_open,
-        on_message=on_message,
-        on_error=on_error,
-        on_close=on_close,
-    )
-    ws.run_forever()
+    while True:
+        try:
+            unprinted = get_unprinted()
+            if unprinted:
+                print(f"[poll] {len(unprinted)} unprinted character(s)")
+                for char in unprinted:
+                    process_character(char)
+        except Exception as e:
+            print(f"[poll] error: {e}")
+        time.sleep(POLL_INTERVAL)
 
 
 if __name__ == "__main__":
-    print(f"Bytefest '26 print client — printer: {PRINTER_NAME}")
-    connect()
+    poll_loop()

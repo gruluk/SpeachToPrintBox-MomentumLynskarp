@@ -22,6 +22,7 @@ from fastapi import FastAPI, File, Form, UploadFile, WebSocket, WebSocketDisconn
 from fastapi.responses import HTMLResponse
 from PIL import Image
 
+import db as instant_db
 from generate import generate_image
 from validate import validate_photo
 
@@ -108,6 +109,17 @@ async def publish_character(
     char["name"] = name
     char["dino_type"] = dino_type
     await broadcast({"type": "new_character", **char})
+
+    # Persist to InstantDB (non-blocking — fire and forget)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None,
+            instant_db.publish_character,
+            char_id, name, dino_type, char["image_b64"],
+        )
+    except Exception as e:
+        print(f"[db] InstantDB write failed: {e}")
+
     return {"ok": True}
 
 

@@ -4,3 +4,4 @@ python-multipart
 openai
 Pillow
 python-dotenv
+httpx
