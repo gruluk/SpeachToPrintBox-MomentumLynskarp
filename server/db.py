@@ -81,6 +81,16 @@ def get_printed_ids() -> set:
     return {c["id"] for c in r.json().get("characters", [])}
 
 
+def get_all_characters() -> list[dict]:
+    """Return all character records from InstantDB, sorted by created_at."""
+    payload = {"query": {"characters": {}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=15)
+    r.raise_for_status()
+    chars = r.json().get("characters", [])
+    chars.sort(key=lambda c: c.get("created_at", 0))
+    return chars
+
+
 def get_unprinted() -> list[dict]:
     """Return all character records where printed == false."""
     payload = {"query": {"characters": {"$": {"where": {"printed": False}}}}}

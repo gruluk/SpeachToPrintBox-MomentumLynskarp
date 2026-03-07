@@ -17,6 +17,7 @@ import json
 import os
 import secrets
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional
 
@@ -40,11 +41,26 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(_security)):
         raise HTTPException(status_code=401, detail="Unauthorized",
                             headers={"WWW-Authenticate": "Basic"})
 
-app = FastAPI()
 
-# In-memory store — sufficient for a single event day
+# In-memory store — populated from InstantDB on startup
 characters: List[dict] = []
 connections: List[WebSocket] = []
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Restore all characters from InstantDB so a reboot/redeploy loses nothing
+    try:
+        loop = asyncio.get_event_loop()
+        existing = await loop.run_in_executor(None, instant_db.get_all_characters)
+        characters.extend(existing)
+        print(f"[startup] Restored {len(existing)} characters from InstantDB")
+    except Exception as e:
+        print(f"[startup] Could not restore characters from InstantDB: {e}")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 async def broadcast(message: dict):
