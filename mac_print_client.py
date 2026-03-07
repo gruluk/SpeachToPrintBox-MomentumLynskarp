@@ -37,15 +37,23 @@ PRINTER_NAME = "Brother_QL_1110NWB"
 
 POLL_INTERVAL = 5  # seconds between InstantDB polls
 
-ASSETS_DIR    = os.path.join(os.path.dirname(__file__), "assets")
-LABEL_W_MM    = 103
-CONTENT_H_MM  = 45
+ASSETS_DIR      = os.path.join(os.path.dirname(__file__), "assets")
+WEB_PUBLIC_DIR  = os.path.join(os.path.dirname(__file__), "web", "public")
+LABEL_W_MM      = 103
+CONTENT_H_MM    = 45
 
 DINO_NAMES = {
     "1": "Brachiosaurus",
     "2": "Triceratops",
     "3": "Stegosaurus",
     "4": "Pterodactyl",
+}
+
+DINO_IMAGES = {
+    "Brachiosaurus": "dino_1.png",
+    "Triceratops":   "dino_2.png",
+    "Stegosaurus":   "dino_3.png",
+    "Pterodactyl":   "dino_4.png",
 }
 
 # ── InstantDB ─────────────────────────────────────────────────────────────────
@@ -110,45 +118,53 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
 
     right_x = split_x + PAD
     right_w = target_w - right_x - PAD
+    top_h   = content_h // 5   # height for logo + dino icon row
 
-    # Logo (top right)
+    # Load dino sprite (pixel art — use NEAREST to keep crisp)
+    dino_img = None
+    if dino_type and dino_type in DINO_IMAGES:
+        dino_path = os.path.join(WEB_PUBLIC_DIR, DINO_IMAGES[dino_type])
+        try:
+            dino_img = Image.open(dino_path).convert("RGBA")
+            dino_img = dino_img.resize((top_h, top_h), Image.NEAREST)
+        except Exception:
+            dino_img = None
+
+    # Logo — shrink width to leave room for dino sprite
     logo_bottom = PAD
     try:
         logo = Image.open(
             os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
         ).convert("RGBA")
-        logo_h = content_h // 5
+        max_logo_w = right_w - (top_h + PAD) if dino_img else right_w
+        logo_h = top_h
         logo_w = int(logo.width * logo_h / logo.height)
-        if logo_w > right_w:
-            logo_w = right_w
+        if logo_w > max_logo_w:
+            logo_w = max_logo_w
             logo_h = int(logo.height * logo_w / logo.width)
         logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
-        canvas.paste(logo, (right_x, PAD), logo)
-        logo_bottom = PAD + logo_h
+        logo_y = PAD + (top_h - logo_h) // 2   # vertically centre within top_h
+        canvas.paste(logo, (right_x, logo_y), logo)
+        logo_bottom = PAD + top_h
     except Exception:
-        pass
+        logo_bottom = PAD + top_h
 
-    # Dino name (bottom right) — dino_type is already the full name
-    dino_label_size = max(16, content_h // 16)
-    draw.text(
-        (right_x, content_h - PAD - dino_label_size),
-        dino_type or "",
-        fill="#4a8a9e",
-        font=_find_font(dino_label_size),
-    )
-    dino_label_top = content_h - PAD - dino_label_size
+    # Dino sprite — right-aligned in the top row, next to logo
+    if dino_img:
+        dino_x = right_x + right_w - top_h
+        canvas.paste(dino_img, (dino_x, PAD), dino_img)
 
-    # Name (right middle)
+    # Name — fills all remaining vertical space below the logo/dino row
     name_area_top = logo_bottom + PAD
-    name_area_h   = dino_label_top - name_area_top - PAD
+    name_area_h   = content_h - name_area_top - PAD
     font_size = min(int(name_area_h * 0.80), 200)
-    font = _find_font(font_size)
     while font_size > 12:
         font = _find_font(font_size)
         bbox = font.getbbox(user_name)
         if (bbox[2] - bbox[0]) <= right_w:
             break
         font_size -= 4
+    font  = _find_font(font_size)
     name_y = name_area_top + (name_area_h - font_size) // 2
     draw.text((right_x, name_y), user_name, fill="#2d5c6a", font=font)
 

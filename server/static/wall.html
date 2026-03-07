@@ -190,24 +190,19 @@
     }
 
     .char-dino-flair {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      margin-top: 3px;
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(255,255,255,0.82);
+      padding: 2px;
+      line-height: 0;
     }
 
     .char-dino-icon {
-      width: 28px;
-      height: 28px;
+      display: block;
+      width: 32px;
+      height: 32px;
       image-rendering: pixelated;
-    }
-
-    .char-dino-label {
-      color: #5b8c3e;
-      font-size: 6px;
-      letter-spacing: 0.5px;
-      text-shadow: 1px 1px 0 rgba(255,255,255,0.85);
     }
 
     @keyframes arrive {
@@ -451,17 +446,10 @@
       if (dinoType && DINO_ICONS[dinoType]) {
         const flair = document.createElement('div');
         flair.className = 'char-dino-flair';
-
         const dinoImg = document.createElement('img');
         dinoImg.src = DINO_ICONS[dinoType];
         dinoImg.className = 'char-dino-icon';
         flair.appendChild(dinoImg);
-
-        const dinoLabel = document.createElement('span');
-        dinoLabel.className = 'char-dino-label';
-        dinoLabel.textContent = dinoType.toUpperCase();
-        flair.appendChild(dinoLabel);
-
         wrap.appendChild(flair);
       }
 
@@ -506,10 +494,8 @@
         if (nameEl) nameEl.textContent = name.toUpperCase();
       }
       if (dinoType !== undefined && DINO_ICONS[dinoType]) {
-        const dinoIcon  = el.querySelector('.char-dino-icon');
-        const dinoLabel = el.querySelector('.char-dino-label');
-        if (dinoIcon)  dinoIcon.src         = DINO_ICONS[dinoType];
-        if (dinoLabel) dinoLabel.textContent = dinoType.toUpperCase();
+        const dinoIcon = el.querySelector('.char-dino-icon');
+        if (dinoIcon) dinoIcon.src = DINO_ICONS[dinoType];
       }
     }
 
