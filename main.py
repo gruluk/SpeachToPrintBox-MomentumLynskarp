@@ -6,8 +6,7 @@ from io import BytesIO
 
 import requests
 import tkinter as tk
-import usb.core
-import usb.util
+import glob
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 
 from camera import Camera
@@ -369,12 +368,17 @@ class App:
         self.root.after(10000, self._poll_printer)
 
     def _check_printer(self):
+        """Check printer connection via sysfs — never opens the USB device."""
         connected = False
         try:
-            dev = usb.core.find(idVendor=PRINTER_VENDOR, idProduct=PRINTER_PRODUCT)
-            connected = dev is not None
-            if dev is not None:
-                usb.util.dispose_resources(dev)
+            vendor_hex = f"{PRINTER_VENDOR:04x}"
+            product_hex = f"{PRINTER_PRODUCT:04x}"
+            for path in glob.glob("/sys/bus/usb/devices/*/idVendor"):
+                if open(path).read().strip() == vendor_hex:
+                    prod_path = path.replace("idVendor", "idProduct")
+                    if open(prod_path).read().strip() == product_hex:
+                        connected = True
+                        break
         except Exception:
             pass
         self.root.after(0, self.printer_dot.set_connected, connected)
