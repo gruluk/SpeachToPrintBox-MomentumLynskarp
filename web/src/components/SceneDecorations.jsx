@@ -47,23 +47,42 @@ export default function SceneDecorations({ seed = 1 }) {
   }, [seed])
 
   const [meteorStyle, setMeteorStyle] = useState(null)
-  const timerRef = useRef(null)
+  const [meteorFrame, setMeteorFrame] = useState(1)
+  const timerRef  = useRef(null)
+  const frameRef  = useRef(null)
 
   useEffect(() => {
+    const DURATION = 2800
+    const FRAMES   = 5
+
     function schedule() {
       timerRef.current = setTimeout(() => {
         setMeteorStyle({ top: `${Math.random() * 30 - 5}vh` })
-        setTimeout(() => { setMeteorStyle(null); schedule() }, 2800)
+        setMeteorFrame(1)
+
+        let f = 1
+        frameRef.current = setInterval(() => {
+          f = Math.min(f + 1, FRAMES)
+          setMeteorFrame(f)
+          if (f === FRAMES) clearInterval(frameRef.current)
+        }, DURATION / FRAMES)
+
+        setTimeout(() => {
+          clearInterval(frameRef.current)
+          setMeteorStyle(null)
+          setMeteorFrame(1)
+          schedule()
+        }, DURATION)
       }, 12000 + Math.random() * 18000)
     }
     schedule()
-    return () => clearTimeout(timerRef.current)
+    return () => { clearTimeout(timerRef.current); clearInterval(frameRef.current) }
   }, [])
 
   return (
     <>
       {meteorStyle && (
-        <img src={`${base}meteor_1.png`} className="meteor" style={meteorStyle} alt="" />
+        <img src={`${base}meteor_${meteorFrame}.png`} className="meteor" style={meteorStyle} alt="" />
       )}
       {items.map((item, i) => (
         <img

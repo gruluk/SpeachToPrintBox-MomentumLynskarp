@@ -396,12 +396,20 @@
 
     // ── Meteor (per-screen ambient) ────────────────────────
     function spawnMeteor() {
+      const DURATION = 2600;
+      const FRAMES   = 5;
       const el = document.createElement('img');
       el.src = '/booth/meteor_1.png';
       el.className = 'wall-meteor';
       el.style.top = `${Math.random() * 30 - 5}vh`;
       document.body.appendChild(el);
-      el.addEventListener('animationend', () => el.remove(), { once: true });
+      let f = 1;
+      const frameInterval = setInterval(() => {
+        f = Math.min(f + 1, FRAMES);
+        el.src = `/booth/meteor_${f}.png`;
+        if (f === FRAMES) clearInterval(frameInterval);
+      }, DURATION / FRAMES);
+      el.addEventListener('animationend', () => { clearInterval(frameInterval); el.remove(); }, { once: true });
       setTimeout(spawnMeteor, 12000 + Math.random() * 18000);
     }
     setTimeout(spawnMeteor, 8000 + Math.random() * 12000);
