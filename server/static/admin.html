@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bytefest '26 — Admin</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e8eaf0;
+      --muted: #7a7f96;
+      --blue: #32ABD0;
+      --blue-dark: #1D7B91;
+      --orange: #FB9214;
+      --green: #539227;
+      --red: #e05252;
+      --red-dark: #b33c3c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: 0.05em;
+    }
+
+    .header-title span { color: var(--muted); font-weight: 400; }
+
+    #stats {
+      display: flex;
+      gap: 1.5rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    #stats strong { color: var(--text); }
+
+    /* ── Main ── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .toolbar input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      outline: none;
+      width: 220px;
+    }
+    .toolbar input:focus { border-color: var(--blue); }
+
+    .btn {
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+
+    .btn-blue  { background: var(--blue);     color: #fff; }
+    .btn-red   { background: var(--red);      color: #fff; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+    /* ── Table ── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .thumb {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      border-radius: 4px;
+      background: #111;
+      border: 1px solid var(--border);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .badge-green { background: rgba(83,146,39,0.2);  color: var(--green); }
+    .badge-muted { background: rgba(122,127,150,0.15); color: var(--muted); }
+
+    .action-row { display: flex; gap: 0.5rem; align-items: center; }
+
+    .btn-sm {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.775rem;
+      border-radius: 5px;
+    }
+
+    /* ── Edit modal ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      width: 380px;
+      max-width: 95vw;
+    }
+
+    .modal h3 { margin-bottom: 1.25rem; font-size: 1rem; }
+
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.4rem; }
+    .field input,
+    .field select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .field input:focus,
+    .field select:focus { border-color: var(--blue); }
+    .field select option { background: var(--surface); }
+
+    .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+
+    /* ── Empty / loading ── */
+    .empty {
+      text-align: center;
+      padding: 4rem;
+      color: var(--muted);
+    }
+
+    #loading { text-align: center; padding: 3rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">BYTEFEST '26 <span>/ Admin</span></div>
+  <div id="stats">Loading...</div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="Search name or dino…" oninput="renderTable()" />
+    <button class="btn btn-ghost" onclick="load()">↺ Refresh</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:72px">Art</th>
+          <th>Name</th>
+          <th>Dino type</th>
+          <th>Created</th>
+          <th>Printed</th>
+          <th style="width:140px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="6" id="loading">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Edit modal -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h3>Edit character</h3>
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="edit-name" maxlength="60" />
+    </div>
+    <div class="field">
+      <label>Dino type</label>
+      <select id="edit-dino">
+        <option value="Brachiosaurus">Brachiosaurus</option>
+        <option value="Triceratops">Triceratops</option>
+        <option value="Stegosaurus">Stegosaurus</option>
+        <option value="Pterodactyl">Pterodactyl</option>
+        <option value="">— none —</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-blue" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let characters = []
+  let editingId = null
+
+  // ── Data ──────────────────────────────────────────────────
+
+  async function load() {
+    try {
+      const res = await fetch('/characters')
+      characters = await res.json()
+      renderTable()
+      renderStats()
+    } catch (e) {
+      document.getElementById('tbody').innerHTML =
+        '<tr><td colspan="6" class="empty">Failed to load — check server</td></tr>'
+    }
+  }
+
+  function renderStats() {
+    const total   = characters.length
+    const printed = characters.filter(c => c.printed).length
+    document.getElementById('stats').innerHTML =
+      `<span><strong>${total}</strong> characters</span>` +
+      `<span><strong>${printed}</strong> printed</span>`
+  }
+
+  function renderTable() {
+    const q     = document.getElementById('search').value.toLowerCase()
+    const tbody = document.getElementById('tbody')
+    const rows  = characters.filter(c =>
+      !q || (c.name || '').toLowerCase().includes(q) ||
+            (c.dino_type || '').toLowerCase().includes(q)
+    )
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No characters found</td></tr>'
+      return
+    }
+
+    tbody.innerHTML = rows.map(c => `
+      <tr id="row-${c.id}">
+        <td>
+          <img class="thumb"
+               src="data:image/png;base64,${c.image_b64}"
+               alt="${escape(c.name)}" />
+        </td>
+        <td>${esc(c.name) || '<span style="color:var(--muted)">—</span>'}</td>
+        <td>${esc(c.dino_type) || '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="color:var(--muted)">${fmtDate(c.created_at)}</td>
+        <td>
+          <span class="badge ${c.printed ? 'badge-green' : 'badge-muted'}">
+            ${c.printed ? 'Printed' : 'Pending'}
+          </span>
+        </td>
+        <td>
+          <div class="action-row">
+            <button class="btn btn-blue btn-sm" onclick="openEdit('${c.id}')">Edit</button>
+            <button class="btn btn-red  btn-sm" onclick="deleteChar('${c.id}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('')
+  }
+
+  // ── Delete ─────────────────────────────────────────────────
+
+  async function deleteChar(id) {
+    const char = characters.find(c => c.id === id)
+    const label = char?.name ? `"${char.name}"` : 'this character'
+    if (!confirm(`Delete ${label}? This cannot be undone.`)) return
+
+    const row = document.getElementById(`row-${id}`)
+    if (row) row.style.opacity = '0.4'
+
+    const res = await fetch(`/admin/api/characters/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      characters = characters.filter(c => c.id !== id)
+      renderTable()
+      renderStats()
+    } else {
+      if (row) row.style.opacity = ''
+      alert('Delete failed — see server logs')
+    }
+  }
+
+  // ── Edit ───────────────────────────────────────────────────
+
+  function openEdit(id) {
+    const char = characters.find(c => c.id === id)
+    if (!char) return
+    editingId = id
+    document.getElementById('edit-name').value  = char.name      || ''
+    document.getElementById('edit-dino').value  = char.dino_type || ''
+    document.getElementById('modal').classList.add('open')
+    document.getElementById('edit-name').focus()
+  }
+
+  function closeModal() {
+    editingId = null
+    document.getElementById('modal').classList.remove('open')
+  }
+
+  async function saveEdit() {
+    if (!editingId) return
+    const name      = document.getElementById('edit-name').value.trim()
+    const dino_type = document.getElementById('edit-dino').value
+
+    const res = await fetch(`/admin/api/characters/${editingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, dino_type }),
+    })
+
+    if (res.ok) {
+      const updated = characters.find(c => c.id === editingId)
+      if (updated) { updated.name = name; updated.dino_type = dino_type }
+      closeModal()
+      renderTable()
+    } else {
+      alert('Save failed — see server logs')
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────
+
+  function esc(s) {
+    if (!s) return ''
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  function fmtDate(ts) {
+    if (!ts) return '—'
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal()
+  })
+
+  // Close modal on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal()
+  })
+
+  load()
+</script>
+</body>
+</html>

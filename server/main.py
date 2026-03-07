@@ -14,17 +14,31 @@ import asyncio
 import base64
 import io
 import json
+import os
+import secrets
 import uuid
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
-from fastapi import FastAPI, File, Form, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from PIL import Image
+from pydantic import BaseModel
 
 import db as instant_db
 from generate import generate_image
 from validate import validate_photo
+
+_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "bytefest26")
+_security = HTTPBasic()
+
+
+def require_admin(credentials: HTTPBasicCredentials = Depends(_security)):
+    ok = secrets.compare_digest(credentials.password.encode(), _ADMIN_PASSWORD.encode())
+    if not ok:
+        raise HTTPException(status_code=401, detail="Unauthorized",
+                            headers={"WWW-Authenticate": "Basic"})
 
 app = FastAPI()
 
@@ -143,6 +157,47 @@ async def websocket_endpoint(ws: WebSocket):
     except WebSocketDisconnect:
         if ws in connections:
             connections.remove(ws)
+
+
+# --- Admin panel ---
+
+class CharacterPatch(BaseModel):
+    name: Optional[str] = None
+    dino_type: Optional[str] = None
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(_=Depends(require_admin)):
+    return (Path(__file__).parent / "static" / "admin.html").read_text()
+
+
+@app.delete("/admin/api/characters/{char_id}")
+async def admin_delete_character(char_id: str, _=Depends(require_admin)):
+    char = next((c for c in characters if c["id"] == char_id), None)
+    if not char:
+        raise HTTPException(status_code=404, detail="not found")
+    characters.remove(char)
+    await broadcast({"type": "remove_character", "id": char_id})
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.delete_character, char_id
+        )
+    except Exception as e:
+        print(f"[db] delete failed: {e}")
+    return {"ok": True}
+
+
+@app.patch("/admin/api/characters/{char_id}")
+async def admin_update_character(char_id: str, body: CharacterPatch, _=Depends(require_admin)):
+    char = next((c for c in characters if c["id"] == char_id), None)
+    if not char:
+        raise HTTPException(status_code=404, detail="not found")
+    if body.name is not None:
+        char["name"] = body.name
+    if body.dino_type is not None:
+        char["dino_type"] = body.dino_type
+    await broadcast({"type": "update_character", **char})
+    return {"ok": True, **char}
 
 
 # --- Web booth SPA ---

@@ -49,6 +49,15 @@ def publish_character(char_id: str, name: str, dino_type: str, image_b64: str) -
     r.raise_for_status()
 
 
+def delete_character(char_id: str) -> None:
+    """Delete a character record from InstantDB."""
+    payload = {
+        "steps": [["delete", "characters", char_id]]
+    }
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
 def mark_printed(char_id: str) -> None:
     """Mark an existing character as printed."""
     payload = {

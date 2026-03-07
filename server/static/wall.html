@@ -307,26 +307,60 @@
           x < r.x + CHAR_SIZE + gap && x + CHAR_SIZE + gap > r.x &&
           y < r.y + CHAR_SIZE + gap && y + CHAR_SIZE + gap > r.y
         )) {
-          placed.push({ x, y });
-          return { x, y };
+              placed.push({ x, y, el: null });
+          return placed[placed.length - 1];
         }
       }
       // Screen full — allow a little overlap
       const x = MARGIN + Math.random() * (maxX - MARGIN);
       const y = HEADER_H + Math.random() * (maxY - HEADER_H);
-      placed.push({ x, y });
-      return { x, y };
+      placed.push({ x, y, el: null });
+      return placed[placed.length - 1];
     }
 
-    function addCharacter(imageB64, name) {
+    function updateCount() {
+      const n = world.querySelectorAll('.char-wrap').length;
+      if (n === 0) {
+        emptyEl.style.display = '';
+        countEl.textContent = 'WAITING FOR PLAYERS...';
+      } else {
+        countEl.textContent = `${n} PLAYER${n !== 1 ? 'S' : ''} JOINED`;
+      }
+    }
+
+    function removeCharacter(id) {
+      const el = world.querySelector(`[data-id="${id}"]`);
+      if (el) {
+        el.style.transition = 'opacity 0.4s, transform 0.4s';
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px) scale(0.8)';
+        setTimeout(() => {
+          const idx = placed.findIndex(p => p.el === el);
+          if (idx !== -1) placed.splice(idx, 1);
+          el.remove();
+          updateCount();
+        }, 400);
+      }
+    }
+
+    function patchCharacter(id, name) {
+      const el = world.querySelector(`[data-id="${id}"]`);
+      if (!el) return;
+      const nameEl = el.querySelector('.char-name');
+      if (nameEl && name !== undefined) nameEl.textContent = name.toUpperCase();
+    }
+
+    function addCharacter(imageB64, name, id) {
       emptyEl.style.display = 'none';
 
       const wrap = document.createElement('div');
       wrap.className = 'char-wrap';
+      if (id) wrap.dataset.id = id;
 
-      const { x, y } = findPosition();
-      wrap.style.left = x + 'px';
-      wrap.style.top  = y + 'px';
+      const pos = findPosition();
+      pos.el = wrap;
+      wrap.style.left = pos.x + 'px';
+      wrap.style.top  = pos.y + 'px';
       wrap.style.setProperty('--size',        CHAR_SIZE + 'px');
       wrap.style.setProperty('--float-dur',  (2.5 + Math.random() * 2.5) + 's');
       wrap.style.setProperty('--float-delay',(Math.random() * 4) + 's');
@@ -344,8 +378,7 @@
 
       world.appendChild(wrap);
 
-      const n = world.querySelectorAll('.char-wrap').length;
-      countEl.textContent = `${n} PLAYER${n !== 1 ? 'S' : ''} JOINED`;
+      updateCount();
       countEl.classList.add('pulse');
       setTimeout(() => countEl.classList.remove('pulse'), 1500);
     }
@@ -356,7 +389,9 @@
       const ws = new WebSocket(`${proto}//${location.host}/ws`);
       ws.onmessage = ({ data }) => {
         const msg = JSON.parse(data);
-        if (msg.type === 'new_character') addCharacter(msg.image_b64, msg.name);
+        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id);
+        if (msg.type === 'remove_character') removeCharacter(msg.id);
+        if (msg.type === 'update_character') patchCharacter(msg.id, msg.name);
       };
       ws.onclose = () => setTimeout(connect, 3000);
     }
