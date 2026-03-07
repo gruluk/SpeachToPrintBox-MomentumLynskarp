@@ -464,6 +464,13 @@
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+      ws.onopen = () => {
+        // Clear stale characters so reconnect doesn't create duplicates
+        world.innerHTML = '';
+        updateCount();
+      };
+
       ws.onmessage = ({ data }) => {
         const msg = JSON.parse(data);
         if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id, msg.x, msg.y);
@@ -471,7 +478,16 @@
         if (msg.type === 'remove_character') removeCharacter(msg.id);
         if (msg.type === 'update_character') patchCharacter(msg.id, msg.name);
       };
-      ws.onclose = () => setTimeout(connect, 3000);
+
+      // Keepalive ping every 25s — prevents Railway's proxy from closing idle WS
+      const ping = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) ws.send('ping');
+      }, 25000);
+
+      ws.onclose = () => {
+        clearInterval(ping);
+        setTimeout(connect, 3000);
+      };
     }
 
     connect();

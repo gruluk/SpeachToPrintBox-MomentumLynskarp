@@ -84,33 +84,38 @@ async def _character_movement_loop() -> None:
     y_max = float(_WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H)
 
     while True:
-        await asyncio.sleep(_PHYSICS_TICK)
-        if not characters:
-            continue
+        try:
+            await asyncio.sleep(_PHYSICS_TICK)
+            if not characters:
+                continue
 
-        for char in list(characters):
-            char['x'] += char.get('vx', 0) * _PHYSICS_TICK
-            char['y'] += char.get('vy', 0) * _PHYSICS_TICK
+            for char in list(characters):
+                char['x'] = char.get('x', 0.0) + char.get('vx', 0) * _PHYSICS_TICK
+                char['y'] = char.get('y', 0.0) + char.get('vy', 0) * _PHYSICS_TICK
 
-            if char['x'] < x_min:
-                char['x'] = x_min
-                char['vx'] = abs(char['vx'])
-            elif char['x'] > x_max:
-                char['x'] = x_max
-                char['vx'] = -abs(char['vx'])
+                if char['x'] < x_min:
+                    char['x'] = x_min
+                    char['vx'] = abs(char.get('vx', 1))
+                elif char['x'] > x_max:
+                    char['x'] = x_max
+                    char['vx'] = -abs(char.get('vx', 1))
 
-            if char['y'] < y_min:
-                char['y'] = y_min
-                char['vy'] = abs(char['vy'])
-            elif char['y'] > y_max:
-                char['y'] = y_max
-                char['vy'] = -abs(char['vy'])
+                if char['y'] < y_min:
+                    char['y'] = y_min
+                    char['vy'] = abs(char.get('vy', 1))
+                elif char['y'] > y_max:
+                    char['y'] = y_max
+                    char['vy'] = -abs(char.get('vy', 1))
 
-        await broadcast({
-            'type': 'positions',
-            'chars': [{'id': c['id'], 'x': round(c['x']), 'y': round(c['y'])}
-                      for c in characters],
-        })
+            await broadcast({
+                'type': 'positions',
+                'chars': [{'id': c['id'], 'x': round(c['x']), 'y': round(c['y'])}
+                          for c in characters],
+            })
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            print(f"[physics] tick error: {e}")
 
 
 @asynccontextmanager
