@@ -6,5 +6,4 @@ output.png
 generated_images/
 .venv/
 venv/
-server/static/web/
 web/node_modules/
