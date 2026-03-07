@@ -238,17 +238,18 @@ h2 {
 .btn-answer {
   background: white;
   color: var(--text);
-  padding: 0.85rem 1.25rem;
-  font-size: 0.65rem;
-  text-align: left;
+  padding: 1.1rem 1rem;
+  font-size: 0.8rem;
+  text-align: center;
 
   &::after {
     border-right: var(--px) solid color-mix(in hsl, white 65%, #000);
     border-bottom: var(--px) solid color-mix(in hsl, white 65%, #000);
   }
-  &:hover:not(:disabled) {
-    background: var(--blue-pale);
-  }
+}
+
+@media (hover: hover) {
+  .btn-answer:hover:not(:disabled) { background: var(--blue-pale); }
 }
 
 .btn-row {
@@ -506,24 +507,24 @@ h2 {
 
 .q-progress {
   font-family: var(--pixel-font);
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   color: var(--muted);
   line-height: 1.8;
 }
 
 .q-text {
   font-family: var(--pixel-font);
-  font-size: 0.8rem;
-  max-width: 500px;
+  font-size: 1.1rem;
+  max-width: 660px;
   line-height: 1.8;
 }
 
 .q-answers {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
   width: 100%;
-  max-width: 500px;
+  max-width: 660px;
 }
 
 /* --- Questionnaire --- */
