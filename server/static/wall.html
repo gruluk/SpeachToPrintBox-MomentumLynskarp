@@ -79,7 +79,7 @@
     /* Only show header on screen 0 */
     body.not-screen-0 #header { display: none; }
 
-    /* ── Screen indicator (small, bottom-right) ─────────── */
+    /* ── Screen indicator ────────────────────────────────── */
     #screen-label {
       position: fixed;
       bottom: 26px; right: 12px;
@@ -90,14 +90,26 @@
       letter-spacing: 1px;
     }
 
-    /* ── Pixel clouds ───────────────────────────────────── */
-    .cloud { position: absolute; pointer-events: none; z-index: 1; animation: drift linear infinite; }
-    .cb    { position: absolute; background: rgba(255,255,255,0.72); }
-
-    @keyframes drift {
-      from { transform: translateX(-320px); }
-      to   { transform: translateX(calc(100vw + 320px)); }
+    /* ── Sky container (world-space, holds clouds) ───────── */
+    #sky {
+      position: fixed;
+      top: 0; left: 0;
+      width: 7680px;
+      height: 300px;
+      pointer-events: none;
+      z-index: 1;
+      overflow: visible;
     }
+
+    /* ── Pixel clouds ─────────────────────────────────────── */
+    /* Clouds animate left→right in world-space coordinates */
+    @keyframes drift-world {
+      from { left: -400px; }
+      to   { left: 8080px; }
+    }
+
+    .cloud { position: absolute; pointer-events: none; }
+    .cb    { position: absolute; background: rgba(255,255,255,0.72); }
 
     /* ── Meteor ─────────────────────────────────────────── */
     .wall-meteor {
@@ -132,13 +144,20 @@
       background: #7bbdd4;
     }
 
-    /* ── Ground scene ───────────────────────────────────── */
-    .ground-dino, .ground-bush {
+    /* ── World-ground container (world-space, holds dinos/bushes) */
+    #world-ground {
       position: fixed;
-      bottom: 20px;
-      image-rendering: pixelated;
+      bottom: 20px; left: 0;
+      width: 7680px;
       pointer-events: none;
       z-index: 205;
+      overflow: visible;
+    }
+
+    .ground-dino, .ground-bush {
+      position: absolute;
+      bottom: 0;
+      image-rendering: pixelated;
     }
 
     /* ── Characters ─────────────────────────────────────── */
@@ -220,17 +239,10 @@
     <div id="count">WAITING FOR PLAYERS...</div>
   </div>
 
+  <div id="sky"></div>
   <div id="world"></div>
   <div id="ground"></div>
-
-  <!-- Ground scene: sits on top of the ground strip -->
-  <img src="/booth/bush_4.png"  class="ground-bush" style="left:0;         width:10vw;">
-  <img src="/booth/dino_3.png"  class="ground-dino" style="left:6vw;        width:12vw;">
-  <img src="/booth/bush_2.png"  class="ground-bush" style="left:18vw;       width:7vw;">
-  <img src="/booth/dino_1.png"  class="ground-dino" style="left:50%;transform:translateX(-50%); width:9vw;">
-  <img src="/booth/bush_1.png"  class="ground-bush" style="left:57vw;       width:11vw;">
-  <img src="/booth/dino_2.png"  class="ground-dino" style="right:6vw;       width:12vw;">
-  <img src="/booth/bush_3.png"  class="ground-bush" style="right:0;         width:9vw;">
+  <div id="world-ground"></div>
 
   <div id="empty">
     <div id="empty-main">NO CHARACTERS YET</div>
@@ -241,27 +253,36 @@
 
   <script>
     // ── Screen configuration ──────────────────────────────
-    // Each Pi opens /wall?screen=N  (N = 0, 1, 2, 3 left→right)
-    // The server works in world coordinates: 0–7680 wide × 0–1080 tall.
-    // This screen renders world X from [OFFSET, OFFSET + 1920).
-    const PARAMS         = new URLSearchParams(location.search);
-    const SCREEN_INDEX   = parseInt(PARAMS.get('screen') ?? '0', 10);
-    const LOGICAL_W      = 1920;   // logical pixels per screen — set Pi output to 1920×1080
-    const SCREEN_OFFSET  = SCREEN_INDEX * LOGICAL_W;
+    const PARAMS        = new URLSearchParams(location.search);
+    const SCREEN_INDEX  = parseInt(PARAMS.get('screen') ?? '0', 10);
+    const LOGICAL_W     = 1920;
+    const WORLD_W       = 7680;
+    const SCREEN_OFFSET = SCREEN_INDEX * LOGICAL_W;
 
-    // Mark body so CSS can hide header / empty state on non-primary screens
     if (SCREEN_INDEX !== 0) document.body.classList.add('not-screen-0');
     document.getElementById('screen-label').textContent = `S${SCREEN_INDEX}`;
+
+    // ── Apply world-space offset to shared containers ─────
+    // Each of these is 7680px wide. By shifting left by SCREEN_OFFSET,
+    // the viewport shows only the slice [SCREEN_OFFSET, SCREEN_OFFSET+1920).
+    const skyEl    = document.getElementById('sky');
+    const groundEl = document.getElementById('world-ground');
+    skyEl.style.transform    = `translateX(-${SCREEN_OFFSET}px)`;
+    groundEl.style.transform = `translateX(-${SCREEN_OFFSET}px)`;
 
     const world   = document.getElementById('world');
     const countEl = document.getElementById('count');
     const emptyEl = document.getElementById('empty');
 
-    const CHAR_SIZE  = 144;
-    const HEADER_H   = 120;
-    const GROUND_H   = Math.round(window.innerHeight * 0.22);
+    const CHAR_SIZE = 144;
+    const HEADER_H  = 120;
+    const GROUND_H  = Math.round(window.innerHeight * 0.22);
 
-    // ── Pixel clouds ─────────────────────────────────────
+    // ── Pixel clouds (world-space) ─────────────────────────
+    // Clouds animate from world x=-400 to world x=8080.
+    // A negative animationDelay of -startFrac*duration places the cloud
+    // at world x = -400 + startFrac*(8080+400) = startFrac*8480-400.
+    // This distributes clouds evenly across the world at load time.
     const CLOUD_SHAPE = [
       [0,0,1,1,1,1,0,0],
       [0,1,1,1,1,1,1,0],
@@ -269,13 +290,16 @@
       [1,1,1,1,1,1,1,1],
     ];
 
-    function spawnCloud(yPx, scale, durationSec, delayFrac) {
+    function spawnCloud(yPx, scale, durSec, startFrac) {
       const px = 8 * scale;
       const el = document.createElement('div');
       el.className = 'cloud';
-      el.style.top = yPx + 'px';
-      el.style.animationDuration = durationSec + 's';
-      el.style.animationDelay   = `-${durationSec * delayFrac}s`;
+      el.style.top              = yPx + 'px';
+      el.style.animationName    = 'drift-world';
+      el.style.animationDuration = durSec + 's';
+      el.style.animationTimingFunction = 'linear';
+      el.style.animationDelay   = `-${durSec * startFrac}s`;
+      el.style.animationIterationCount = 'infinite';
       CLOUD_SHAPE.forEach((row, ri) =>
         row.forEach((cell, ci) => {
           if (!cell) return;
@@ -285,14 +309,53 @@
           el.appendChild(b);
         })
       );
-      document.body.appendChild(el);
+      skyEl.appendChild(el);
     }
 
-    spawnCloud( 35, 2.2, 55, 0.15);
-    spawnCloud( 90, 1.4, 75, 0.60);
-    spawnCloud(145, 1.8, 65, 0.40);
+    // 5 clouds spread across the world — each clearly visible on a different screen at load
+    // startFrac × 8480 − 400 = approximate world x at load:
+    //   0.06 → ~109px  (screen 0)
+    //   0.28 → ~1974px (screen 1)
+    //   0.50 → ~3840px (screen 2)
+    //   0.72 → ~5706px (screen 3)
+    //   0.39 → ~2907px (screen 1/2 boundary)
+    spawnCloud( 35, 2.2, 210, 0.06);
+    spawnCloud( 90, 1.4, 290, 0.28);
+    spawnCloud(145, 1.8, 250, 0.50);
+    spawnCloud( 65, 2.0, 240, 0.72);
+    spawnCloud(115, 1.6, 270, 0.39);
 
-    // ── Scattered pixel decorations ───────────────────────
+    // ── Ground scene (world-space) ─────────────────────────
+    // Dinos and bushes are placed at absolute world-pixel x positions.
+    // Each screen sees only the portion that falls in its 1920px slice.
+    const GROUND_SCENE = [
+      { src: 'bush_4', x:    0, w: 192 },
+      { src: 'dino_3', x:  192, w: 230 },
+      { src: 'bush_2', x:  520, w: 134 },
+      { src: 'bush_1', x: 1050, w: 211 },
+      { src: 'bush_3', x: 1600, w: 173 },
+      { src: 'bush_4', x: 2300, w: 192 },
+      { src: 'bush_2', x: 2750, w: 134 },
+      { src: 'dino_1', x: 3753, w: 173 }, // centered at world mid-point (3840)
+      { src: 'bush_1', x: 4100, w: 211 },
+      { src: 'bush_3', x: 4700, w: 173 },
+      { src: 'bush_4', x: 5300, w: 192 },
+      { src: 'bush_2', x: 5800, w: 134 },
+      { src: 'bush_1', x: 6300, w: 211 },
+      { src: 'dino_2', x: 6700, w: 230 },
+      { src: 'bush_3', x: 7488, w: 173 }, // right edge (7680-173≈7507, bumped left a touch)
+    ];
+
+    GROUND_SCENE.forEach(({ src, x, w }) => {
+      const img = document.createElement('img');
+      img.src       = `/booth/${src}.png`;
+      img.className = src.startsWith('dino') ? 'ground-dino' : 'ground-bush';
+      img.style.left  = x + 'px';
+      img.style.width = w + 'px';
+      groundEl.appendChild(img);
+    });
+
+    // ── Scattered pixel decorations (per-screen ambient) ──
     const DECO_COLORS = ['#2d5c6a','#5ba4c0','#5b8c3e','#7bbdd4','#4a8a9e'];
     for (let i = 0; i < 22; i++) {
       const d = document.createElement('div');
@@ -309,9 +372,7 @@
       document.body.appendChild(d);
     }
 
-    // ── Meteor ────────────────────────────────────────────
-    // Each screen runs its own meteor — they won't align across screens,
-    // but the effect is ambient decoration so that's fine.
+    // ── Meteor (per-screen ambient) ────────────────────────
     function spawnMeteor() {
       const el = document.createElement('img');
       el.src = '/booth/meteor_1.png';
@@ -336,8 +397,6 @@
     }
 
     function addCharacter(imageB64, name, id, worldX, worldY) {
-      // localX is the position on THIS screen; may be negative or beyond viewport
-      // (browser clips it — that's how seamless edge-crossing works)
       const localX = (worldX ?? Math.random() * LOGICAL_W) - SCREEN_OFFSET;
       const localY = worldY ?? (HEADER_H + Math.random() * (window.innerHeight - CHAR_SIZE - GROUND_H - HEADER_H));
 
@@ -347,7 +406,7 @@
 
       wrap.style.left = localX + 'px';
       wrap.style.top  = localY + 'px';
-      wrap.style.setProperty('--size',        CHAR_SIZE + 'px');
+      wrap.style.setProperty('--size',       CHAR_SIZE + 'px');
       wrap.style.setProperty('--float-dur',  (2.5 + Math.random() * 2.5) + 's');
       wrap.style.setProperty('--float-delay',(Math.random() * 4) + 's');
 
@@ -370,7 +429,6 @@
         setTimeout(() => countEl.classList.remove('pulse'), 1500);
       }
 
-      // Enable position transitions after the arrive animation completes
       setTimeout(() => {
         wrap.style.transition = 'left 8s ease-in-out, top 8s ease-in-out';
       }, 800);

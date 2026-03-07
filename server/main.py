@@ -135,6 +135,7 @@ def health():
 # --- TV wall ---
 
 @app.get("/", response_class=HTMLResponse)
+@app.get("/wall", response_class=HTMLResponse)
 def wall():
     return (Path(__file__).parent / "static" / "wall.html").read_text()
 
