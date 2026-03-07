@@ -14,6 +14,7 @@ import asyncio
 import base64
 import io
 import json
+import math
 import os
 import random
 import secrets
@@ -58,34 +59,58 @@ _WALL_HEADER_H    = 120    # keep characters below the header
 _WALL_GROUND_H    = 220    # keep characters above the ground-dino scene
 _WALL_CHAR_SIZE   = 144
 _WALL_MARGIN      = 24
+_CHAR_SPEED_MIN   = 30    # px/s  — slow DVD-screensaver drift
+_CHAR_SPEED_MAX   = 60    # px/s
+_PHYSICS_TICK     = 0.1   # seconds between physics updates (10 fps)
 
 
 def _assign_world_pos(char: dict) -> None:
-    """Assign a random world-coordinate position (in-memory only, not persisted)."""
-    char['wpos_x'] = random.randint(_WALL_MARGIN,
-                                    _WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN)
-    char['wpos_y'] = random.randint(_WALL_HEADER_H,
-                                    _WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H)
-    char['next_move'] = time.time() + random.uniform(2, 12)
+    """Assign a random starting position and velocity for DVD-style bouncing."""
+    char['x'] = float(random.randint(_WALL_MARGIN,
+                                     _WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN))
+    char['y'] = float(random.randint(_WALL_HEADER_H,
+                                     _WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H))
+    speed = random.uniform(_CHAR_SPEED_MIN, _CHAR_SPEED_MAX)
+    angle = random.uniform(0, 2 * math.pi)
+    char['vx'] = speed * math.cos(angle)
+    char['vy'] = speed * math.sin(angle)
 
 
 async def _character_movement_loop() -> None:
-    """Pick new wander targets for each character and broadcast to all screens."""
+    """Physics loop: advance every character each tick, bounce off walls, broadcast positions."""
+    x_min = float(_WALL_MARGIN)
+    x_max = float(_WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN)
+    y_min = float(_WALL_HEADER_H)
+    y_max = float(_WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H)
+
     while True:
-        await asyncio.sleep(0.5)
-        now = time.time()
+        await asyncio.sleep(_PHYSICS_TICK)
+        if not characters:
+            continue
+
         for char in list(characters):
-            if char.get('next_move', 0) <= now:
-                x   = random.randint(_WALL_MARGIN,
-                                     _WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN)
-                y   = random.randint(_WALL_HEADER_H,
-                                     _WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H)
-                dur = round(random.uniform(5, 10), 1)
-                char['wpos_x']    = x
-                char['wpos_y']    = y
-                char['next_move'] = now + dur + random.uniform(3, 8)
-                await broadcast({'type': 'move_character',
-                                 'id': char['id'], 'x': x, 'y': y, 'dur': dur})
+            char['x'] += char.get('vx', 0) * _PHYSICS_TICK
+            char['y'] += char.get('vy', 0) * _PHYSICS_TICK
+
+            if char['x'] < x_min:
+                char['x'] = x_min
+                char['vx'] = abs(char['vx'])
+            elif char['x'] > x_max:
+                char['x'] = x_max
+                char['vx'] = -abs(char['vx'])
+
+            if char['y'] < y_min:
+                char['y'] = y_min
+                char['vy'] = abs(char['vy'])
+            elif char['y'] > y_max:
+                char['y'] = y_max
+                char['vy'] = -abs(char['vy'])
+
+        await broadcast({
+            'type': 'positions',
+            'chars': [{'id': c['id'], 'x': round(c['x']), 'y': round(c['y'])}
+                      for c in characters],
+        })
 
 
 @asynccontextmanager

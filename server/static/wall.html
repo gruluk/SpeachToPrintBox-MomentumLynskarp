@@ -397,15 +397,14 @@
     }
 
     function addCharacter(imageB64, name, id, worldX, worldY) {
-      const localX = (worldX ?? Math.random() * LOGICAL_W) - SCREEN_OFFSET;
-      const localY = worldY ?? (HEADER_H + Math.random() * (window.innerHeight - CHAR_SIZE - GROUND_H - HEADER_H));
+      const localX = worldX - SCREEN_OFFSET;
 
       const wrap = document.createElement('div');
       wrap.className = 'char-wrap';
       if (id) wrap.dataset.id = id;
 
       wrap.style.left = localX + 'px';
-      wrap.style.top  = localY + 'px';
+      wrap.style.top  = worldY + 'px';
       wrap.style.setProperty('--size',       CHAR_SIZE + 'px');
       wrap.style.setProperty('--float-dur',  (2.5 + Math.random() * 2.5) + 's');
       wrap.style.setProperty('--float-delay',(Math.random() * 4) + 's');
@@ -429,18 +428,20 @@
         setTimeout(() => countEl.classList.remove('pulse'), 1500);
       }
 
+      // Enable smooth transitions once the arrive animation finishes
       setTimeout(() => {
-        wrap.style.transition = 'left 8s ease-in-out, top 8s ease-in-out';
+        wrap.style.transition = 'left 120ms linear, top 120ms linear';
       }, 800);
     }
 
-    function moveCharacter(id, worldX, worldY, dur) {
-      const el = world.querySelector(`[data-id="${id}"]`);
-      if (!el) return;
-      const localX = worldX - SCREEN_OFFSET;
-      el.style.transition = `left ${dur}s ease-in-out, top ${dur}s ease-in-out`;
-      el.style.left = localX + 'px';
-      el.style.top  = worldY + 'px';
+    // Batch position update from server physics loop (10 fps)
+    function applyPositions(chars) {
+      chars.forEach(({ id, x, y }) => {
+        const el = world.querySelector(`[data-id="${id}"]`);
+        if (!el) return;
+        el.style.left = (x - SCREEN_OFFSET) + 'px';
+        el.style.top  = y + 'px';
+      });
     }
 
     function removeCharacter(id) {
@@ -465,8 +466,8 @@
       const ws = new WebSocket(`${proto}//${location.host}/ws`);
       ws.onmessage = ({ data }) => {
         const msg = JSON.parse(data);
-        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id, msg.wpos_x, msg.wpos_y);
-        if (msg.type === 'move_character')   moveCharacter(msg.id, msg.x, msg.y, msg.dur);
+        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id, msg.x, msg.y);
+        if (msg.type === 'positions')        applyPositions(msg.chars);
         if (msg.type === 'remove_character') removeCharacter(msg.id);
         if (msg.type === 'update_character') patchCharacter(msg.id, msg.name);
       };
