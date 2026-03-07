@@ -128,11 +128,11 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
     except Exception:
         pass
 
-    # Dino name (bottom right)
+    # Dino name (bottom right) — dino_type is already the full name
     dino_label_size = max(16, content_h // 16)
     draw.text(
         (right_x, content_h - PAD - dino_label_size),
-        DINO_NAMES.get(dino_type, ""),
+        dino_type or "",
         fill="#4a8a9e",
         font=_find_font(dino_label_size),
     )
@@ -157,24 +157,35 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
 
 # ── Printing ──────────────────────────────────────────────────────────────────
 
-def print_label(image: Image.Image) -> None:
+def print_label(image: Image.Image) -> bool:
+    """Send image to the printer. Returns True on success."""
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         image.save(f, format="PNG")
         tmp_path = f.name
+
+    cmd = [
+        "lp", "-d", PRINTER_NAME,
+        "-o", f"media=Custom.{LABEL_W_MM}x{CONTENT_H_MM}mm",
+        "-o", "MediaType=Continuous",
+        "-o", "CutMedia=EndOfJob",
+        tmp_path,
+    ]
+    print(f"[print] running: {' '.join(cmd)}")
+
     try:
-        subprocess.run(
-            [
-                "lp", "-d", PRINTER_NAME,
-                "-o", f"PageSize=Custom.{LABEL_W_MM}x{CONTENT_H_MM}mm",
-                "-o", "MediaType=roll",
-                "-o", "CutMedia=EndOfJob",
-                tmp_path,
-            ],
-            check=True,
-        )
-        print(f"[print] sent to {PRINTER_NAME}")
-    except subprocess.CalledProcessError as e:
-        print(f"[print] lp failed: {e}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.stdout.strip():
+            print(f"[print] lp stdout: {result.stdout.strip()}")
+        if result.stderr.strip():
+            print(f"[print] lp stderr: {result.stderr.strip()}")
+        if result.returncode != 0:
+            print(f"[print] lp exited with code {result.returncode}")
+            return False
+        print(f"[print] job queued on {PRINTER_NAME}")
+        return True
+    except FileNotFoundError:
+        print("[print] ERROR: 'lp' command not found — is CUPS installed?")
+        return False
     finally:
         os.unlink(tmp_path)
 
@@ -184,19 +195,54 @@ def print_label(image: Image.Image) -> None:
 def process_character(char: dict) -> None:
     char_id   = char["id"]
     name      = char.get("name", "").strip()
-    dino_type = char.get("dino_type", "1")
+    dino_type = char.get("dino_type", "")  # already the full name from DB
     image_b64 = char.get("image_b64", "")
 
+    print(f"[char]  id={char_id} name={name!r} dino_type={dino_type!r} "
+          f"image_b64={'<present>' if image_b64 else '<MISSING>'}")
+
     if not name or not image_b64:
-        print(f"[skip] {char_id} — missing name or image")
+        print(f"[skip]  {char_id} — missing name or image, skipping")
         return
 
-    print(f"[print] {name} ({DINO_NAMES.get(dino_type, dino_type)})")
-    img   = Image.open(BytesIO(base64.b64decode(image_b64)))
-    label = composite_label(img, name, dino_type)
-    print_label(label)
-    mark_printed(char_id)
-    print(f"[db]    marked {char_id} as printed")
+    print(f"[print] compositing label for {name} ({dino_type or 'unknown dino'})")
+    try:
+        img   = Image.open(BytesIO(base64.b64decode(image_b64)))
+        label = composite_label(img, name, dino_type)
+    except Exception as e:
+        print(f"[error] compositing failed: {e}")
+        return
+
+    success = print_label(label)
+    if success:
+        mark_printed(char_id)
+        print(f"[db]    marked {char_id} as printed")
+    else:
+        print(f"[warn]  print failed — NOT marking as printed so it retries next poll")
+
+
+def check_printer() -> None:
+    """Log CUPS printer status on startup."""
+    try:
+        result = subprocess.run(["lpstat", "-p", PRINTER_NAME],
+                                capture_output=True, text=True)
+        status = (result.stdout + result.stderr).strip()
+        print(f"[cups]  {status if status else f'{PRINTER_NAME} not found in lpstat'}")
+    except FileNotFoundError:
+        print("[cups]  lpstat not available — CUPS may not be installed")
+
+    # Also list all printers so user can verify the name
+    try:
+        result = subprocess.run(["lpstat", "-p"], capture_output=True, text=True)
+        lines = [l for l in result.stdout.splitlines() if l.strip()]
+        if lines:
+            print("[cups]  all printers:")
+            for l in lines:
+                print(f"          {l}")
+        else:
+            print("[cups]  no printers found via lpstat -p")
+    except Exception:
+        pass
 
 
 def poll_loop() -> None:
@@ -205,6 +251,7 @@ def poll_loop() -> None:
         return
 
     print(f"Bytefest '26 print client — printer: {PRINTER_NAME}")
+    check_printer()
     print(f"Polling InstantDB every {POLL_INTERVAL}s for unprinted characters...")
 
     while True:
