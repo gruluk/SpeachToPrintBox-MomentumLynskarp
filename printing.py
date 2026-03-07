@@ -99,23 +99,22 @@ def _usb_write(data: bytes) -> None:
         raise RuntimeError("Printer not found")
 
     try:
-        try:
-            if dev.is_kernel_driver_active(0):
-                dev.detach_kernel_driver(0)
-        except (usb.core.USBError, NotImplementedError):
-            pass
-
-        try:
-            dev.set_configuration()
-        except usb.core.USBError as e:
-            if e.errno != 16:
-                raise
+        # Detach built-in usblp driver (doesn't appear in lsmod but still binds).
+        # Check all interfaces — some printers expose more than one.
+        cfg = dev.get_active_configuration()
+        for intf in cfg:
+            n = intf.bInterfaceNumber
             try:
-                usb.util.release_interface(dev, 0)
-            except Exception:
-                pass
-            dev.set_configuration()
+                if dev.is_kernel_driver_active(n):
+                    dev.detach_kernel_driver(n)
+                    print(f"[usb] detached kernel driver from interface {n}")
+            except Exception as e:
+                print(f"[usb] detach iface {n}: {e}")
 
+        # The kernel already set the configuration when the device was plugged in.
+        # Calling set_configuration() again fails with EBUSY when the built-in
+        # usblp driver is bound (blacklisting has no effect on built-in drivers).
+        # Skip it and claim the interface directly.
         usb.util.claim_interface(dev, 0)
 
         cfg = dev.get_active_configuration()
