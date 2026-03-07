@@ -67,17 +67,20 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
 
   return (
     <div className="screen preview-screen">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="camera-video"
-      />
-      {countdown !== null && (
-        <div className="countdown">{countdown}</div>
-      )}
-      {errorMsg && <p className="error overlay-error">{errorMsg}</p>}
+      <p className="camera-hint">Position your face in the circle</p>
+      <div className="camera-circle">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="camera-video"
+        />
+        {countdown !== null && (
+          <div className="countdown">{countdown}</div>
+        )}
+      </div>
+      {errorMsg && <p className="error">{errorMsg}</p>}
       <div className="capture-bar">
         <button
           className="btn-secondary btn-cancel"
