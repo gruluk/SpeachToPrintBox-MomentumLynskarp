@@ -94,7 +94,7 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
           onClick={capture}
           disabled={capturing}
         >
-          {capturing ? '...' : '📸 Take Photo'}
+          {capturing ? '...' : 'Take Photo'}
         </button>
       </div>
     </div>

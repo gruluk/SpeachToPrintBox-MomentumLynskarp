@@ -8,6 +8,7 @@ import NameInputScreen from './components/NameInputScreen'
 import QuestionnaireScreen from './components/QuestionnaireScreen'
 import WaitingScreen from './components/WaitingScreen'
 import ResultScreen from './components/ResultScreen'
+import DinoRevealScreen from './components/DinoRevealScreen'
 
 const QUESTIONS = [
   {
@@ -60,6 +61,7 @@ export default function App() {
   const [answers, setAnswers] = useState([])
   const [resultData, setResultData] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
+  const [validating, setValidating] = useState(false)
 
   // Gen state in refs — avoids re-renders while WaitingScreen polls
   const genReadyRef = useRef(false)
@@ -98,7 +100,8 @@ export default function App() {
   const handleCapture = useCallback(async (blob) => {
     setPhotoBlob(blob)
     setPhotoUrl(URL.createObjectURL(blob))
-    setState('VALIDATING')
+    setValidating(true)
+    setState('REVIEW')
 
     const fd = new FormData()
     fd.append('image', blob, 'photo.jpg')
@@ -107,15 +110,16 @@ export default function App() {
       const data = await res.json()
       if (data.ok) {
         startGeneration(blob) // fire and forget
-        setState('REVIEW')
+        setValidating(false)
       } else {
         setErrorMsg(data.message || 'Photo not valid. Try again.')
+        setValidating(false)
         setState('PREVIEW')
       }
     } catch (e) {
       console.error('[validate]', e)
       startGeneration(blob) // proceed anyway on network error
-      setState('REVIEW')
+      setValidating(false)
     }
   }, [startGeneration])
 
@@ -128,7 +132,7 @@ export default function App() {
 
   const handleQuestionsDone = useCallback((ans) => {
     setAnswers(ans)
-    setState('WAITING')
+    setState('DINO_REVEAL')
   }, [])
 
   const handleGenReady = useCallback((result) => {
@@ -164,6 +168,7 @@ export default function App() {
     setAnswers([])
     setResultData(null)
     setErrorMsg('')
+    setValidating(false)
     resetGen()
     setState('START')
   }, [photoUrl])
@@ -183,13 +188,16 @@ export default function App() {
         <ValidatingScreen />
       )}
       {state === 'REVIEW' && (
-        <ReviewScreen photoUrl={photoUrl} onOk={handleReviewOk} onRetake={() => setState('PREVIEW')} />
+        <ReviewScreen photoUrl={photoUrl} validating={validating} onOk={handleReviewOk} onRetake={() => { setValidating(false); setState('PREVIEW') }} />
       )}
       {state === 'NAME_INPUT' && (
-        <NameInputScreen onSubmit={handleNameSubmit} />
+        <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('REVIEW')} />
       )}
       {state === 'QUESTIONNAIRE' && (
-        <QuestionnaireScreen questions={QUESTIONS} onDone={handleQuestionsDone} />
+        <QuestionnaireScreen questions={QUESTIONS} onDone={handleQuestionsDone} onBack={() => setState('NAME_INPUT')} />
+      )}
+      {state === 'DINO_REVEAL' && (
+        <DinoRevealScreen dinoKey={dinoKey} dinoName={dinoName} onContinue={() => setState('WAITING')} />
       )}
       {state === 'WAITING' && (
         <WaitingScreen

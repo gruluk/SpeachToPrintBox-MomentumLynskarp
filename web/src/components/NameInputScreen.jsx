@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function NameInputScreen({ onSubmit }) {
+export default function NameInputScreen({ onSubmit, onBack }) {
   const [value, setValue] = useState('')
 
   function handleSubmit(e) {
@@ -21,9 +21,10 @@ export default function NameInputScreen({ onSubmit }) {
           autoFocus
           maxLength={40}
         />
-        <button className="btn-primary" type="submit" disabled={!value.trim()}>
-          Next →
-        </button>
+        <div className="btn-row">
+          <button className="btn-secondary" type="button" onClick={onBack}>← Back</button>
+          <button className="btn-primary" type="submit" disabled={!value.trim()}>Next →</button>
+        </div>
       </form>
     </div>
   )

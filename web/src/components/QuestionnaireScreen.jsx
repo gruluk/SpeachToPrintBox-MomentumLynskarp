@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function QuestionnaireScreen({ questions, onDone }) {
+export default function QuestionnaireScreen({ questions, onDone, onBack }) {
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState([])
 
@@ -11,6 +11,15 @@ export default function QuestionnaireScreen({ questions, onDone }) {
       setStep(step + 1)
     } else {
       onDone(newAnswers)
+    }
+  }
+
+  function goBack() {
+    if (step === 0) {
+      onBack()
+    } else {
+      setAnswers(answers.slice(0, -1))
+      setStep(step - 1)
     }
   }
 
@@ -26,6 +35,7 @@ export default function QuestionnaireScreen({ questions, onDone }) {
           </button>
         ))}
       </div>
+      <button className="btn-secondary q-back" onClick={goBack}>← Back</button>
     </div>
   )
 }
