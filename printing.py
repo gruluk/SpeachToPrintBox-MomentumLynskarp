@@ -1,15 +1,13 @@
+import glob
 import os
-import gc
 
-import usb.core
-import usb.util
 from PIL import Image, ImageDraw, ImageFont
 from brother_ql.raster import BrotherQLRaster
 from brother_ql.conversion import convert
 from brother_ql.labels import ALL_LABELS
 
 from config import (
-    PRINTER_MODEL, PRINTER_VENDOR, PRINTER_PRODUCT,
+    PRINTER_MODEL,
     LABEL, PRINT_HEIGHT_MM, ASSETS_DIR, DINO_NAMES,
 )
 
@@ -90,56 +88,16 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
     return canvas
 
 
-def _usb_write(data: bytes) -> None:
-    """Send raw raster bytes directly to the printer, bypassing brother_ql's backend."""
-    gc.collect()
-
-    dev = usb.core.find(idVendor=PRINTER_VENDOR, idProduct=PRINTER_PRODUCT)
-    if dev is None:
-        raise RuntimeError("Printer not found")
-
-    try:
-        # Detach built-in usblp driver. is_kernel_driver_active() returns False
-        # for built-in (non-module) drivers, so we call detach unconditionally
-        # and ignore ENOENT (errno 2 = no driver attached).
-        cfg = dev.get_active_configuration()
-        for intf in cfg:
-            n = intf.bInterfaceNumber
-            try:
-                dev.detach_kernel_driver(n)
-                print(f"[usb] detached kernel driver from interface {n}")
-            except usb.core.USBError as e:
-                if e.errno != 2:  # 2 = ENOENT = no driver attached, that's fine
-                    print(f"[usb] detach iface {n}: errno={e.errno} {e}")
-            except Exception as e:
-                print(f"[usb] detach iface {n}: {e}")
-
-        # The kernel already set the configuration when the device was plugged in.
-        # Calling set_configuration() again fails with EBUSY when the built-in
-        # usblp driver is bound (blacklisting has no effect on built-in drivers).
-        # Skip it and claim the interface directly.
-        usb.util.claim_interface(dev, 0)
-
-        cfg = dev.get_active_configuration()
-        intf = cfg[(0, 0)]
-        ep_out = usb.util.find_descriptor(
-            intf,
-            custom_match=lambda e: usb.util.endpoint_direction(
-                e.bEndpointAddress
-            ) == usb.util.ENDPOINT_OUT,
-        )
-        if ep_out is None:
-            raise RuntimeError("Bulk OUT endpoint not found")
-
-        for offset in range(0, len(data), 512):
-            ep_out.write(data[offset : offset + 512], timeout=15000)
-
-    finally:
-        try:
-            usb.util.release_interface(dev, 0)
-        except Exception:
-            pass
-        usb.util.dispose_resources(dev)
+def _lp_write(data: bytes) -> None:
+    """Write raster bytes via the usblp kernel driver device file (/dev/usb/lp*)."""
+    candidates = sorted(glob.glob("/dev/usb/lp*")) + ["/dev/lp0"]
+    for path in candidates:
+        if os.path.exists(path):
+            print(f"[print] writing {len(data)} bytes to {path}")
+            with open(path, "wb") as f:
+                f.write(data)
+            return
+    raise RuntimeError("Printer device file not found (tried /dev/usb/lp*, /dev/lp0)")
 
 
 def print_image(image: Image.Image) -> None:
@@ -162,4 +120,4 @@ def print_image(image: Image.Image) -> None:
 
     qlr = BrotherQLRaster(PRINTER_MODEL)
     convert(qlr, [img], LABEL, cut=True, rotate="0", dpi_600=False)
-    _usb_write(qlr.data)
+    _lp_write(qlr.data)
