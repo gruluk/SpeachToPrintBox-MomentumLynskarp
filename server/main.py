@@ -200,6 +200,35 @@ async def admin_update_character(char_id: str, body: CharacterPatch, _=Depends(r
     return {"ok": True, **char}
 
 
+@app.post("/admin/api/characters/{char_id}/reprint")
+async def admin_reprint(char_id: str, _=Depends(require_admin)):
+    char = next((c for c in characters if c["id"] == char_id), None)
+    if not char:
+        raise HTTPException(status_code=404, detail="not found")
+    char["printed"] = False
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.set_printed, char_id, False
+        )
+    except Exception as e:
+        print(f"[db] reprint failed: {e}")
+    return {"ok": True}
+
+
+@app.get("/admin/api/sync")
+async def admin_sync(_=Depends(require_admin)):
+    """Sync printed status from InstantDB into the in-memory list, return updated list."""
+    try:
+        printed_ids = await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.get_printed_ids
+        )
+        for char in characters:
+            char["printed"] = char["id"] in printed_ids
+    except Exception as e:
+        print(f"[db] sync failed: {e}")
+    return characters
+
+
 # --- Web booth SPA ---
 
 from fastapi.staticfiles import StaticFiles

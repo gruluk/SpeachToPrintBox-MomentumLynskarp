@@ -67,6 +67,20 @@ def mark_printed(char_id: str) -> None:
     r.raise_for_status()
 
 
+def set_printed(char_id: str, printed: bool) -> None:
+    payload = {"steps": [["update", "characters", char_id, {"printed": printed}]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+def get_printed_ids() -> set:
+    """Return IDs of all characters marked as printed in InstantDB."""
+    payload = {"query": {"characters": {"$": {"where": {"printed": True}}}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+    return {c["id"] for c in r.json().get("characters", [])}
+
+
 def get_unprinted() -> list[dict]:
     """Return all character records where printed == false."""
     payload = {"query": {"characters": {"$": {"where": {"printed": False}}}}}

@@ -108,6 +108,7 @@
       border: 1px solid var(--border);
     }
     .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+    .btn-orange { background: #c97010; color: #fff; }
 
     /* ── Table ── */
     .table-wrap {
@@ -234,7 +235,7 @@
 <main>
   <div class="toolbar">
     <input type="search" id="search" placeholder="Search name or dino…" oninput="renderTable()" />
-    <button class="btn btn-ghost" onclick="load()">↺ Refresh</button>
+    <button class="btn btn-ghost" onclick="load()">↺ Sync &amp; Refresh</button>
   </div>
 
   <div class="table-wrap">
@@ -289,7 +290,9 @@
 
   async function load() {
     try {
-      const res = await fetch('/characters')
+      // Sync fetches printed status from InstantDB before returning the list
+      const res = await fetch('/admin/api/sync')
+      if (res.status === 401) { location.reload(); return; }
       characters = await res.json()
       renderTable()
       renderStats()
@@ -337,8 +340,9 @@
         </td>
         <td>
           <div class="action-row">
-            <button class="btn btn-blue btn-sm" onclick="openEdit('${c.id}')">Edit</button>
-            <button class="btn btn-red  btn-sm" onclick="deleteChar('${c.id}')">Delete</button>
+            <button class="btn btn-blue   btn-sm" onclick="openEdit('${c.id}')">Edit</button>
+            <button class="btn btn-orange btn-sm" onclick="reprint('${c.id}')" title="Queue for reprint">↻ Print</button>
+            <button class="btn btn-red    btn-sm" onclick="deleteChar('${c.id}')">Delete</button>
           </div>
         </td>
       </tr>
@@ -363,6 +367,24 @@
     } else {
       if (row) row.style.opacity = ''
       alert('Delete failed — see server logs')
+    }
+  }
+
+  // ── Reprint ────────────────────────────────────────────────
+
+  async function reprint(id) {
+    const char = characters.find(c => c.id === id)
+    const label = char?.name ? `"${char.name}"` : 'this character'
+    if (!confirm(`Queue ${label} for reprint? The print client will send it to the printer on the next poll.`)) return
+
+    const res = await fetch(`/admin/api/characters/${id}/reprint`, { method: 'POST' })
+    if (res.ok) {
+      const c = characters.find(c => c.id === id)
+      if (c) c.printed = false
+      renderTable()
+      renderStats()
+    } else {
+      alert('Reprint failed — see server logs')
     }
   }
 
