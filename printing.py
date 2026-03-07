@@ -99,15 +99,18 @@ def _usb_write(data: bytes) -> None:
         raise RuntimeError("Printer not found")
 
     try:
-        # Detach built-in usblp driver (doesn't appear in lsmod but still binds).
-        # Check all interfaces — some printers expose more than one.
+        # Detach built-in usblp driver. is_kernel_driver_active() returns False
+        # for built-in (non-module) drivers, so we call detach unconditionally
+        # and ignore ENOENT (errno 2 = no driver attached).
         cfg = dev.get_active_configuration()
         for intf in cfg:
             n = intf.bInterfaceNumber
             try:
-                if dev.is_kernel_driver_active(n):
-                    dev.detach_kernel_driver(n)
-                    print(f"[usb] detached kernel driver from interface {n}")
+                dev.detach_kernel_driver(n)
+                print(f"[usb] detached kernel driver from interface {n}")
+            except usb.core.USBError as e:
+                if e.errno != 2:  # 2 = ENOENT = no driver attached, that's fine
+                    print(f"[usb] detach iface {n}: errno={e.errno} {e}")
             except Exception as e:
                 print(f"[usb] detach iface {n}: {e}")
 
