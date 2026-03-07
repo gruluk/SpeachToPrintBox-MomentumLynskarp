@@ -143,3 +143,26 @@ async def websocket_endpoint(ws: WebSocket):
     except WebSocketDisconnect:
         if ws in connections:
             connections.remove(ws)
+
+
+# --- Web booth SPA ---
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+_WEB_DIR = Path(__file__).parent / "static" / "web"
+
+if _WEB_DIR.exists():
+    app.mount("/booth/assets", StaticFiles(directory=str(_WEB_DIR / "assets")), name="web-assets")
+
+    @app.get("/booth")
+    @app.get("/booth/")
+    def booth_index():
+        return FileResponse(str(_WEB_DIR / "index.html"))
+
+    @app.get("/booth/{path:path}")
+    def booth_spa(path: str):
+        file_path = _WEB_DIR / path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(_WEB_DIR / "index.html"))
