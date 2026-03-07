@@ -43,16 +43,15 @@ class StartScreen:
 
 class PreviewControls:
     def __init__(self, root: tk.Tk, on_take, on_debug):
-        self.frame = tk.Frame(root, bg="black")
         self._status_var = tk.StringVar(value="")
-        tk.Label(
-            self.frame, textvariable=self._status_var,
-            font=("Helvetica", 11), fg=MUTED, bg="black",
-        ).pack(pady=(4, 2))
-        btn_row = tk.Frame(self.frame, bg="black")
-        btn_row.pack(pady=(0, 12))
+        self._status_lbl = tk.Label(
+            root, textvariable=self._status_var,
+            font=("Helvetica", 11), fg="white", bg="black",
+            padx=8, pady=3,
+        )
+        self._btn_row = tk.Frame(root, bg="black", bd=0, highlightthickness=0)
         self._take_btn = tk.Button(
-            btn_row, text="Take Photo",
+            self._btn_row, text="Take Photo",
             font=("Helvetica", 14, "bold"), fg="white", bg=ACCENT,
             activebackground=ACCENT_ACTIVE, activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
@@ -60,7 +59,7 @@ class PreviewControls:
         )
         self._take_btn.pack(side=tk.LEFT, padx=4)
         tk.Button(
-            btn_row, text="Debug Print",
+            self._btn_row, text="Debug Print",
             font=("Helvetica", 14, "bold"), fg="white", bg=WARNING,
             activebackground="#7a4508", activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
@@ -68,10 +67,12 @@ class PreviewControls:
         ).pack(side=tk.LEFT, padx=4)
 
     def show(self):
-        self.frame.place(relx=0.5, rely=1.0, anchor="s")
+        self._btn_row.place(relx=0.5, rely=1.0, anchor="s", y=-16)
+        self._status_lbl.place(relx=0.5, rely=1.0, anchor="s", y=-72)
 
     def hide(self):
-        self.frame.place_forget()
+        self._btn_row.place_forget()
+        self._status_lbl.place_forget()
 
     def set_status(self, msg: str):
         self._status_var.set(msg)
@@ -85,17 +86,15 @@ class PreviewControls:
 
 class ValidatingControls:
     def __init__(self, root: tk.Tk, on_retake):
-        self.frame = tk.Frame(root, bg="black")
         self._status_var = tk.StringVar(value="Checking photo...")
         self._status_lbl = tk.Label(
-            self.frame, textvariable=self._status_var,
+            root, textvariable=self._status_var,
             font=("Helvetica", 11), fg="white", bg="black",
+            padx=8, pady=3,
         )
-        self._status_lbl.pack(pady=(4, 2))
-        btn_row = tk.Frame(self.frame, bg="black")
-        btn_row.pack(pady=(0, 12))
+        self._btn_row = tk.Frame(root, bg="black", bd=0, highlightthickness=0)
         tk.Button(
-            btn_row, text="Retake",
+            self._btn_row, text="Retake",
             font=("Helvetica", 14, "bold"), fg="white", bg=MUTED,
             activebackground="#3a7080", activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
@@ -103,10 +102,12 @@ class ValidatingControls:
         ).pack(side=tk.LEFT, padx=4)
 
     def show(self):
-        self.frame.place(relx=0.5, rely=1.0, anchor="s")
+        self._btn_row.place(relx=0.5, rely=1.0, anchor="s", y=-16)
+        self._status_lbl.place(relx=0.5, rely=1.0, anchor="s", y=-72)
 
     def hide(self):
-        self.frame.place_forget()
+        self._btn_row.place_forget()
+        self._status_lbl.place_forget()
 
     def set_status(self, msg: str, color: str = "white"):
         self._status_var.set(msg)
@@ -115,24 +116,22 @@ class ValidatingControls:
 
 class ReviewControls:
     def __init__(self, root: tk.Tk, on_retake, on_next):
-        self.frame = tk.Frame(root, bg="black")
         self._status_var = tk.StringVar(value="Happy with the photo?")
         self._status_lbl = tk.Label(
-            self.frame, textvariable=self._status_var,
-            font=("Helvetica", 11), fg=MUTED, bg="black",
+            root, textvariable=self._status_var,
+            font=("Helvetica", 11), fg="white", bg="black",
+            padx=8, pady=3,
         )
-        self._status_lbl.pack(pady=(4, 2))
-        btn_row = tk.Frame(self.frame, bg="black")
-        btn_row.pack(pady=(0, 12))
+        self._btn_row = tk.Frame(root, bg="black", bd=0, highlightthickness=0)
         tk.Button(
-            btn_row, text="Retake",
+            self._btn_row, text="Retake",
             font=("Helvetica", 14, "bold"), fg="white", bg=MUTED,
             activebackground="#3a7080", activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
             command=on_retake,
         ).pack(side=tk.LEFT, padx=4)
         tk.Button(
-            btn_row, text="Next →",
+            self._btn_row, text="Next →",
             font=("Helvetica", 14, "bold"), fg="white", bg=SUCCESS,
             activebackground=SUCCESS_ACTIVE, activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
@@ -140,12 +139,14 @@ class ReviewControls:
         ).pack(side=tk.LEFT, padx=4)
 
     def show(self):
-        self.frame.place(relx=0.5, rely=1.0, anchor="s")
+        self._btn_row.place(relx=0.5, rely=1.0, anchor="s", y=-16)
+        self._status_lbl.place(relx=0.5, rely=1.0, anchor="s", y=-72)
 
     def hide(self):
-        self.frame.place_forget()
+        self._btn_row.place_forget()
+        self._status_lbl.place_forget()
 
-    def set_status(self, msg: str, color: str = MUTED):
+    def set_status(self, msg: str, color: str = "white"):
         self._status_var.set(msg)
         self._status_lbl.config(fg=color)
 
@@ -318,21 +319,22 @@ class WaitingScreen:
 
 class ResultControls:
     def __init__(self, root: tk.Tk, on_done):
-        self.frame = tk.Frame(root, bg="black")
+        self._labels = tk.Frame(root, bg="black", bd=0, highlightthickness=0)
         self._print_var = tk.StringVar(value="")
         tk.Label(
-            self.frame, textvariable=self._print_var,
-            font=("Helvetica", 10), fg="#888888", bg="black",
+            self._labels, textvariable=self._print_var,
+            font=("Helvetica", 10), fg="#aaaaaa", bg="black",
+            padx=8, pady=0,
         ).pack()
         self._status_var = tk.StringVar(value="Printing...")
         tk.Label(
-            self.frame, textvariable=self._status_var,
+            self._labels, textvariable=self._status_var,
             font=("Helvetica", 11), fg="white", bg="black",
-        ).pack(pady=(4, 2))
-        btn_row = tk.Frame(self.frame, bg="black")
-        btn_row.pack(pady=(0, 12))
+            padx=8, pady=3,
+        ).pack()
+        self._btn_row = tk.Frame(root, bg="black", bd=0, highlightthickness=0)
         tk.Button(
-            btn_row, text="Done",
+            self._btn_row, text="Done",
             font=("Helvetica", 14, "bold"), fg="white", bg=MUTED,
             activebackground="#3a7080", activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
@@ -340,10 +342,12 @@ class ResultControls:
         ).pack(side=tk.LEFT, padx=4)
 
     def show(self):
-        self.frame.place(relx=0.5, rely=1.0, anchor="s")
+        self._btn_row.place(relx=0.5, rely=1.0, anchor="s", y=-16)
+        self._labels.place(relx=0.5, rely=1.0, anchor="s", y=-80)
 
     def hide(self):
-        self.frame.place_forget()
+        self._btn_row.place_forget()
+        self._labels.place_forget()
 
     def set_status(self, msg: str):
         self._status_var.set(msg)
