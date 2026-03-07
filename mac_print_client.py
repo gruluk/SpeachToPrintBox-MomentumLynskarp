@@ -129,7 +129,13 @@ def print_label(image: Image.Image) -> None:
         tmp_path = f.name
     try:
         subprocess.run(
-            ["lp", "-d", PRINTER_NAME, "-o", "fit-to-page", tmp_path],
+            [
+                "lp", "-d", PRINTER_NAME,
+                "-o", f"PageSize=Custom.{LABEL_W_MM}x{CONTENT_H_MM}mm",
+                "-o", "MediaType=roll",
+                "-o", "CutMedia=EndOfJob",
+                tmp_path,
+            ],
             check=True,
         )
         print(f"[print] sent to {PRINTER_NAME}")
