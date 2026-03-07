@@ -3,16 +3,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- Colors (Bytefest '26 palette) ---
-BG            = "#c2e8f7"
-DISPLAY_BG    = "#96cfe0"
-TEXT          = "#2d5c6a"
-MUTED         = "#4a8a9e"
-ACCENT        = "#2d5c6a"
-ACCENT_ACTIVE = "#1e3f4a"
-SUCCESS       = "#5b8c3e"
-SUCCESS_ACTIVE = "#4a7533"
-WARNING       = "#a05c10"
+# --- Bytefest '26 brand palette ---
+BLUE_PALE    = "#C1E6F2"
+BLUE_LIGHT   = "#ADDDEC"
+BLUE_BRAND   = "#32ABD0"
+BLUE_DARK    = "#1D7B91"
+ORANGE_BRAND = "#FB9214"
+ORANGE_MID   = "#F5B166"
+ORANGE_PALE  = "#F9CB99"
+GREEN_BRAND  = "#539227"
+GREEN_MID    = "#80963A"
+GREEN_DARK   = "#5A6731"
+GREEN_LIGHT  = "#73C78C"
+BROWN        = "#8F5741"
+BEIGE        = "#D1B7AD"
+
+# --- Semantic colors (mapped from palette) ---
+BG             = BLUE_PALE
+DISPLAY_BG     = BLUE_LIGHT
+TEXT           = BLUE_DARK
+MUTED          = BLUE_BRAND
+ACCENT         = BLUE_DARK
+ACCENT_ACTIVE  = "#155e6e"   # BLUE_DARK darkened for pressed state
+SUCCESS        = GREEN_BRAND
+SUCCESS_ACTIVE = GREEN_MID
+WARNING        = ORANGE_BRAND
 
 # --- Printer ---
 PRINTER_MODEL   = "QL-1110NWB"

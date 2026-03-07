@@ -268,15 +268,22 @@ class QuestionnaireScreen:
             w.destroy()
         colors  = [ACCENT, SUCCESS, WARNING, MUTED]
         actives = [ACCENT_ACTIVE, SUCCESS_ACTIVE, "#7a4508", "#3a7080"]
-        for i, (text, dino) in enumerate(q_dict["a"]):
-            tk.Button(
-                self._btns_frame, text=text,
-                font=("Helvetica", 13), fg="white",
-                bg=colors[i], activebackground=actives[i], activeforeground="white",
-                relief=tk.FLAT, padx=20, pady=14, cursor="hand2", borderwidth=0,
-                wraplength=500,
-                command=lambda d=dino: self._on_answer(d),
-            ).pack(fill=tk.X, pady=5)
+        for row in range(2):
+            row_frame = tk.Frame(self._btns_frame, bg=BG)
+            row_frame.pack(fill=tk.X, pady=5)
+            row_frame.columnconfigure(0, weight=1)
+            row_frame.columnconfigure(1, weight=1)
+            for col in range(2):
+                i = row * 2 + col
+                text, dino = q_dict["a"][i]
+                tk.Button(
+                    row_frame, text=text,
+                    font=("Helvetica", 13), fg="white",
+                    bg=colors[i], activebackground=actives[i], activeforeground="white",
+                    relief=tk.FLAT, padx=20, pady=24, cursor="hand2", borderwidth=0,
+                    wraplength=280,
+                    command=lambda d=dino: self._on_answer(d),
+                ).grid(row=0, column=col, sticky="nsew", padx=5)
 
     def show(self):
         self.frame.place(relx=0, rely=0, relwidth=1, relheight=1)
@@ -312,7 +319,7 @@ class WaitingScreen:
 
 
 class ResultControls:
-    def __init__(self, root: tk.Tk, on_try_again):
+    def __init__(self, root: tk.Tk, on_done):
         self.frame = tk.Frame(root, bg="black")
         self._print_var = tk.StringVar(value="")
         tk.Label(
@@ -327,11 +334,11 @@ class ResultControls:
         btn_row = tk.Frame(self.frame, bg="black")
         btn_row.pack(pady=(0, 12))
         tk.Button(
-            btn_row, text="Try Again",
+            btn_row, text="Done",
             font=("Helvetica", 14, "bold"), fg="white", bg=MUTED,
             activebackground="#3a7080", activeforeground="white",
             relief=tk.FLAT, padx=32, pady=12, cursor="hand2", borderwidth=0,
-            command=on_try_again,
+            command=on_done,
         ).pack(side=tk.LEFT, padx=4)
 
     def show(self):

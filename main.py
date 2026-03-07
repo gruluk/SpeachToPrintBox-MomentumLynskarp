@@ -75,7 +75,7 @@ class App:
         self.name_scr     = NameInputScreen(self.root, on_next=self._on_name_next, on_retake=self._retake)
         self.quiz_scr     = QuestionnaireScreen(self.root, on_answer=self._on_answer, on_retake=self._retake)
         self.waiting_scr  = WaitingScreen(self.root, on_retake=self._retake)
-        self.result_ctrl  = ResultControls(self.root, on_try_again=self._retake)
+        self.result_ctrl  = ResultControls(self.root, on_done=self._on_done)
         self.printer_dot  = PrinterDot(self.root)
 
         self._all_screens = [
@@ -225,7 +225,7 @@ class App:
     def _on_validation_fail(self, message: str):
         self.valid_ctrl.set_status(f"{message} — try again", WARNING)
 
-    def _retake(self):
+    def _reset_session(self):
         self.captured_photo = None
         self.user_name = ""
         self.dino_type = "1"
@@ -235,9 +235,16 @@ class App:
         self._gen_ready = False
         self._gen_error = ""
         self._countdown_n = 0
+        self.preview_ctrl.enable_take()
+
+    def _retake(self):
+        self._reset_session()
         self._show_state(PREVIEW)
         self.preview_ctrl.set_status("Look at the camera and press Take Photo!")
-        self.preview_ctrl.enable_take()
+
+    def _on_done(self):
+        self._reset_session()
+        self._show_state(START)
 
     def _proceed_to_name(self):
         self.name_scr.clear()
