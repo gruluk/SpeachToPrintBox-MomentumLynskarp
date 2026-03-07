@@ -189,6 +189,27 @@
       text-shadow: 1px 1px 0 rgba(255,255,255,0.85);
     }
 
+    .char-dino-flair {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 3px;
+    }
+
+    .char-dino-icon {
+      width: 28px;
+      height: 28px;
+      image-rendering: pixelated;
+    }
+
+    .char-dino-label {
+      color: #5b8c3e;
+      font-size: 6px;
+      letter-spacing: 0.5px;
+      text-shadow: 1px 1px 0 rgba(255,255,255,0.85);
+    }
+
     @keyframes arrive {
       0%   { opacity: 0; transform: translateY(40px) scale(0.75); }
       100% { opacity: 1; transform: translateY(0)    scale(1);    }
@@ -277,6 +298,13 @@
     const CHAR_SIZE = 144;
     const HEADER_H  = 120;
     const GROUND_H  = Math.round(window.innerHeight * 0.22);
+
+    const DINO_ICONS = {
+      'Brachiosaurus': '/booth/dino_1.png',
+      'Triceratops':   '/booth/dino_2.png',
+      'Stegosaurus':   '/booth/dino_3.png',
+      'Pterodactyl':   '/booth/dino_4.png',
+    };
 
     // ── Pixel clouds (world-space) ─────────────────────────
     // Clouds animate from world x=-400 to world x=8080.
@@ -396,7 +424,7 @@
       }
     }
 
-    function addCharacter(imageB64, name, id, worldX, worldY) {
+    function addCharacter(imageB64, name, id, worldX, worldY, dinoType) {
       const localX = worldX - SCREEN_OFFSET;
 
       const wrap = document.createElement('div');
@@ -418,6 +446,23 @@
         nameEl.className = 'char-name';
         nameEl.textContent = name.toUpperCase();
         wrap.appendChild(nameEl);
+      }
+
+      if (dinoType && DINO_ICONS[dinoType]) {
+        const flair = document.createElement('div');
+        flair.className = 'char-dino-flair';
+
+        const dinoImg = document.createElement('img');
+        dinoImg.src = DINO_ICONS[dinoType];
+        dinoImg.className = 'char-dino-icon';
+        flair.appendChild(dinoImg);
+
+        const dinoLabel = document.createElement('span');
+        dinoLabel.className = 'char-dino-label';
+        dinoLabel.textContent = dinoType.toUpperCase();
+        flair.appendChild(dinoLabel);
+
+        wrap.appendChild(flair);
       }
 
       world.appendChild(wrap);
@@ -453,11 +498,19 @@
       setTimeout(() => { el.remove(); updateCount(); }, 400);
     }
 
-    function patchCharacter(id, name) {
+    function patchCharacter(id, name, dinoType) {
       const el = world.querySelector(`[data-id="${id}"]`);
       if (!el) return;
-      const nameEl = el.querySelector('.char-name');
-      if (nameEl && name !== undefined) nameEl.textContent = name.toUpperCase();
+      if (name !== undefined) {
+        const nameEl = el.querySelector('.char-name');
+        if (nameEl) nameEl.textContent = name.toUpperCase();
+      }
+      if (dinoType !== undefined && DINO_ICONS[dinoType]) {
+        const dinoIcon  = el.querySelector('.char-dino-icon');
+        const dinoLabel = el.querySelector('.char-dino-label');
+        if (dinoIcon)  dinoIcon.src         = DINO_ICONS[dinoType];
+        if (dinoLabel) dinoLabel.textContent = dinoType.toUpperCase();
+      }
     }
 
     // ── WebSocket with auto-reconnect ─────────────────────
@@ -473,10 +526,10 @@
 
       ws.onmessage = ({ data }) => {
         const msg = JSON.parse(data);
-        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id, msg.x, msg.y);
+        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id, msg.x, msg.y, msg.dino_type);
         if (msg.type === 'positions')        applyPositions(msg.chars);
         if (msg.type === 'remove_character') removeCharacter(msg.id);
-        if (msg.type === 'update_character') patchCharacter(msg.id, msg.name);
+        if (msg.type === 'update_character') patchCharacter(msg.id, msg.name, msg.dino_type);
       };
 
       // Keepalive ping every 25s — prevents Railway's proxy from closing idle WS
