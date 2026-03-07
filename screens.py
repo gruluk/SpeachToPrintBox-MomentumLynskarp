@@ -252,14 +252,18 @@ class QuestionnaireScreen:
             font=("Helvetica", 20, "bold"), fg=TEXT, bg=BG, wraplength=720,
         ).pack(pady=(0, 20))
         self._btns_frame = tk.Frame(self.frame, bg=BG)
-        self._btns_frame.pack(fill=tk.X, padx=80)
+        self._btns_frame.pack(fill=tk.BOTH, expand=True, padx=40, pady=(0, 8))
+        self._btns_frame.columnconfigure(0, weight=1)
+        self._btns_frame.columnconfigure(1, weight=1)
+        self._btns_frame.rowconfigure(0, weight=1)
+        self._btns_frame.rowconfigure(1, weight=1)
         tk.Button(
             self.frame, text="Retake",
             font=("Helvetica", 12), fg="white", bg=MUTED,
             activebackground="#3a7080", activeforeground="white",
             relief=tk.FLAT, padx=20, pady=8, cursor="hand2", borderwidth=0,
             command=on_retake,
-        ).pack(pady=(12, 10))
+        ).pack(pady=(4, 16))
 
     def set_question(self, q_dict: dict, index: int, total: int):
         self._counter_var.set(f"Question {index + 1} of {total}")
@@ -268,22 +272,16 @@ class QuestionnaireScreen:
             w.destroy()
         colors  = [ACCENT, SUCCESS, WARNING, MUTED]
         actives = [ACCENT_ACTIVE, SUCCESS_ACTIVE, "#7a4508", "#3a7080"]
-        for row in range(2):
-            row_frame = tk.Frame(self._btns_frame, bg=BG)
-            row_frame.pack(fill=tk.X, pady=5)
-            row_frame.columnconfigure(0, weight=1)
-            row_frame.columnconfigure(1, weight=1)
-            for col in range(2):
-                i = row * 2 + col
-                text, dino = q_dict["a"][i]
-                tk.Button(
-                    row_frame, text=text,
-                    font=("Helvetica", 13), fg="white",
-                    bg=colors[i], activebackground=actives[i], activeforeground="white",
-                    relief=tk.FLAT, padx=20, pady=24, cursor="hand2", borderwidth=0,
-                    wraplength=280,
-                    command=lambda d=dino: self._on_answer(d),
-                ).grid(row=0, column=col, sticky="nsew", padx=5)
+        for i, (text, dino) in enumerate(q_dict["a"]):
+            row, col = divmod(i, 2)
+            tk.Button(
+                self._btns_frame, text=text,
+                font=("Helvetica", 14), fg="white",
+                bg=colors[i], activebackground=actives[i], activeforeground="white",
+                relief=tk.FLAT, cursor="hand2", borderwidth=0,
+                wraplength=300,
+                command=lambda d=dino: self._on_answer(d),
+            ).grid(row=row, column=col, sticky="nsew", padx=6, pady=6)
 
     def show(self):
         self.frame.place(relx=0, rely=0, relwidth=1, relheight=1)
