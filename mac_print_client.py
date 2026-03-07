@@ -31,7 +31,7 @@ SERVER_WS_URL = "wss://speachtoprintbox-production.up.railway.app/ws"
 
 # Run `lpstat -p` to find the exact name — usually something like:
 #   Brother_QL-1110NWB  or  Brother_QL_1110NWB
-PRINTER_NAME = "Brother_QL-1110NWB"
+PRINTER_NAME = "Brother_QL_1110NWB"
 
 ASSETS_DIR    = os.path.join(os.path.dirname(__file__), "assets")
 LABEL_W_MM    = 103
