@@ -15,7 +15,7 @@ from config import (
     START, PREVIEW, VALIDATING, REVIEW, NAME_INPUT, QUESTIONNAIRE,
     WAITING, PROCESSING, RESULT,
     QUESTIONS, ASSETS_DIR, SERVER_URL,
-    PRINTER_VENDOR, PRINTER_PRODUCT,
+    PRINTER_VENDOR, PRINTER_PRODUCT, ENABLE_LOCAL_PRINT,
 )
 from printing import composite_label, print_image
 from screens import (
@@ -352,6 +352,10 @@ class App:
         threading.Thread(target=self._do_print, args=(composited,), daemon=True).start()
 
     def _do_print(self, composited: Image.Image):
+        if not ENABLE_LOCAL_PRINT:
+            self.root.after(0, self.result_ctrl.set_status, "Done! Press Try Again to go again.")
+            self.root.after(0, self.result_ctrl.set_print_status, "Printing via Mac.")
+            return
         try:
             print_image(composited)
             self.root.after(0, self.result_ctrl.set_status, "Printed! Press Try Again to go again.")
