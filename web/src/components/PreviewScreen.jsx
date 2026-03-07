@@ -1,36 +1,39 @@
 import { useEffect, useRef, useState } from 'react'
 
+// Keep the stream alive across component mounts so iOS only asks for
+// camera permission once per session instead of on every retake.
+let _cachedStream = null
+
 export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
   const videoRef = useRef(null)
-  const streamRef = useRef(null)
   const [countdown, setCountdown] = useState(null)
   const [capturing, setCapturing] = useState(false)
 
   useEffect(() => {
-    let active = true
-
     async function startCamera() {
+      // Reuse existing stream if its tracks are still live
+      if (_cachedStream && _cachedStream.getTracks().every(t => t.readyState === 'live')) {
+        videoRef.current.srcObject = _cachedStream
+        videoRef.current.play()
+        return
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         })
-        if (!active) {
-          stream.getTracks().forEach(t => t.stop())
-          return
-        }
-        streamRef.current = stream
-        const video = videoRef.current
-        video.srcObject = stream
-        video.play()
+        _cachedStream = stream
+        videoRef.current.srcObject = stream
+        videoRef.current.play()
       } catch (e) {
         console.error('[camera]', e)
       }
     }
 
     startCamera()
+    // Detach from video on unmount but keep tracks running to avoid re-prompting
     return () => {
-      active = false
-      streamRef.current?.getTracks().forEach(t => t.stop())
+      const video = videoRef.current
+      if (video) video.srcObject = null
     }
   }, [])
 
@@ -60,7 +63,6 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
     // Do NOT mirror — server needs un-mirrored image
     ctx.drawImage(video, 0, 0)
     canvas.toBlob((blob) => {
-      streamRef.current?.getTracks().forEach(t => t.stop())
       onCapture(blob)
     }, 'image/jpeg', 0.92)
   }
