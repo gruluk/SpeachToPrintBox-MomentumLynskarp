@@ -144,15 +144,26 @@ app = FastAPI(lifespan=lifespan)
 
 
 async def broadcast(message: dict):
+    if not connections:
+        return
     data = json.dumps(message)
-    dead = []
-    for ws in connections:
+    conns = list(connections)
+
+    async def send_one(ws):
         try:
-            await ws.send_text(data)
+            await asyncio.wait_for(ws.send_text(data), timeout=3.0)
+            return None
         except Exception:
-            dead.append(ws)
+            return ws
+
+    dead = [ws for ws in await asyncio.gather(*[send_one(ws) for ws in conns]) if ws is not None]
     for ws in dead:
-        connections.remove(ws)
+        if ws in connections:
+            connections.remove(ws)
+        try:
+            await ws.close()
+        except Exception:
+            pass
 
 
 # --- Health ---
