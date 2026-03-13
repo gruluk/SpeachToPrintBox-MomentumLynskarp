@@ -256,13 +256,16 @@ def get_characters():
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
-    connections.append(ws)
-    # Send all existing characters so the wall is up to date on reconnect
+    # Send all existing characters BEFORE joining the broadcast pool.
+    # The physics loop yields to the event loop between ticks, so adding
+    # to connections first would cause concurrent sends on the same socket
+    # (this loop + broadcast), corrupting WebSocket frames.
     for char in characters:
         await ws.send_text(json.dumps({"type": "new_character", **char}))
+    connections.append(ws)
     try:
         while True:
-            await ws.receive_text()  # keep-alive
+            await ws.receive_text()  # keep-alive / ping
     except WebSocketDisconnect:
         if ws in connections:
             connections.remove(ws)
@@ -306,6 +309,13 @@ async def admin_update_character(char_id: str, body: CharacterPatch, _=Depends(r
     if body.dino_type is not None:
         char["dino_type"] = body.dino_type
     await broadcast({"type": "update_character", **char})
+    # Persist name/dino_type to InstantDB so mac_print_client picks up the new values
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.update_character_meta, char_id, body.name, body.dino_type
+        )
+    except Exception as e:
+        print(f"[db] update_character_meta failed: {e}")
     return {"ok": True, **char}
 
 

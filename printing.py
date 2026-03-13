@@ -44,7 +44,7 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
         logo = Image.open(
             os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
         ).convert("RGBA")
-        logo_h = content_h // 5
+        logo_h = content_h // 3
         logo_w = int(logo.width * logo_h / logo.height)
         if logo_w > right_w:
             logo_w = right_w

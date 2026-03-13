@@ -67,6 +67,20 @@ def mark_printed(char_id: str) -> None:
     r.raise_for_status()
 
 
+def update_character_meta(char_id: str, name: str | None, dino_type: str | None) -> None:
+    """Update name and/or dino_type for an existing character."""
+    fields = {}
+    if name is not None:
+        fields["name"] = name
+    if dino_type is not None:
+        fields["dino_type"] = dino_type
+    if not fields:
+        return
+    payload = {"steps": [["update", "characters", char_id, fields]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
 def set_printed(char_id: str, printed: bool) -> None:
     payload = {"steps": [["update", "characters", char_id, {"printed": printed}]]}
     r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
