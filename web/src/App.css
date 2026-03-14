@@ -90,14 +90,14 @@ html, body {
 
 .subtitle {
   font-family: var(--pixel-font);
-  font-size: 0.75rem;
+  font-size: 1rem;
   color: var(--muted);
   line-height: 1.8;
 }
 
 h2 {
   font-family: var(--pixel-font);
-  font-size: 1rem;
+  font-size: 1.4rem;
   color: var(--text);
   line-height: 1.6;
 }
@@ -158,7 +158,7 @@ h2 {
   background: var(--accent);
   color: white;
   padding: 0.9rem 2rem;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   min-width: 160px;
 
   &::after {
@@ -175,7 +175,7 @@ h2 {
   background: var(--blue-light);
   color: var(--text);
   padding: 0.9rem 1.75rem;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
 
   &::after {
     border-right: var(--px) solid color-mix(in hsl, var(--blue-light) 65%, #000);
@@ -191,7 +191,7 @@ h2 {
   background: var(--green-brand);
   color: white;
   padding: 1rem 3rem;
-  font-size: 0.85rem;
+  font-size: 1rem;
 
   &::after {
     border-right: var(--px) solid color-mix(in hsl, var(--green-brand) 65%, #000);
@@ -207,7 +207,7 @@ h2 {
   background: var(--green-brand);
   color: white;
   padding: 1rem 2.5rem;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
 
   &::after {
     border-right: var(--px) solid color-mix(in hsl, var(--green-brand) 65%, #000);
@@ -223,7 +223,7 @@ h2 {
   background: var(--blue-light);
   color: var(--text);
   padding: 1rem 1.5rem;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
 
   &::after {
     border-right: var(--px) solid color-mix(in hsl, var(--blue-light) 65%, #000);
@@ -239,7 +239,7 @@ h2 {
   background: white;
   color: var(--text);
   padding: 1.1rem 1rem;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   text-align: center;
 
   &::after {
@@ -369,7 +369,7 @@ h2 {
 
 .camera-hint {
   font-family: var(--pixel-font);
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   color: var(--muted);
   line-height: 1.8;
 }
@@ -464,16 +464,16 @@ h2 {
 
 .status-text {
   font-family: var(--pixel-font);
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   color: var(--text);
   line-height: 1.8;
-  max-width: 340px;
+  max-width: 400px;
   text-align: center;
 }
 
 .status-sub {
   font-family: var(--pixel-font);
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   color: var(--muted);
   line-height: 1.8;
 }
@@ -514,10 +514,10 @@ h2 {
 
 .dino-intro-sub {
   font-family: var(--pixel-font);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: var(--muted);
   line-height: 1.9;
-  max-width: 520px;
+  max-width: 560px;
 }
 
 .dino-intro-row {
@@ -538,15 +538,15 @@ h2 {
 
 .q-progress {
   font-family: var(--pixel-font);
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--muted);
   line-height: 1.8;
 }
 
 .q-text {
   font-family: var(--pixel-font);
-  font-size: 1.1rem;
-  max-width: 660px;
+  font-size: 1.4rem;
+  max-width: 700px;
   line-height: 1.8;
 }
 
@@ -630,7 +630,7 @@ h2 {
 
 .dino-reveal-label {
   font-family: var(--pixel-font);
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   color: var(--muted);
   line-height: 1.8;
 }
@@ -648,11 +648,28 @@ h2 {
   line-height: 1.5;
 }
 
+/* --- Info screen --- */
+
+.info-title {
+  font-family: var(--pixel-font);
+  font-size: 1.3rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.info-body {
+  font-family: var(--pixel-font);
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 2;
+  text-align: center;
+}
+
 /* --- Result --- */
 
 .result-name {
   font-family: var(--pixel-font);
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   color: var(--muted);
   line-height: 1.8;
 }
@@ -667,7 +684,7 @@ h2 {
 
 .result-hint {
   font-family: var(--pixel-font);
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   color: var(--muted);
   line-height: 1.8;
 }

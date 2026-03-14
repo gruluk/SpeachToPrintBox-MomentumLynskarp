@@ -19,8 +19,8 @@ export default function WaitingScreen({ genReadyRef, genResultRef, genErrorRef, 
     <div className="screen center">
       <SceneDecorations seed={6} />
       <div className="spinner" />
-      <p className="status-text">Creating your pixel art portrait...</p>
-      <p className="status-sub">This takes about 30–60 seconds</p>
+      <p className="status-text">Lager pikselkunst-portrettet ditt...</p>
+      <p className="status-sub">Dette tar omtrent 30–60 sekunder</p>
     </div>
   )
 }

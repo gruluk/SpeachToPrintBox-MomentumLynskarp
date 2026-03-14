@@ -48,7 +48,7 @@ export default function DinoRevealScreen({ dinoKey, dinoName, onContinue }) {
   return (
     <div className="screen center dino-reveal-screen">
       <SceneDecorations seed={5} />
-      <p className="dino-reveal-label">You are a...</p>
+      <p className="dino-reveal-label">Du er en...</p>
       <img
         src={`${base}${DINO_IMAGES[dinoKey]}`}
         alt={dinoName}
@@ -56,7 +56,7 @@ export default function DinoRevealScreen({ dinoKey, dinoName, onContinue }) {
       />
       <h2 className="dino-reveal-name">{dinoName}!</h2>
       <button className="btn-start" onClick={onContinue}>
-        Let's go!
+        La oss gå!
       </button>
     </div>
   )

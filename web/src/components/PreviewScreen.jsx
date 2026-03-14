@@ -69,7 +69,7 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
 
   return (
     <div className="screen preview-screen">
-      <p className="camera-hint">Position your face in the circle</p>
+      <p className="camera-hint">Plasser ansiktet ditt i sirkelen</p>
       <div className="camera-circle">
         <video
           ref={videoRef}
@@ -89,14 +89,14 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
           onClick={onCancel}
           disabled={capturing}
         >
-          Cancel
+          Avbryt
         </button>
         <button
           className="btn-capture"
           onClick={capture}
           disabled={capturing}
         >
-          {capturing ? '...' : 'Take Photo'}
+          {capturing ? '...' : 'Ta bilde'}
         </button>
       </div>
     </div>

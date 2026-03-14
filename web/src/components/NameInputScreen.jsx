@@ -12,20 +12,20 @@ export default function NameInputScreen({ onSubmit, onBack }) {
   return (
     <div className="screen center">
       <SceneDecorations seed={3} />
-      <h2>What's your name?</h2>
+      <h2>Hva heter du?</h2>
       <form onSubmit={handleSubmit} className="name-form">
         <input
           className="name-input"
           type="text"
-          placeholder="Your name"
+          placeholder="Ditt navn"
           value={value}
           onChange={e => setValue(e.target.value)}
           autoFocus
           maxLength={40}
         />
         <div className="btn-row">
-          <button className="btn-secondary" type="button" onClick={onBack}>← Back</button>
-          <button className="btn-primary" type="submit" disabled={!value.trim()}>Next →</button>
+          <button className="btn-secondary" type="button" onClick={onBack}>← Tilbake</button>
+          <button className="btn-primary" type="submit" disabled={!value.trim()}>Neste →</button>
         </div>
       </form>
     </div>

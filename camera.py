@@ -1,10 +1,43 @@
-from picamera2 import Picamera2
-from PIL import Image
+try:
+    from picamera2 import Picamera2
+    _PICAMERA_AVAILABLE = True
+except ImportError:
+    _PICAMERA_AVAILABLE = False
+
+from PIL import Image, ImageDraw
 import threading
 
 
-class Camera:
+class _DummyCamera:
+    """Stub camera for development on non-Pi hardware."""
     def __init__(self):
+        self._w, self._h = 640, 480
+
+    def set_display_size(self, w: int, h: int) -> None:
+        self._w, self._h = w, h
+
+    def get_frame(self) -> Image.Image:
+        img = Image.new("RGB", (self._w, self._h), color=(30, 30, 30))
+        draw = ImageDraw.Draw(img)
+        draw.text((self._w // 2 - 60, self._h // 2), "[ kamera ]", fill=(120, 120, 120))
+        return img
+
+    def get_snapshot(self) -> Image.Image:
+        return self.get_frame()
+
+    def close(self) -> None:
+        pass
+
+
+class Camera:
+    def __new__(cls):
+        if not _PICAMERA_AVAILABLE:
+            return _DummyCamera()
+        return super().__new__(cls)
+
+    def __init__(self):
+        if not _PICAMERA_AVAILABLE:
+            return
         self.picam2 = Picamera2()
         config = self.picam2.create_video_configuration(
             main={"size": (640, 480)}

@@ -37,7 +37,7 @@ export default function QuestionnaireScreen({ questions, onDone, onBack }) {
           </button>
         ))}
       </div>
-      <button className="btn-secondary q-back" onClick={goBack}>← Back</button>
+      <button className="btn-secondary q-back" onClick={goBack}>← Tilbake</button>
     </div>
   )
 }

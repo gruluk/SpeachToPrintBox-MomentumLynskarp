@@ -18,13 +18,13 @@ export default function ResultScreen({ resultData, name, dinoName, answers, onPu
   return (
     <div className="screen center">
       <SceneDecorations seed={7} />
-      <h2>Your portrait is ready!</h2>
+      <h2>Portrettet ditt er klart!</h2>
       <p className="result-name">{name} — the {dinoName}</p>
       {imgSrc && (
         <img src={imgSrc} alt="Your pixel art portrait" className="result-image" />
       )}
-      <p className="result-hint">Check the TV wall to see yourself!</p>
-      <button className="btn-primary" onClick={onDone}>Done</button>
+      <p className="result-hint">Sjekk TV-veggen for å se deg selv!</p>
+      <button className="btn-primary" onClick={onDone}>Ferdig</button>
     </div>
   )
 }

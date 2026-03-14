@@ -13,9 +13,9 @@ export default function DinoIntroScreen({ onContinue }) {
   return (
     <div className="screen center">
       <SceneDecorations seed={9} />
-      <h2 className="dino-intro-title">Which dino are you?</h2>
+      <h2 className="dino-intro-title">Hvilken dino er du?</h2>
       <p className="dino-intro-sub">
-        Answer a few questions and we'll figure out which dinosaur matches your personality!
+        Svar på noen spørsmål og vi finner ut hvilken dinosaur som passer til deg!
       </p>
       <div className="dino-intro-row">
         {DINOS.map(({ src, name }) => (
@@ -28,7 +28,7 @@ export default function DinoIntroScreen({ onContinue }) {
         ))}
       </div>
       <button className="btn-start" onClick={onContinue}>
-        Find my dino!
+        Finn min dino!
       </button>
     </div>
   )
