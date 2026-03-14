@@ -163,8 +163,15 @@
     /* ── Characters ─────────────────────────────────────── */
     #world { position: fixed; inset: 0; z-index: 10; overflow: visible; }
 
-    .char-wrap {
+    /* Outer: GPU-composited positioning layer, no animations */
+    .char-pos {
       position: absolute;
+      top: 0; left: 0;
+      will-change: transform;
+    }
+
+    /* Inner: visual animations only, no position */
+    .char-wrap {
       text-align: center;
       filter: drop-shadow(3px 8px 0 rgba(45,92,106,0.2));
       opacity: 0;
@@ -415,8 +422,11 @@
     setTimeout(spawnMeteor, 8000 + Math.random() * 12000);
 
     // ── Character management ──────────────────────────────
+    // O(1) id→element lookup — replaces querySelector in hot paths
+    const charMap = new Map();
+
     function updateCount() {
-      const n = world.querySelectorAll('.char-wrap').length;
+      const n = charMap.size;
       if (n === 0) {
         emptyEl.style.display = '';
         countEl.textContent = 'WAITING FOR PLAYERS...';
@@ -429,15 +439,17 @@
     function addCharacter(imageB64, name, id, worldX, worldY, dinoType) {
       const localX = worldX - SCREEN_OFFSET;
 
+      // Outer positioning layer — moved by transform, GPU-composited
+      const pos = document.createElement('div');
+      pos.className = 'char-pos';
+      pos.style.transform = `translate(${localX}px, ${worldY}px)`;
+
+      // Inner visual layer — handles arrive + float animations
       const wrap = document.createElement('div');
       wrap.className = 'char-wrap';
-      if (id) wrap.dataset.id = id;
-
-      wrap.style.left = localX + 'px';
-      wrap.style.top  = worldY + 'px';
-      wrap.style.setProperty('--size',       CHAR_SIZE + 'px');
-      wrap.style.setProperty('--float-dur',  (2.5 + Math.random() * 2.5) + 's');
-      wrap.style.setProperty('--float-delay',(Math.random() * 4) + 's');
+      wrap.style.setProperty('--size',        CHAR_SIZE + 'px');
+      wrap.style.setProperty('--float-dur',   (2.5 + Math.random() * 2.5) + 's');
+      wrap.style.setProperty('--float-delay', (Math.random() * 4) + 's');
 
       const img = document.createElement('img');
       img.src = `data:image/png;base64,${imageB64}`;
@@ -460,7 +472,9 @@
         wrap.appendChild(flair);
       }
 
-      world.appendChild(wrap);
+      pos.appendChild(wrap);
+      world.appendChild(pos);
+      if (id) charMap.set(id, pos);
       updateCount();
 
       if (SCREEN_INDEX === 0) {
@@ -468,33 +482,40 @@
         setTimeout(() => countEl.classList.remove('pulse'), 1500);
       }
 
-      // Enable smooth transitions once the arrive animation finishes
+      // Enable smooth position transitions after arrive animation finishes
       setTimeout(() => {
-        wrap.style.transition = 'left 120ms linear, top 120ms linear';
+        pos.style.transition = 'transform 120ms linear';
       }, 800);
     }
 
     // Batch position update from server physics loop (10 fps)
     function applyPositions(chars) {
       chars.forEach(({ id, x, y }) => {
-        const el = world.querySelector(`[data-id="${id}"]`);
+        const el = charMap.get(id);
         if (!el) return;
-        el.style.left = (x - SCREEN_OFFSET) + 'px';
-        el.style.top  = y + 'px';
+        const localX = x - SCREEN_OFFSET;
+        // Viewport culling — skip off-screen characters entirely
+        const visible = localX > -CHAR_SIZE && localX < 1920 + CHAR_SIZE;
+        el.style.visibility = visible ? '' : 'hidden';
+        if (visible) el.style.transform = `translate(${localX}px, ${y}px)`;
       });
     }
 
     function removeCharacter(id) {
-      const el = world.querySelector(`[data-id="${id}"]`);
+      const el = charMap.get(id);
       if (!el) return;
-      el.style.transition = 'opacity 0.4s, transform 0.4s';
-      el.style.opacity    = '0';
-      el.style.transform  = 'translateY(30px) scale(0.8)';
+      charMap.delete(id);
+      const wrap = el.querySelector('.char-wrap');
+      if (wrap) {
+        wrap.style.transition = 'opacity 0.4s, transform 0.4s';
+        wrap.style.opacity    = '0';
+        wrap.style.transform  = 'translateY(30px) scale(0.8)';
+      }
       setTimeout(() => { el.remove(); updateCount(); }, 400);
     }
 
     function patchCharacter(id, name, dinoType) {
-      const el = world.querySelector(`[data-id="${id}"]`);
+      const el = charMap.get(id);
       if (!el) return;
       if (name !== undefined) {
         const nameEl = el.querySelector('.char-name');
@@ -514,6 +535,7 @@
       ws.onopen = () => {
         // Clear stale characters so reconnect doesn't create duplicates
         world.innerHTML = '';
+        charMap.clear();
         updateCount();
       };
 
