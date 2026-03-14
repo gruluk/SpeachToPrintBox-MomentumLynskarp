@@ -357,18 +357,36 @@ class ResultControls:
 
 
 class InfoOverlay:
-    """Semi-transparent privacy notice shown once when entering preview."""
+    """Privacy notice shown as a modal Toplevel when entering preview."""
 
     def __init__(self, root: tk.Tk, on_dismiss):
-        self._overlay = tk.Frame(root, bg="black")
-        self._overlay.place_forget()
+        self._root = root
+        self._on_dismiss = on_dismiss
+        self._win: tk.Toplevel | None = None
 
-        card = tk.Frame(self._overlay, bg=BG, padx=40, pady=32)
+    def show(self):
+        if self._win is not None:
+            return
+        win = tk.Toplevel(self._root)
+        win.overrideredirect(True)
+        win.configure(bg=BG)
+        # Match the root window size and position
+        self._root.update_idletasks()
+        x = self._root.winfo_x()
+        y = self._root.winfo_y()
+        w = self._root.winfo_width() or self._root.winfo_screenwidth()
+        h = self._root.winfo_height() or self._root.winfo_screenheight()
+        win.geometry(f"{w}x{h}+{x}+{y}")
+        win.lift()
+        win.focus_force()
+        self._win = win
+
+        card = tk.Frame(win, bg=BG, padx=48, pady=36)
         card.place(relx=0.5, rely=0.5, anchor="center")
 
         tk.Label(
             card, text="🔒  Personverninformasjon",
-            font=("Helvetica", 22, "bold"), fg=TEXT, bg=BG,
+            font=("Helvetica", 24, "bold"), fg=TEXT, bg=BG,
         ).pack(pady=(0, 16))
 
         body = (
@@ -379,25 +397,28 @@ class InfoOverlay:
         )
         tk.Label(
             card, text=body,
-            font=("Helvetica", 16), fg=TEXT, bg=BG,
+            font=("Helvetica", 17), fg=TEXT, bg=BG,
             justify=tk.CENTER,
-        ).pack(pady=(0, 24))
+        ).pack(pady=(0, 28))
 
         tk.Button(
             card, text="Forstått, la oss starte!",
             font=("Helvetica", 18, "bold"), fg="white", bg=SUCCESS,
             activebackground=SUCCESS_ACTIVE, activeforeground="white",
             relief=tk.FLAT, padx=40, pady=14, cursor="hand2", borderwidth=0,
-            command=on_dismiss,
+            command=self._dismiss,
         ).pack()
 
-    def show(self):
-        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
-        self._overlay.config(bg="#000000")
-        self._overlay.lift()
+    def _dismiss(self):
+        if self._win is not None:
+            self._win.destroy()
+            self._win = None
+        self._on_dismiss()
 
     def hide(self):
-        self._overlay.place_forget()
+        if self._win is not None:
+            self._win.destroy()
+            self._win = None
 
 
 class PrinterDot:
