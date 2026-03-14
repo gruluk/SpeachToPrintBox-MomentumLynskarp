@@ -56,30 +56,30 @@ SERVER_URL  = os.getenv("SERVER_URL", "http://localhost:8000")
 # --- Questionnaire ---
 QUESTIONS = [
     {
-        "q": "Production is on fire 🔥. You...",
+        "q": "Produksjon brenner 🔥. Du...",
         "a": [
-            ("Blame the intern", "1"),
-            ("Open 3 incidents, close 2 immediately", "2"),
-            ("Push a hotfix without testing", "3"),
-            ("Already left for vacation", "4"),
+            ("Skylder på praktikanten", "1"),
+            ("Åpner 3 saker, lukker 2 med én gang", "2"),
+            ("Pusher en hotfix uten testing", "3"),
+            ("Er allerede på ferie", "4"),
         ],
     },
     {
-        "q": "Your README is...",
+        "q": "Din README er...",
         "a": [
-            ("A detailed 40-page novel", "1"),
-            ("A strongly-worded warning", "2"),
-            ("Three emojis and a broken badge", "3"),
-            ("What's a README?", "4"),
+            ("En detaljert roman på 40 sider", "1"),
+            ("En skarp advarsel", "2"),
+            ("Tre emojier og et ødelagt badge", "3"),
+            ("Hva er en README?", "4"),
         ],
     },
     {
-        "q": "You at a hackathon:",
+        "q": "Du på et hackathon:",
         "a": [
-            ("Planning the perfect architecture", "1"),
-            ("Defending your tech choices loudly", "2"),
-            ("Rewriting in a new framework at 2am", "3"),
-            ("Pitching 5 ideas to anyone nearby", "4"),
+            ("Planlegger perfekt arkitektur", "1"),
+            ("Forsvarer teknologivalgene dine høylytt", "2"),
+            ("Skriver om i et nytt rammeverk klokken 2", "3"),
+            ("Pitcher 5 ideer til alle i nærheten", "4"),
         ],
     },
 ]

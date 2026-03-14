@@ -154,12 +154,12 @@ class App:
 
     def _on_start(self):
         self._show_state(PREVIEW)
-        self.preview_ctrl.set_status("Look at the camera and press Take Photo!")
+        self.preview_ctrl.set_status("Se i kameraet og trykk Ta bilde!")
 
     def _take_photo(self):
         self._countdown_n = 3
         self.preview_ctrl.disable_take()
-        self.preview_ctrl.set_status("Get ready...")
+        self.preview_ctrl.set_status("Gjør deg klar...")
         self.root.after(1000, self._countdown_tick)
 
     def _countdown_tick(self):
@@ -188,7 +188,7 @@ class App:
         self.display_label.config(image=photo)
         self.display_label.image = photo
         self._show_state(VALIDATING)
-        self.valid_ctrl.set_status("Checking photo...")
+        self.valid_ctrl.set_status("Sjekker bildet...")
         threading.Thread(target=self._run_validation, daemon=True).start()
 
     def _run_validation(self):
@@ -219,10 +219,10 @@ class App:
         photo_bytes = self._photo_to_jpeg_bytes()
         threading.Thread(target=self._process, args=(photo_bytes,), daemon=True).start()
         self._show_state(REVIEW)
-        self.review_ctrl.set_status("Happy with the photo?")
+        self.review_ctrl.set_status("Fornøyd med bildet?")
 
     def _on_validation_fail(self, message: str):
-        self.valid_ctrl.set_status(f"{message} — try again", WARNING)
+        self.valid_ctrl.set_status(f"{message} — prøv igjen", WARNING)
 
     def _reset_session(self):
         self.captured_photo = None
@@ -239,7 +239,7 @@ class App:
     def _retake(self):
         self._reset_session()
         self._show_state(PREVIEW)
-        self.preview_ctrl.set_status("Look at the camera and press Take Photo!")
+        self.preview_ctrl.set_status("Se i kameraet og trykk Ta bilde!")
 
     def _on_done(self):
         self._reset_session()
@@ -277,7 +277,7 @@ class App:
                 self._show_result(self._gen_result)
             else:
                 self._show_state(REVIEW)
-                self.review_ctrl.set_status(f"Error: {self._gen_error}", WARNING)
+                self.review_ctrl.set_status(f"Feil: {self._gen_error}", WARNING)
         else:
             self._show_state(WAITING)
             self._check_gen_ready()
@@ -290,7 +290,7 @@ class App:
             self._show_result(self._gen_result)
         else:
             self._show_state(REVIEW)
-            self.review_ctrl.set_status(f"Error: {self._gen_error}", WARNING)
+            self.review_ctrl.set_status(f"Feil: {self._gen_error}", WARNING)
 
     def _process(self, photo_bytes: bytes):
         try:
@@ -348,22 +348,22 @@ class App:
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
         self.display_label.image = photo
-        self.result_ctrl.set_status("Printing...")
+        self.result_ctrl.set_status("Skriver ut...")
         threading.Thread(target=self._do_print, args=(composited,), daemon=True).start()
 
     def _do_print(self, composited: Image.Image):
         if not ENABLE_LOCAL_PRINT:
-            self.root.after(0, self.result_ctrl.set_status, "Done! Press Try Again to go again.")
-            self.root.after(0, self.result_ctrl.set_print_status, "Printing via Mac.")
+            self.root.after(0, self.result_ctrl.set_status, "Ferdig! Trykk Prøv igjen for å starte på nytt.")
+            self.root.after(0, self.result_ctrl.set_print_status, "Skriver ut via Mac.")
             return
         try:
             print_image(composited)
-            self.root.after(0, self.result_ctrl.set_status, "Printed! Press Try Again to go again.")
-            self.root.after(0, self.result_ctrl.set_print_status, "Label sent to printer.")
+            self.root.after(0, self.result_ctrl.set_status, "Utskrevet! Trykk Prøv igjen for å starte på nytt.")
+            self.root.after(0, self.result_ctrl.set_print_status, "Etikett sendt til skriveren.")
         except Exception as e:
             import traceback; traceback.print_exc()
-            self.root.after(0, self.result_ctrl.set_status, "Done! Press Try Again to go again.")
-            self.root.after(0, self.result_ctrl.set_print_status, f"Print failed: {e}")
+            self.root.after(0, self.result_ctrl.set_status, "Ferdig! Trykk Prøv igjen for å starte på nytt.")
+            self.root.after(0, self.result_ctrl.set_print_status, f"Utskrift feilet: {e}")
 
     # --- Printer polling ---
 
