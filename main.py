@@ -21,7 +21,7 @@ from printing import composite_label, print_image
 from screens import (
     StartScreen, PreviewControls, ValidatingControls, ReviewControls,
     NameInputScreen, QuestionnaireScreen, WaitingScreen, ResultControls,
-    PrinterDot,
+    PrinterDot, InfoOverlay,
 )
 
 
@@ -76,6 +76,7 @@ class App:
         self.waiting_scr  = WaitingScreen(self.root, on_retake=self._retake)
         self.result_ctrl  = ResultControls(self.root, on_done=self._on_done)
         self.printer_dot  = PrinterDot(self.root)
+        self.info_overlay = InfoOverlay(self.root, on_dismiss=self._on_info_dismiss)
 
         self._all_screens = [
             self.start_scr, self.preview_ctrl, self.valid_ctrl, self.review_ctrl,
@@ -155,6 +156,10 @@ class App:
     def _on_start(self):
         self._show_state(PREVIEW)
         self.preview_ctrl.set_status("Se i kameraet og trykk Ta bilde!")
+        self.info_overlay.show()
+
+    def _on_info_dismiss(self):
+        self.info_overlay.hide()
 
     def _take_photo(self):
         self._countdown_n = 3

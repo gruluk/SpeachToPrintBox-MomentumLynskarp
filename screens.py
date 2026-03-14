@@ -356,6 +356,50 @@ class ResultControls:
         self._print_var.set(msg)
 
 
+class InfoOverlay:
+    """Semi-transparent privacy notice shown once when entering preview."""
+
+    def __init__(self, root: tk.Tk, on_dismiss):
+        self._overlay = tk.Frame(root, bg="black")
+        self._overlay.place_forget()
+
+        card = tk.Frame(self._overlay, bg=BG, padx=40, pady=32)
+        card.place(relx=0.5, rely=0.5, anchor="center")
+
+        tk.Label(
+            card, text="🔒  Personverninformasjon",
+            font=("Helvetica", 22, "bold"), fg=TEXT, bg=BG,
+        ).pack(pady=(0, 16))
+
+        body = (
+            "Bildet ditt vil bli behandlet av OpenAI gpt-image-1\n"
+            "for å lage en piksel-avatar av deg.\n\n"
+            "Selve bildet lagres ikke — kun avataren din\n"
+            "lagres midlertidig under arrangementet."
+        )
+        tk.Label(
+            card, text=body,
+            font=("Helvetica", 16), fg=TEXT, bg=BG,
+            justify=tk.CENTER,
+        ).pack(pady=(0, 24))
+
+        tk.Button(
+            card, text="Forstått, la oss starte!",
+            font=("Helvetica", 18, "bold"), fg="white", bg=SUCCESS,
+            activebackground=SUCCESS_ACTIVE, activeforeground="white",
+            relief=tk.FLAT, padx=40, pady=14, cursor="hand2", borderwidth=0,
+            command=on_dismiss,
+        ).pack()
+
+    def show(self):
+        self._overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._overlay.config(bg="#000000")
+        self._overlay.lift()
+
+    def hide(self):
+        self._overlay.place_forget()
+
+
 class PrinterDot:
     def __init__(self, root: tk.Tk):
         self.label = tk.Label(
