@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageTk
 from camera import Camera
 from config import (
     BG, MUTED, WARNING,
-    START, PREVIEW, VALIDATING, REVIEW, NAME_INPUT, QUESTIONNAIRE,
+    START, INFO, PREVIEW, VALIDATING, REVIEW, NAME_INPUT, QUESTIONNAIRE,
     WAITING, PROCESSING, RESULT,
     QUESTIONS, ASSETS_DIR, SERVER_URL,
     PRINTER_VENDOR, PRINTER_PRODUCT, ENABLE_LOCAL_PRINT,
@@ -21,7 +21,7 @@ from printing import composite_label, print_image
 from screens import (
     StartScreen, PreviewControls, ValidatingControls, ReviewControls,
     NameInputScreen, QuestionnaireScreen, WaitingScreen, ResultControls,
-    PrinterDot, InfoOverlay,
+    PrinterDot, InfoScreen,
 )
 
 
@@ -76,12 +76,12 @@ class App:
         self.waiting_scr  = WaitingScreen(self.root, on_retake=self._retake)
         self.result_ctrl  = ResultControls(self.root, on_done=self._on_done)
         self.printer_dot  = PrinterDot(self.root)
-        self.info_overlay = InfoOverlay(self.root, on_dismiss=self._on_info_dismiss)
+        self.info_scr     = InfoScreen(self.root, on_continue=self._on_info_continue)
 
         self._all_screens = [
-            self.start_scr, self.preview_ctrl, self.valid_ctrl, self.review_ctrl,
-            self.name_scr, self.quiz_scr, self.waiting_scr, self.result_ctrl,
-            self.printer_dot,
+            self.start_scr, self.info_scr, self.preview_ctrl, self.valid_ctrl,
+            self.review_ctrl, self.name_scr, self.quiz_scr, self.waiting_scr,
+            self.result_ctrl, self.printer_dot,
         ]
 
     # --- Preview loop ---
@@ -127,6 +127,10 @@ class App:
             self.start_scr.show()
             return
 
+        if state == INFO:
+            self.info_scr.show()
+            return
+
         self.printer_dot.show()
 
         if state == PREVIEW:
@@ -154,12 +158,11 @@ class App:
         return buf.getvalue()
 
     def _on_start(self):
+        self._show_state(INFO)
+
+    def _on_info_continue(self):
         self._show_state(PREVIEW)
         self.preview_ctrl.set_status("Se i kameraet og trykk Ta bilde!")
-        self.info_overlay.show()
-
-    def _on_info_dismiss(self):
-        self.info_overlay.hide()
 
     def _take_photo(self):
         self._countdown_n = 3

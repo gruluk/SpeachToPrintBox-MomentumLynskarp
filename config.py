@@ -40,6 +40,7 @@ PRINT_HEIGHT_MM = 45  # content height for both continuous and die-cut
 
 # --- States ---
 START         = "start"
+INFO          = "info"
 PREVIEW       = "preview"
 VALIDATING    = "validating"
 REVIEW        = "review"

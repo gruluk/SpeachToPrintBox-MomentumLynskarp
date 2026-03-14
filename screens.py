@@ -356,38 +356,16 @@ class ResultControls:
         self._print_var.set(msg)
 
 
-class InfoOverlay:
-    """Privacy notice shown as a modal Toplevel when entering preview."""
+class InfoScreen:
+    """Privacy / AI info screen shown between START and the camera preview."""
 
-    def __init__(self, root: tk.Tk, on_dismiss):
-        self._root = root
-        self._on_dismiss = on_dismiss
-        self._win: tk.Toplevel | None = None
-
-    def show(self):
-        if self._win is not None:
-            return
-        win = tk.Toplevel(self._root)
-        win.overrideredirect(True)
-        win.configure(bg=BG)
-        # Match the root window size and position
-        self._root.update_idletasks()
-        x = self._root.winfo_x()
-        y = self._root.winfo_y()
-        w = self._root.winfo_width() or self._root.winfo_screenwidth()
-        h = self._root.winfo_height() or self._root.winfo_screenheight()
-        win.geometry(f"{w}x{h}+{x}+{y}")
-        win.lift()
-        win.focus_force()
-        self._win = win
-
-        card = tk.Frame(win, bg=BG, padx=48, pady=36)
-        card.place(relx=0.5, rely=0.5, anchor="center")
+    def __init__(self, root: tk.Tk, on_continue):
+        self.frame = tk.Frame(root, bg=BG)
 
         tk.Label(
-            card, text="🔒  Personverninformasjon",
-            font=("Helvetica", 24, "bold"), fg=TEXT, bg=BG,
-        ).pack(pady=(0, 16))
+            self.frame, text="🔒  Personverninformasjon",
+            font=("Helvetica", 26, "bold"), fg=TEXT, bg=BG,
+        ).pack(pady=(60, 24))
 
         body = (
             "Bildet ditt vil bli behandlet av OpenAI gpt-image-1\n"
@@ -396,29 +374,24 @@ class InfoOverlay:
             "lagres midlertidig under arrangementet."
         )
         tk.Label(
-            card, text=body,
-            font=("Helvetica", 17), fg=TEXT, bg=BG,
+            self.frame, text=body,
+            font=("Helvetica", 18), fg=TEXT, bg=BG,
             justify=tk.CENTER,
-        ).pack(pady=(0, 28))
+        ).pack(pady=(0, 40))
 
         tk.Button(
-            card, text="Forstått, la oss starte!",
-            font=("Helvetica", 18, "bold"), fg="white", bg=SUCCESS,
+            self.frame, text="Forstått, la oss starte! →",
+            font=("Helvetica", 20, "bold"), fg="white", bg=SUCCESS,
             activebackground=SUCCESS_ACTIVE, activeforeground="white",
-            relief=tk.FLAT, padx=40, pady=14, cursor="hand2", borderwidth=0,
-            command=self._dismiss,
+            relief=tk.FLAT, padx=48, pady=18, cursor="hand2", borderwidth=0,
+            command=on_continue,
         ).pack()
 
-    def _dismiss(self):
-        if self._win is not None:
-            self._win.destroy()
-            self._win = None
-        self._on_dismiss()
+    def show(self):
+        self.frame.place(relx=0, rely=0, relwidth=1, relheight=1)
 
     def hide(self):
-        if self._win is not None:
-            self._win.destroy()
-            self._win = None
+        self.frame.place_forget()
 
 
 class PrinterDot:
