@@ -13,6 +13,14 @@ from config import (
     LABEL, PRINT_HEIGHT_MM, ASSETS_DIR, DINO_NAMES,
 )
 
+WEB_PUBLIC_DIR = os.path.join(os.path.dirname(__file__), "web", "public")
+DINO_IMAGES = {
+    "Brachiosaurus": "dino_1.png",
+    "Triceratops":   "dino_2.png",
+    "Stegosaurus":   "dino_3.png",
+    "Pterodactyl":   "dino_4.png",
+}
+
 
 def composite_label(character: Image.Image, user_name: str, dino_type: str) -> Image.Image:
     label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
@@ -38,40 +46,52 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
 
     font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
-    # Logo (top right, small)
+    # Dino sprite box: 2/5 of content height, preserve aspect ratio
+    dino_box = content_h * 2 // 5
+
+    # Load dino sprite (pixel art — use NEAREST to keep crisp)
+    dino_img = None
+    dino_name = DINO_NAMES.get(dino_type, "")
+    if dino_name and dino_name in DINO_IMAGES:
+        dino_path = os.path.join(WEB_PUBLIC_DIR, DINO_IMAGES[dino_name])
+        try:
+            dino_img = Image.open(dino_path).convert("RGBA")
+            # Fit within dino_box while preserving aspect ratio
+            scale = min(dino_box / dino_img.width, dino_box / dino_img.height)
+            dino_w = int(dino_img.width * scale)
+            dino_h = int(dino_img.height * scale)
+            dino_img = dino_img.resize((dino_w, dino_h), Image.NEAREST)
+        except Exception:
+            dino_img = None
+
+    # Logo (top-right area, shrink to leave room for dino sprite)
     logo_bottom = PAD
+    max_logo_w = right_w - (dino_box + PAD) if dino_img else right_w
     try:
         logo = Image.open(
             os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
         ).convert("RGBA")
-        logo_h = content_h // 3
+        logo_h = dino_box
         logo_w = int(logo.width * logo_h / logo.height)
-        if logo_w > right_w:
-            logo_w = right_w
+        if logo_w > max_logo_w:
+            logo_w = max_logo_w
             logo_h = int(logo.height * logo_w / logo.width)
         logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
-        canvas.paste(logo, (right_x, PAD), logo)
-        logo_bottom = PAD + logo_h
+        logo_y = PAD + (dino_box - logo_h) // 2
+        canvas.paste(logo, (right_x, logo_y), logo)
+        logo_bottom = PAD + dino_box
     except Exception:
-        pass
+        logo_bottom = PAD + dino_box
 
-    # Dino name label (bottom right, small text)
-    dino_label_size = max(16, content_h // 16)
-    try:
-        small_font = ImageFont.truetype(font_path, dino_label_size)
-    except Exception:
-        small_font = ImageFont.load_default()
-    draw.text(
-        (right_x, content_h - PAD - dino_label_size),
-        DINO_NAMES[dino_type],
-        fill="#4a8a9e",
-        font=small_font,
-    )
-    dino_label_top = content_h - PAD - dino_label_size
+    # Dino sprite — right-aligned in the top row
+    if dino_img:
+        dino_x = right_x + right_w - dino_img.width
+        dino_y = PAD + (dino_box - dino_img.height) // 2
+        canvas.paste(dino_img, (dino_x, dino_y), dino_img)
 
-    # Name (right middle, fills space between logo and dino label)
+    # Name (fills remaining vertical space below the logo/dino row)
     name_area_top = logo_bottom + PAD
-    name_area_h = dino_label_top - name_area_top - PAD
+    name_area_h = content_h - name_area_top - PAD
     font_size = min(int(name_area_h * 0.80), 200)
     try:
         font = ImageFont.truetype(font_path, font_size)

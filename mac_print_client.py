@@ -118,7 +118,7 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
 
     right_x = split_x + PAD
     right_w = target_w - right_x - PAD
-    top_h   = content_h // 5   # height for logo + dino icon row
+    dino_box = content_h * 2 // 5   # height for logo + dino icon row
 
     # Load dino sprite (pixel art — use NEAREST to keep crisp)
     dino_img = None
@@ -126,7 +126,11 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
         dino_path = os.path.join(WEB_PUBLIC_DIR, DINO_IMAGES[dino_type])
         try:
             dino_img = Image.open(dino_path).convert("RGBA")
-            dino_img = dino_img.resize((top_h, top_h), Image.NEAREST)
+            # Fit within dino_box while preserving aspect ratio
+            scale = min(dino_box / dino_img.width, dino_box / dino_img.height)
+            dino_w = int(dino_img.width * scale)
+            dino_h = int(dino_img.height * scale)
+            dino_img = dino_img.resize((dino_w, dino_h), Image.NEAREST)
         except Exception:
             dino_img = None
 
@@ -136,23 +140,24 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
         logo = Image.open(
             os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
         ).convert("RGBA")
-        max_logo_w = right_w - (top_h + PAD) if dino_img else right_w
-        logo_h = top_h
+        max_logo_w = right_w - (dino_box + PAD) if dino_img else right_w
+        logo_h = dino_box
         logo_w = int(logo.width * logo_h / logo.height)
         if logo_w > max_logo_w:
             logo_w = max_logo_w
             logo_h = int(logo.height * logo_w / logo.width)
         logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
-        logo_y = PAD + (top_h - logo_h) // 2   # vertically centre within top_h
+        logo_y = PAD + (dino_box - logo_h) // 2
         canvas.paste(logo, (right_x, logo_y), logo)
-        logo_bottom = PAD + top_h
+        logo_bottom = PAD + dino_box
     except Exception:
-        logo_bottom = PAD + top_h
+        logo_bottom = PAD + dino_box
 
     # Dino sprite — right-aligned in the top row, next to logo
     if dino_img:
-        dino_x = right_x + right_w - top_h
-        canvas.paste(dino_img, (dino_x, PAD), dino_img)
+        dino_x = right_x + right_w - dino_img.width
+        dino_y = PAD + (dino_box - dino_img.height) // 2
+        canvas.paste(dino_img, (dino_x, dino_y), dino_img)
 
     # Name — fills all remaining vertical space below the logo/dino row
     name_area_top = logo_bottom + PAD
