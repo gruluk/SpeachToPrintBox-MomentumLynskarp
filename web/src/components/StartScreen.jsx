@@ -34,7 +34,7 @@ export default function StartScreen({ onStart, errorMsg }) {
 
       {/* Centre content */}
       <div className="start-content">
-        <img src={`${base}logo_figma.png`} className="start-logo" alt="Bytefest '26" />
+        <img src={`${base}logo.png`} className="start-logo" alt="Bytefest '26" />
         <p className="subtitle">Få ditt pikselkunst-portrett!</p>
         {errorMsg && <p className="error">{errorMsg}</p>}
         <button className="btn-start" onClick={onStart}>Start</button>
