@@ -184,7 +184,7 @@ export default function App() {
         <StartScreen onStart={() => { setErrorMsg(''); setState('INFO') }} errorMsg={errorMsg} />
       )}
       {state === 'INFO' && (
-        <InfoScreen onContinue={() => setState('PREVIEW')} />
+        <InfoScreen onContinue={() => setState('PREVIEW')} onBack={() => setState('START')} />
       )}
       {state === 'PREVIEW' && (
         <PreviewScreen onCapture={handleCapture} onCancel={() => { setErrorMsg(''); setState('START') }} errorMsg={errorMsg} />
