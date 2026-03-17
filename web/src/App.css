@@ -388,19 +388,37 @@ h2 {
   inset: 0;
   pointer-events: none;
   z-index: 100;
+  animation: ring-pulse 1s ease-in-out infinite;
+}
+
+/* Layer 1: solid white gradient — uses P3 wide-gamut white for max intensity */
+.ring-light-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: radial-gradient(
     ellipse at center,
-    transparent 30%,
-    rgba(255, 255, 255, 0.5) 65%,
-    rgba(255, 255, 255, 0.95) 85%,
-    #ffffff 100%
+    transparent 25%,
+    color(display-p3 1 1 1 / 0.6) 55%,
+    color(display-p3 1 1 1 / 0.95) 75%,
+    color(display-p3 1 1 1) 100%
   );
-  animation: ring-pulse 1s ease-in-out infinite;
+}
+
+/* Layer 2: brightness amplifier — pushes edge pixels into HDR range on capable displays */
+.ring-light-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: brightness(6);
+  -webkit-backdrop-filter: brightness(6);
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 28%, black 60%);
+  mask-image: radial-gradient(ellipse at center, transparent 28%, black 60%);
 }
 
 @keyframes ring-pulse {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.85; }
+  50%       { opacity: 0.9; }
 }
 
 .camera-video {
