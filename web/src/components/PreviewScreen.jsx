@@ -70,7 +70,7 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
   return (
     <div className="screen preview-screen">
       <p className="camera-hint">Plasser ansiktet ditt i sirkelen</p>
-      <div className="camera-circle">
+      <div className={`camera-circle${capturing ? ' ring-light' : ''}`}>
         <video
           ref={videoRef}
           autoPlay
