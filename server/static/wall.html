@@ -41,29 +41,11 @@
       pointer-events: none;
     }
 
-    #title-row { display: flex; align-items: flex-start; gap: 10px; }
-
-    #title {
-      color: #2d5c6a;
-      font-size: 42px;
-      letter-spacing: 4px;
-      line-height: 1;
-      text-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+    #header-logo {
+      height: 80px;
+      width: auto;
+      image-rendering: pixelated;
     }
-
-    #badge {
-      background: #5b8c3e;
-      color: #fff;
-      font-size: 11px;
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      margin-top: -6px;
-      flex-shrink: 0;
-      box-shadow: 2px 2px 0 rgba(0,0,0,0.15);
-    }
-
-    #subtitle { color: #4a8a9e; font-size: 10px; letter-spacing: 5px; margin-top: 10px; }
 
     #count {
       color: #2d5c6a;
@@ -251,13 +233,7 @@
 <body>
 
   <div id="header">
-    <div>
-      <div id="title-row">
-        <span id="title">BYTEFEST</span>
-        <span id="badge">'26</span>
-      </div>
-      <div id="subtitle">+ VENNER</div>
-    </div>
+    <img id="header-logo" src="/booth/logo.png" alt="Bytefest '26" />
     <div id="count">WAITING FOR PLAYERS...</div>
   </div>
 

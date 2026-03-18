@@ -1,6 +1,6 @@
 import SceneDecorations from './SceneDecorations'
 
-export default function InfoScreen({ onContinue }) {
+export default function InfoScreen({ onContinue, onBack }) {
   return (
     <div className="screen center">
       <SceneDecorations seed={8} />
@@ -13,9 +13,10 @@ export default function InfoScreen({ onContinue }) {
         Selve bildet lagres ikke, kun avataren din<br />
         lagres midlertidig under arrangementet.
       </p>
-      <button className="btn-start" onClick={onContinue}>
-        Forstått, la oss starte! →
-      </button>
+      <div className="btn-row">
+        <button className="btn-secondary" onClick={onBack}>Tilbake</button>
+        <button className="btn-start" onClick={onContinue}>Forstått, la oss starte!</button>
+      </div>
     </div>
   )
 }

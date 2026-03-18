@@ -238,8 +238,8 @@ h2 {
 .btn-answer {
   background: white;
   color: var(--text);
-  padding: 1.1rem 1rem;
-  font-size: 0.9rem;
+  padding: 1.5rem 1.25rem;
+  font-size: 1.1rem;
   text-align: center;
 
   &::after {
@@ -381,6 +381,44 @@ h2 {
   border-radius: 50%;
   overflow: hidden;
   box-shadow: 0 0 0 var(--px) #111;
+}
+
+.ring-light-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  animation: ring-pulse 1s ease-in-out infinite;
+}
+
+/* Layer 1: solid white gradient — uses P3 wide-gamut white for max intensity */
+.ring-light-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 25%,
+    color(display-p3 1 1 1 / 0.6) 55%,
+    color(display-p3 1 1 1 / 0.95) 75%,
+    color(display-p3 1 1 1) 100%
+  );
+}
+
+/* Layer 2: brightness amplifier — pushes edge pixels into HDR range on capable displays */
+.ring-light-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: brightness(6);
+  -webkit-backdrop-filter: brightness(6);
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 28%, black 60%);
+  mask-image: radial-gradient(ellipse at center, transparent 28%, black 60%);
+}
+
+@keyframes ring-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.9; }
 }
 
 .camera-video {
@@ -538,31 +576,31 @@ h2 {
 
 .q-progress {
   font-family: var(--pixel-font);
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: var(--muted);
   line-height: 1.8;
 }
 
 .q-text {
   font-family: var(--pixel-font);
-  font-size: 1.4rem;
-  max-width: 700px;
+  font-size: 1.8rem;
+  max-width: 860px;
   line-height: 1.8;
 }
 
 .q-answers {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
   width: 100%;
-  max-width: 660px;
+  max-width: 860px;
 }
 
 /* --- Questionnaire --- */
 
 .q-back {
-  font-size: 0.6rem;
-  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  padding: 0.8rem 1.75rem;
   margin-top: 0.5rem;
 }
 
