@@ -91,7 +91,7 @@ html, body {
 .subtitle {
   font-family: var(--pixel-font);
   font-size: 1rem;
-  color: var(--muted);
+  color: var(--text);
   line-height: 1.8;
 }
 
