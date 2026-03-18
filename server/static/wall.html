@@ -272,7 +272,7 @@
     const countEl = document.getElementById('count');
     const emptyEl = document.getElementById('empty');
 
-    const CHAR_SIZE = 144;
+    let CHAR_SIZE = 144;
     const HEADER_H  = 120;
     const GROUND_H  = Math.round(window.innerHeight * 0.22);
 
@@ -490,6 +490,14 @@
       setTimeout(() => { el.remove(); updateCount(); }, 400);
     }
 
+    function setCharSize(newSize) {
+      CHAR_SIZE = newSize;
+      charMap.forEach(el => {
+        const wrap = el.querySelector('.char-wrap');
+        if (wrap) wrap.style.setProperty('--size', newSize + 'px');
+      });
+    }
+
     function patchCharacter(id, name, dinoType) {
       const el = charMap.get(id);
       if (!el) return;
@@ -521,6 +529,7 @@
         if (msg.type === 'positions')        applyPositions(msg.chars);
         if (msg.type === 'remove_character') removeCharacter(msg.id);
         if (msg.type === 'update_character') patchCharacter(msg.id, msg.name, msg.dino_type);
+        if (msg.type === 'char_size')        setCharSize(msg.size);
       };
 
       // Keepalive ping every 25s — prevents Railway's proxy from closing idle WS

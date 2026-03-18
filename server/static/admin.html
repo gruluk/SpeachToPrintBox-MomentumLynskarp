@@ -110,6 +110,36 @@
     .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
     .btn-orange { background: #c97010; color: #fff; }
 
+    /* ── Avatar size controls ── */
+    .size-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .size-controls strong { color: var(--text); }
+
+    .size-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .size-btn:hover { border-color: var(--blue); background: rgba(50,171,208,0.1); }
+
     /* ── Table ── */
     .table-wrap {
       overflow-x: auto;
@@ -236,6 +266,12 @@
   <div class="toolbar">
     <input type="search" id="search" placeholder="Search name or dino…" oninput="renderTable()" />
     <button class="btn btn-ghost" onclick="load()">↺ Sync &amp; Refresh</button>
+    <div class="size-controls">
+      <span>Avatar size:</span>
+      <button class="size-btn" onclick="changeSize(-16)">−</button>
+      <strong id="size-val">144</strong><span>px</span>
+      <button class="size-btn" onclick="changeSize(+16)">+</button>
+    </div>
   </div>
 
   <div class="table-wrap">
@@ -285,6 +321,7 @@
 <script>
   let characters = []
   let editingId = null
+  let currentCharSize = 144
 
   // ── Data ──────────────────────────────────────────────────
 
@@ -426,6 +463,37 @@
     }
   }
 
+  // ── Avatar size ──────────────────────────────────────────────
+
+  async function loadCharSize() {
+    try {
+      const res = await fetch('/admin/api/char-size')
+      if (res.ok) {
+        const data = await res.json()
+        currentCharSize = data.char_size
+        document.getElementById('size-val').textContent = currentCharSize
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  async function changeSize(delta) {
+    const newSize = Math.max(48, Math.min(400, currentCharSize + delta))
+    if (newSize === currentCharSize) return
+    try {
+      const res = await fetch('/admin/api/char-size', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ char_size: newSize }),
+      })
+      if (res.ok) {
+        currentCharSize = newSize
+        document.getElementById('size-val').textContent = currentCharSize
+      }
+    } catch (e) {
+      alert('Failed to update size')
+    }
+  }
+
   // ── Helpers ────────────────────────────────────────────────
 
   function esc(s) {
@@ -449,6 +517,7 @@
   })
 
   load()
+  loadCharSize()
 </script>
 </body>
 </html>

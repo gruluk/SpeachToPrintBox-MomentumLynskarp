@@ -57,7 +57,7 @@ _WORLD_W          = _LOGICAL_SCREEN_W * 4   # 7680 — full 4-screen width
 _WORLD_H          = 1080
 _WALL_HEADER_H    = 120    # keep characters below the header
 _WALL_GROUND_H    = 220    # keep characters above the ground-dino scene
-_WALL_CHAR_SIZE   = 144
+_WALL_CHAR_SIZE   = 144   # default; mutable via admin API
 _WALL_MARGIN      = 24
 _CHAR_SPEED_MIN   = 30    # px/s  — slow DVD-screensaver drift
 _CHAR_SPEED_MAX   = 60    # px/s
@@ -78,16 +78,16 @@ def _assign_world_pos(char: dict) -> None:
 
 async def _character_movement_loop() -> None:
     """Physics loop: advance every character each tick, bounce off walls, broadcast positions."""
-    x_min = float(_WALL_MARGIN)
-    x_max = float(_WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN)
-    y_min = float(_WALL_HEADER_H)
-    y_max = float(_WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H)
-
     while True:
         try:
             await asyncio.sleep(_PHYSICS_TICK)
             if not characters:
                 continue
+
+            x_min = float(_WALL_MARGIN)
+            x_max = float(_WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN)
+            y_min = float(_WALL_HEADER_H)
+            y_max = float(_WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H)
 
             for char in list(characters):
                 char['x'] = char.get('x', 0.0) + char.get('vx', 0) * _PHYSICS_TICK
@@ -260,6 +260,7 @@ async def websocket_endpoint(ws: WebSocket):
     # The physics loop yields to the event loop between ticks, so adding
     # to connections first would cause concurrent sends on the same socket
     # (this loop + broadcast), corrupting WebSocket frames.
+    await ws.send_text(json.dumps({"type": "char_size", "size": _WALL_CHAR_SIZE}))
     for char in characters:
         await ws.send_text(json.dumps({"type": "new_character", **char}))
     connections.append(ws)
@@ -332,6 +333,22 @@ async def admin_reprint(char_id: str, _=Depends(require_admin)):
     except Exception as e:
         print(f"[db] reprint failed: {e}")
     return {"ok": True}
+
+
+@app.get("/admin/api/char-size")
+async def admin_get_char_size(_=Depends(require_admin)):
+    return {"char_size": _WALL_CHAR_SIZE}
+
+
+@app.post("/admin/api/char-size")
+async def admin_set_char_size(body: dict, _=Depends(require_admin)):
+    global _WALL_CHAR_SIZE
+    size = body.get("char_size")
+    if not isinstance(size, int) or size < 48 or size > 400:
+        raise HTTPException(status_code=400, detail="char_size must be int between 48 and 400")
+    _WALL_CHAR_SIZE = size
+    await broadcast({"type": "char_size", "size": size})
+    return {"ok": True, "char_size": size}
 
 
 @app.get("/admin/api/sync")
