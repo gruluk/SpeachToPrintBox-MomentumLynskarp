@@ -18,8 +18,6 @@ import time
 import httpx
 from dotenv import load_dotenv
 
-import db
-
 load_dotenv()
 
 BATCH = 20  # characters per request
@@ -44,15 +42,15 @@ def seed(n: int, base_url: str):
     print(f"Done. Inserted {n} characters.")
 
 
-def clear_all():
-    print("Fetching all characters from InstantDB...")
-    chars = db.get_all_characters()
-    print(f"Deleting {len(chars)} characters...")
-    for i, c in enumerate(chars):
-        db.delete_character(c["id"])
-        if (i + 1) % 20 == 0:
-            print(f"  deleted {i + 1}/{len(chars)}")
-    print("Done.")
+def clear_all(base_url: str):
+    print(f"Clearing all characters via {base_url}/admin/api/characters ...")
+    r = httpx.delete(
+        f"{base_url}/admin/api/characters",
+        auth=("admin", ADMIN_PASSWORD),
+        timeout=60,
+    )
+    r.raise_for_status()
+    print(f"Done. Deleted {r.json()['deleted']} characters.")
 
 
 if __name__ == "__main__":
@@ -64,7 +62,7 @@ if __name__ == "__main__":
         args = args[:idx] + args[idx + 2:]
 
     if "--clear" in args:
-        clear_all()
+        clear_all(url)
     else:
         n = int(args[0]) if args else 400
         seed(n, url)

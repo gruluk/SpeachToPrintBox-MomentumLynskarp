@@ -61,7 +61,7 @@ _WALL_CHAR_SIZE   = 144   # default; mutable via admin API
 _WALL_MARGIN      = 24
 _CHAR_SPEED_MIN   = 30    # px/s  — slow DVD-screensaver drift
 _CHAR_SPEED_MAX   = 60    # px/s
-_PHYSICS_TICK     = 0.2   # seconds between physics updates (5 fps)
+_PHYSICS_TICK     = 0.1   # seconds between physics updates (10 fps)
 
 
 def _assign_world_pos(char: dict) -> None:
@@ -349,6 +349,22 @@ async def admin_set_char_size(body: dict, _=Depends(require_admin)):
     _WALL_CHAR_SIZE = size
     await broadcast({"type": "char_size", "size": size})
     return {"ok": True, "char_size": size}
+
+
+@app.delete("/admin/api/characters")
+async def admin_clear_all(_=Depends(require_admin)):
+    """Remove all characters from memory, broadcast removals, and delete from InstantDB."""
+    ids = [c["id"] for c in characters]
+    characters.clear()
+    for char_id in ids:
+        await broadcast({"type": "remove_character", "id": char_id})
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, instant_db.delete_character, char_id
+            )
+        except Exception as e:
+            print(f"[db] delete failed: {e}")
+    return {"ok": True, "deleted": len(ids)}
 
 
 @app.post("/admin/api/seed")
