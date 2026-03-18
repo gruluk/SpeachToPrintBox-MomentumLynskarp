@@ -61,7 +61,7 @@ _WALL_CHAR_SIZE   = 144   # default; mutable via admin API
 _WALL_MARGIN      = 24
 _CHAR_SPEED_MIN   = 30    # px/s  — slow DVD-screensaver drift
 _CHAR_SPEED_MAX   = 60    # px/s
-_PHYSICS_TICK     = 0.1   # seconds between physics updates (10 fps)
+_PHYSICS_TICK     = 0.2   # seconds between physics updates (5 fps)
 
 
 def _assign_world_pos(char: dict) -> None:

@@ -145,17 +145,15 @@
     /* ── Characters ─────────────────────────────────────── */
     #world { position: fixed; inset: 0; z-index: 10; overflow: visible; }
 
-    /* Outer: GPU-composited positioning layer, no animations */
+    /* Outer: positioning layer — will-change applied only when visible */
     .char-pos {
       position: absolute;
       top: 0; left: 0;
-      will-change: transform;
     }
 
     /* Inner: visual animations only, no position */
     .char-wrap {
       text-align: center;
-      filter: drop-shadow(3px 8px 0 rgba(45,92,106,0.2));
       opacity: 0;
       animation:
         arrive     0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
@@ -460,22 +458,35 @@
 
       // Enable smooth position transitions after arrive animation finishes
       setTimeout(() => {
-        pos.style.transition = 'transform 120ms linear';
+        pos.style.transition = 'transform 200ms linear';
       }, 800);
     }
 
-    // Batch position update from server physics loop (10 fps)
+    // Batch position update — buffered and flushed in rAF to sync with browser paint
+    let _pendingPositions = null;
     function applyPositions(chars) {
-      chars.forEach(({ id, x, y }) => {
-        const el = charMap.get(id);
-        if (!el) return;
-        const localX = x - SCREEN_OFFSET;
-        // Viewport culling — skip off-screen characters entirely
-        const visible = localX > -CHAR_SIZE && localX < 1920 + CHAR_SIZE;
-        el.style.visibility = visible ? '' : 'hidden';
-        if (visible) el.style.transform = `translate(${localX}px, ${y}px)`;
-      });
+      _pendingPositions = chars;
     }
+    function flushPositions() {
+      if (_pendingPositions) {
+        const chars = _pendingPositions;
+        _pendingPositions = null;
+        chars.forEach(({ id, x, y }) => {
+          const el = charMap.get(id);
+          if (!el) return;
+          const localX = x - SCREEN_OFFSET;
+          const visible = localX > -CHAR_SIZE && localX < 1920 + CHAR_SIZE;
+          if (visible !== (el.style.visibility !== 'hidden')) {
+            el.style.visibility = visible ? '' : 'hidden';
+            // Only promote visible elements to compositor layers
+            el.style.willChange = visible ? 'transform' : 'auto';
+          }
+          if (visible) el.style.transform = `translate(${localX}px, ${y}px)`;
+        });
+      }
+      requestAnimationFrame(flushPositions);
+    }
+    requestAnimationFrame(flushPositions);
 
     function removeCharacter(id) {
       const el = charMap.get(id);
