@@ -253,6 +253,24 @@ def get_characters():
     return characters
 
 
+# --- Dino assignment ---
+
+_DINO_TYPES = ["Brachiosaurus", "Triceratops", "Stegosaurus", "Pterodactyl"]
+
+@app.get("/next-dino")
+def next_dino(preference: str = ""):
+    """Return the least-represented dino type, using preference as a tiebreaker."""
+    counts = {d: 0 for d in _DINO_TYPES}
+    for c in characters:
+        dt = c.get("dino_type", "")
+        if dt in counts:
+            counts[dt] += 1
+    min_count = min(counts.values())
+    least = [d for d in _DINO_TYPES if counts[d] == min_count]
+    assigned = preference if preference in least else least[0]
+    return {"dino_type": assigned}
+
+
 # --- TV wall WebSocket ---
 
 @app.websocket("/ws")

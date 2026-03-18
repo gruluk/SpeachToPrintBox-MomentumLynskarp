@@ -61,6 +61,7 @@ export default function App() {
   const [photoUrl, setPhotoUrl] = useState(null)
   const [name, setName] = useState('')
   const [answers, setAnswers] = useState([])
+  const [assignedDino, setAssignedDino] = useState('')
   const [resultData, setResultData] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [validating, setValidating] = useState(false)
@@ -132,8 +133,16 @@ export default function App() {
     setState('DINO_INTRO')
   }, [])
 
-  const handleQuestionsDone = useCallback((ans) => {
+  const handleQuestionsDone = useCallback(async (ans) => {
     setAnswers(ans)
+    const preference = DINO_NAMES[scoreDino(ans)] || ''
+    try {
+      const res = await fetch(`/next-dino?preference=${encodeURIComponent(preference)}`)
+      const data = await res.json()
+      setAssignedDino(data.dino_type)
+    } catch {
+      setAssignedDino(preference) // fall back to questionnaire result on error
+    }
     setState('DINO_REVEAL')
   }, [])
 
@@ -168,6 +177,7 @@ export default function App() {
     setPhotoUrl(null)
     setName('')
     setAnswers([])
+    setAssignedDino('')
     setResultData(null)
     setErrorMsg('')
     setValidating(false)
@@ -175,8 +185,8 @@ export default function App() {
     setState('START')
   }, [photoUrl])
 
-  const dinoKey = answers.length ? scoreDino(answers) : '1'
-  const dinoName = DINO_NAMES[dinoKey] || ''
+  const dinoKey = Object.keys(DINO_NAMES).find(k => DINO_NAMES[k] === assignedDino) || (answers.length ? scoreDino(answers) : '1')
+  const dinoName = assignedDino || DINO_NAMES[dinoKey] || ''
 
   return (
     <div className="app">
