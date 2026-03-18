@@ -51,8 +51,9 @@ def validate_photo(photo: Image.Image) -> ValidationResult:
                             "- The person is too far away (face smaller than ~10% of frame height)\n\n"
                             "Set ok=true if a person's face is reasonably visible and roughly forward-facing.\n\n"
                             "Keep message under 6 words, friendly and direct. "
-                            'Examples: "No face detected", "Move closer to the camera", '
-                            '"Too dark — find better lighting", "Please face the camera".\n'
+                            "Respond in Norwegian. "
+                            'Examples: "Ingen ansikt oppdaget", "Kom nærmere kameraet", '
+                            '"For mørkt — finn bedre lys", "Vend ansiktet mot kameraet".\n'
                             "Leave message empty string when ok=true."
                         ),
                     },
