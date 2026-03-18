@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 // camera permission once per session instead of on every retake.
 let _cachedStream = null
 
+const ZOOM = 1.8  // increase to zoom in more
+
 export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
   const videoRef = useRef(null)
   const [countdown, setCountdown] = useState(null)
@@ -57,11 +59,16 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
   function doCapture() {
     const video = videoRef.current
     const canvas = document.createElement('canvas')
+    // Crop the center of the frame to match the visual zoom
+    const sw = video.videoWidth / ZOOM
+    const sh = video.videoHeight / ZOOM
+    const sx = (video.videoWidth - sw) / 2
+    const sy = (video.videoHeight - sh) / 2
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
     const ctx = canvas.getContext('2d')
     // Do NOT mirror — server needs un-mirrored image
-    ctx.drawImage(video, 0, 0)
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
     canvas.toBlob((blob) => {
       onCapture(blob)
     }, 'image/jpeg', 0.92)
@@ -78,6 +85,7 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
           playsInline
           muted
           className="camera-video"
+          style={{ transform: `scale(${ZOOM})` }}
         />
         {countdown !== null && (
           <div className="countdown">{countdown}</div>
