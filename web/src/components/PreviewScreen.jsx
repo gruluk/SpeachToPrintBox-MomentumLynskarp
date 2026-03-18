@@ -67,9 +67,6 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
     const ctx = canvas.getContext('2d')
-    // Mirror horizontally
-    ctx.translate(canvas.width, 0)
-    ctx.scale(-1, 1)
     ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
     canvas.toBlob((blob) => {
       onCapture(blob)
