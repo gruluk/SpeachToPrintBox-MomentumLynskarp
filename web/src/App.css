@@ -238,8 +238,8 @@ h2 {
 .btn-answer {
   background: white;
   color: var(--text);
-  padding: 1.1rem 1rem;
-  font-size: 0.9rem;
+  padding: 1.5rem 1.25rem;
+  font-size: 1.1rem;
   text-align: center;
 
   &::after {
@@ -576,31 +576,31 @@ h2 {
 
 .q-progress {
   font-family: var(--pixel-font);
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: var(--muted);
   line-height: 1.8;
 }
 
 .q-text {
   font-family: var(--pixel-font);
-  font-size: 1.4rem;
-  max-width: 700px;
+  font-size: 1.8rem;
+  max-width: 860px;
   line-height: 1.8;
 }
 
 .q-answers {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
   width: 100%;
-  max-width: 660px;
+  max-width: 860px;
 }
 
 /* --- Questionnaire --- */
 
 .q-back {
-  font-size: 0.6rem;
-  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  padding: 0.8rem 1.75rem;
   margin-top: 0.5rem;
 }
 
