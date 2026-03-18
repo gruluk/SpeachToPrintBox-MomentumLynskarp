@@ -12,6 +12,7 @@ The server must be running. Set ADMIN_PASSWORD env var if it differs from the de
 """
 
 import os
+import subprocess
 import sys
 import time
 
@@ -51,6 +52,16 @@ def clear_all(base_url: str):
     )
     r.raise_for_status()
     print(f"Done. Deleted {r.json()['deleted']} characters.")
+
+    print("Cancelling CUPS print queue...")
+    try:
+        result = subprocess.run(["cancel", "-a"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("Print queue cleared.")
+        else:
+            print(f"cancel -a: {(result.stdout + result.stderr).strip() or 'no jobs in queue'}")
+    except FileNotFoundError:
+        print("Warning: 'cancel' command not found — clear the print queue manually.")
 
 
 if __name__ == "__main__":
