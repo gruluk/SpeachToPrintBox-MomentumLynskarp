@@ -64,10 +64,11 @@ _CHAR_SPEED_MAX   = 60    # px/s
 _PHYSICS_TICK     = 0.1   # seconds between physics updates (10 fps)
 
 
-def _assign_world_pos(char: dict) -> None:
+def _assign_world_pos(char: dict, right_side: bool = False) -> None:
     """Assign a random starting position and velocity for DVD-style bouncing."""
-    char['x'] = float(random.randint(_WALL_MARGIN,
-                                     _WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN))
+    x_min = (_WORLD_W - _LOGICAL_SCREEN_W + _WALL_MARGIN) if right_side else _WALL_MARGIN
+    x_max = _WORLD_W - _WALL_CHAR_SIZE - _WALL_MARGIN
+    char['x'] = float(random.randint(x_min, x_max))
     char['y'] = float(random.randint(_WALL_HEADER_H,
                                      _WORLD_H - _WALL_CHAR_SIZE - _WALL_GROUND_H))
     speed = random.uniform(_CHAR_SPEED_MIN, _CHAR_SPEED_MAX)
@@ -231,6 +232,7 @@ async def publish_character(
         return {"error": "not found"}
     char["name"] = name
     char["dino_type"] = dino_type
+    _assign_world_pos(char, right_side=True)
     await broadcast({"type": "new_character", **char})
 
     # Persist to InstantDB (non-blocking — fire and forget)
