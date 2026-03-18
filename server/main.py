@@ -351,6 +351,51 @@ async def admin_set_char_size(body: dict, _=Depends(require_admin)):
     return {"ok": True, "char_size": size}
 
 
+@app.post("/admin/api/seed")
+async def admin_seed(count: int = 10, _=Depends(require_admin)):
+    """Insert N fake characters into memory, broadcast to walls, and persist to InstantDB."""
+    import base64, io, random
+    from PIL import Image, ImageDraw
+
+    names = ["Ada","Bo","Carl","Dina","Emil","Frida","Geir","Hanna","Ida","Jonas",
+             "Kari","Lars","Mari","Nils","Ola","Petra","Rolf","Silje","Tor","Una"]
+    dino_types = ["dino_1", "dino_2", "dino_3", "dino_4"]
+
+    def make_image(color):
+        img = Image.new("RGB", (160, 160), (30, 30, 30))
+        draw = ImageDraw.Draw(img)
+        r, g, b = color
+        draw.ellipse([40, 20, 120, 100], fill=(r, g, b))
+        draw.rectangle([55, 100, 105, 150], fill=(r, g, b))
+        draw.ellipse([50, 40, 68, 58], fill=(20, 20, 20))
+        draw.ellipse([92, 40, 110, 58], fill=(20, 20, 20))
+        draw.arc([58, 65, 102, 88], start=10, end=170, fill=(20, 20, 20), width=3)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode()
+
+    added = []
+    for i in range(count):
+        color = (random.randint(80, 220), random.randint(80, 220), random.randint(80, 220))
+        char_id = str(uuid.uuid4())
+        name = random.choice(names)
+        dino_type = dino_types[i % len(dino_types)]
+        image_b64 = await asyncio.get_event_loop().run_in_executor(None, make_image, color)
+        char = {"id": char_id, "image_b64": image_b64, "name": name, "dino_type": dino_type}
+        _assign_world_pos(char)
+        characters.append(char)
+        await broadcast({"type": "new_character", **char})
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, instant_db.publish_character, char_id, name, dino_type, image_b64
+            )
+        except Exception as e:
+            print(f"[seed] db write failed: {e}")
+        added.append(char_id)
+
+    return {"ok": True, "added": len(added)}
+
+
 @app.get("/admin/api/sync")
 async def admin_sync(_=Depends(require_admin)):
     """Sync printed status from InstantDB into the in-memory list, return updated list."""
