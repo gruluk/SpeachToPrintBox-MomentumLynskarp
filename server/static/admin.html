@@ -110,35 +110,24 @@
     .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
     .btn-orange { background: #c97010; color: #fff; }
 
-    /* ── Avatar size controls ── */
-    .size-controls {
+    /* ── Avatar size slider ── */
+    .size-row {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-left: auto;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
       color: var(--muted);
       font-size: 0.8rem;
     }
 
-    .size-controls strong { color: var(--text); }
+    .size-row strong { color: var(--text); }
 
-    .size-btn {
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      font-weight: 700;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--surface);
-      color: var(--text);
+    .size-row input[type="range"] {
+      flex: 1;
+      max-width: 280px;
+      accent-color: var(--blue);
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-      user-select: none;
     }
-    .size-btn:hover { border-color: var(--blue); background: rgba(50,171,208,0.1); }
 
     /* ── Table ── */
     .table-wrap {
@@ -266,12 +255,12 @@
   <div class="toolbar">
     <input type="search" id="search" placeholder="Search name or dino…" oninput="renderTable()" />
     <button class="btn btn-ghost" onclick="load()">↺ Sync &amp; Refresh</button>
-    <div class="size-controls">
-      <span>Avatar size:</span>
-      <button class="size-btn" onclick="changeSize(-16)">−</button>
-      <strong id="size-val">144</strong><span>px</span>
-      <button class="size-btn" onclick="changeSize(+16)">+</button>
-    </div>
+  </div>
+
+  <div class="size-row">
+    <span>Avatar size:</span>
+    <input type="range" id="size-slider" min="48" max="400" step="8" value="144" oninput="onSizeSlider(this.value)" />
+    <strong id="size-val">144</strong><span>px</span>
   </div>
 
   <div class="table-wrap">
@@ -465,6 +454,8 @@
 
   // ── Avatar size ──────────────────────────────────────────────
 
+  let _sizeTimer = null
+
   async function loadCharSize() {
     try {
       const res = await fetch('/admin/api/char-size')
@@ -472,22 +463,28 @@
         const data = await res.json()
         currentCharSize = data.char_size
         document.getElementById('size-val').textContent = currentCharSize
+        document.getElementById('size-slider').value = currentCharSize
       }
     } catch (e) { /* ignore */ }
   }
 
-  async function changeSize(delta) {
-    const newSize = Math.max(48, Math.min(400, currentCharSize + delta))
-    if (newSize === currentCharSize) return
+  function onSizeSlider(val) {
+    const size = parseInt(val, 10)
+    document.getElementById('size-val').textContent = size
+    clearTimeout(_sizeTimer)
+    _sizeTimer = setTimeout(() => commitSize(size), 150)
+  }
+
+  async function commitSize(size) {
+    if (size === currentCharSize) return
     try {
       const res = await fetch('/admin/api/char-size', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ char_size: newSize }),
+        body: JSON.stringify({ char_size: size }),
       })
       if (res.ok) {
-        currentCharSize = newSize
-        document.getElementById('size-val').textContent = currentCharSize
+        currentCharSize = size
       }
     } catch (e) {
       alert('Failed to update size')
