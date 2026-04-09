@@ -11,9 +11,9 @@
       --border: #2a2d3a;
       --text: #e8eaf0;
       --muted: #7a7f96;
-      --blue: #32ABD0;
-      --blue-dark: #1D7B91;
-      --orange: #FB9214;
+      --purple: #3c1c71;
+      --purple-light: #7a1c71;
+      --orange: #e06c00;
       --green: #539227;
       --red: #e05252;
       --red-dark: #b33c3c;
@@ -29,7 +29,6 @@
       min-height: 100vh;
     }
 
-    /* ── Header ── */
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -46,10 +45,9 @@
     .header-title {
       font-size: 1rem;
       font-weight: 700;
-      color: var(--blue);
+      color: var(--purple-light);
       letter-spacing: 0.05em;
     }
-
     .header-title span { color: var(--muted); font-weight: 400; }
 
     #stats {
@@ -58,22 +56,20 @@
       color: var(--muted);
       font-size: 0.8rem;
     }
-
     #stats strong { color: var(--text); }
 
-    /* ── Main ── */
     main {
       max-width: 1200px;
       margin: 0 auto;
       padding: 1.5rem 2rem;
     }
 
-    /* ── Toolbar ── */
     .toolbar {
       display: flex;
       align-items: center;
       gap: 1rem;
       margin-bottom: 1.25rem;
+      flex-wrap: wrap;
     }
 
     .toolbar input {
@@ -86,7 +82,9 @@
       outline: none;
       width: 220px;
     }
-    .toolbar input:focus { border-color: var(--blue); }
+    .toolbar input:focus { border-color: var(--purple); }
+
+    .toolbar-spacer { flex: 1; }
 
     .btn {
       border: none;
@@ -100,9 +98,9 @@
     .btn:hover { opacity: 0.85; }
     .btn:disabled { opacity: 0.4; cursor: default; }
 
-    .btn-blue  { background: var(--blue);     color: #fff; }
-    .btn-red   { background: var(--red);      color: #fff; }
-    .btn-ghost {
+    .btn-purple { background: var(--purple); color: #fff; }
+    .btn-red    { background: var(--red);    color: #fff; }
+    .btn-ghost  {
       background: transparent;
       color: var(--muted);
       border: 1px solid var(--border);
@@ -110,7 +108,6 @@
     .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
     .btn-orange { background: #c97010; color: #fff; }
 
-    /* ── Avatar size slider ── */
     .size-row {
       display: flex;
       align-items: center;
@@ -119,27 +116,21 @@
       color: var(--muted);
       font-size: 0.8rem;
     }
-
     .size-row strong { color: var(--text); }
-
     .size-row input[type="range"] {
       flex: 1;
       max-width: 280px;
-      accent-color: var(--blue);
+      accent-color: var(--purple);
       cursor: pointer;
     }
 
-    /* ── Table ── */
     .table-wrap {
       overflow-x: auto;
       border: 1px solid var(--border);
       border-radius: 10px;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+    table { width: 100%; border-collapse: collapse; }
 
     th {
       background: var(--surface);
@@ -158,14 +149,11 @@
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
     }
-
     tr:last-child td { border-bottom: none; }
-
     tr:hover td { background: rgba(255,255,255,0.02); }
 
     .thumb {
-      width: 56px;
-      height: 56px;
+      width: 56px; height: 56px;
       object-fit: contain;
       image-rendering: pixelated;
       border-radius: 4px;
@@ -192,7 +180,6 @@
       border-radius: 5px;
     }
 
-    /* ── Edit modal ── */
     .modal-backdrop {
       display: none;
       position: fixed;
@@ -212,13 +199,11 @@
       width: 380px;
       max-width: 95vw;
     }
-
     .modal h3 { margin-bottom: 1.25rem; font-size: 1rem; }
 
     .field { margin-bottom: 1rem; }
     .field label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.4rem; }
-    .field input,
-    .field select {
+    .field input {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -228,33 +213,27 @@
       font-size: 0.9rem;
       outline: none;
     }
-    .field input:focus,
-    .field select:focus { border-color: var(--blue); }
-    .field select option { background: var(--surface); }
+    .field input:focus { border-color: var(--purple); }
 
     .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
 
-    /* ── Empty / loading ── */
-    .empty {
-      text-align: center;
-      padding: 4rem;
-      color: var(--muted);
-    }
-
+    .empty { text-align: center; padding: 4rem; color: var(--muted); }
     #loading { text-align: center; padding: 3rem; color: var(--muted); }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="header-title">BYTEFEST '26 <span>/ Admin</span></div>
+  <div class="header-title">SOPRA STERIA <span>/ Admin</span></div>
   <div id="stats">Loading...</div>
 </header>
 
 <main>
   <div class="toolbar">
-    <input type="search" id="search" placeholder="Search name or dino…" oninput="renderTable()" />
+    <input type="search" id="search" placeholder="Search name…" oninput="renderTable()" />
     <button class="btn btn-ghost" onclick="load()">↺ Sync &amp; Refresh</button>
+    <div class="toolbar-spacer"></div>
+    <button class="btn btn-red" onclick="clearAll()">Clear All</button>
   </div>
 
   <div class="size-row">
@@ -269,14 +248,13 @@
         <tr>
           <th style="width:72px">Art</th>
           <th>Name</th>
-          <th>Dino type</th>
           <th>Created</th>
           <th>Printed</th>
           <th style="width:140px">Actions</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="6" id="loading">Loading…</td></tr>
+        <tr><td colspan="5" id="loading">Loading…</td></tr>
       </tbody>
     </table>
   </div>
@@ -290,19 +268,9 @@
       <label>Name</label>
       <input type="text" id="edit-name" maxlength="60" />
     </div>
-    <div class="field">
-      <label>Dino type</label>
-      <select id="edit-dino">
-        <option value="Brachiosaurus">Brachiosaurus</option>
-        <option value="Triceratops">Triceratops</option>
-        <option value="Stegosaurus">Stegosaurus</option>
-        <option value="Pterodactyl">Pterodactyl</option>
-        <option value="">— none —</option>
-      </select>
-    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-blue" onclick="saveEdit()">Save</button>
+      <button class="btn btn-purple" onclick="saveEdit()">Save</button>
     </div>
   </div>
 </div>
@@ -312,11 +280,8 @@
   let editingId = null
   let currentCharSize = 144
 
-  // ── Data ──────────────────────────────────────────────────
-
   async function load() {
     try {
-      // Sync fetches printed status from InstantDB before returning the list
       const res = await fetch('/admin/api/sync')
       if (res.status === 401) { location.reload(); return; }
       characters = await res.json()
@@ -324,7 +289,7 @@
       renderStats()
     } catch (e) {
       document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="6" class="empty">Failed to load — check server</td></tr>'
+        '<tr><td colspan="5" class="empty">Failed to load — check server</td></tr>'
     }
   }
 
@@ -340,12 +305,11 @@
     const q     = document.getElementById('search').value.toLowerCase()
     const tbody = document.getElementById('tbody')
     const rows  = characters.filter(c =>
-      !q || (c.name || '').toLowerCase().includes(q) ||
-            (c.dino_type || '').toLowerCase().includes(q)
+      !q || (c.name || '').toLowerCase().includes(q)
     )
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">No characters found</td></tr>'
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No characters found</td></tr>'
       return
     }
 
@@ -354,10 +318,9 @@
         <td>
           <img class="thumb"
                src="data:image/png;base64,${c.image_b64}"
-               alt="${escape(c.name)}" />
+               alt="${esc(c.name)}" />
         </td>
         <td>${esc(c.name) || '<span style="color:var(--muted)">—</span>'}</td>
-        <td>${esc(c.dino_type) || '<span style="color:var(--muted)">—</span>'}</td>
         <td style="color:var(--muted)">${fmtDate(c.created_at)}</td>
         <td>
           <span class="badge ${c.printed ? 'badge-green' : 'badge-muted'}">
@@ -366,7 +329,7 @@
         </td>
         <td>
           <div class="action-row">
-            <button class="btn btn-blue   btn-sm" onclick="openEdit('${c.id}')">Edit</button>
+            <button class="btn btn-purple btn-sm" onclick="openEdit('${c.id}')">Edit</button>
             <button class="btn btn-orange btn-sm" onclick="reprint('${c.id}')" title="Queue for reprint">↻ Print</button>
             <button class="btn btn-red    btn-sm" onclick="deleteChar('${c.id}')">Delete</button>
           </div>
@@ -375,7 +338,23 @@
     `).join('')
   }
 
-  // ── Delete ─────────────────────────────────────────────────
+  // ── Clear All ───────────────────────────────────────────────
+
+  async function clearAll() {
+    if (!confirm(`Delete ALL ${characters.length} characters? This cannot be undone.`)) return
+    if (!confirm('Are you really sure? This will remove everything from the wall and database.')) return
+
+    const res = await fetch('/admin/api/characters', { method: 'DELETE' })
+    if (res.ok) {
+      characters = []
+      renderTable()
+      renderStats()
+    } else {
+      alert('Clear all failed — see server logs')
+    }
+  }
+
+  // ── Delete ──────────────────────────────────────────────────
 
   async function deleteChar(id) {
     const char = characters.find(c => c.id === id)
@@ -396,12 +375,12 @@
     }
   }
 
-  // ── Reprint ────────────────────────────────────────────────
+  // ── Reprint ─────────────────────────────────────────────────
 
   async function reprint(id) {
     const char = characters.find(c => c.id === id)
     const label = char?.name ? `"${char.name}"` : 'this character'
-    if (!confirm(`Queue ${label} for reprint? The print client will send it to the printer on the next poll.`)) return
+    if (!confirm(`Queue ${label} for reprint?`)) return
 
     const res = await fetch(`/admin/api/characters/${id}/reprint`, { method: 'POST' })
     if (res.ok) {
@@ -414,14 +393,13 @@
     }
   }
 
-  // ── Edit ───────────────────────────────────────────────────
+  // ── Edit ────────────────────────────────────────────────────
 
   function openEdit(id) {
     const char = characters.find(c => c.id === id)
     if (!char) return
     editingId = id
-    document.getElementById('edit-name').value  = char.name      || ''
-    document.getElementById('edit-dino').value  = char.dino_type || ''
+    document.getElementById('edit-name').value = char.name || ''
     document.getElementById('modal').classList.add('open')
     document.getElementById('edit-name').focus()
   }
@@ -433,18 +411,17 @@
 
   async function saveEdit() {
     if (!editingId) return
-    const name      = document.getElementById('edit-name').value.trim()
-    const dino_type = document.getElementById('edit-dino').value
+    const name = document.getElementById('edit-name').value.trim()
 
     const res = await fetch(`/admin/api/characters/${editingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, dino_type }),
+      body: JSON.stringify({ name }),
     })
 
     if (res.ok) {
       const updated = characters.find(c => c.id === editingId)
-      if (updated) { updated.name = name; updated.dino_type = dino_type }
+      if (updated) updated.name = name
       closeModal()
       renderTable()
     } else {
@@ -452,7 +429,7 @@
     }
   }
 
-  // ── Avatar size ──────────────────────────────────────────────
+  // ── Avatar size ─────────────────────────────────────────────
 
   let _sizeTimer = null
 
@@ -465,7 +442,7 @@
         document.getElementById('size-val').textContent = currentCharSize
         document.getElementById('size-slider').value = currentCharSize
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {}
   }
 
   function onSizeSlider(val) {
@@ -483,15 +460,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ char_size: size }),
       })
-      if (res.ok) {
-        currentCharSize = size
-      }
+      if (res.ok) currentCharSize = size
     } catch (e) {
       alert('Failed to update size')
     }
   }
 
-  // ── Helpers ────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────
 
   function esc(s) {
     if (!s) return ''
@@ -503,12 +478,9 @@
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  // Close modal on backdrop click
   document.getElementById('modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeModal()
   })
-
-  // Close modal on Escape
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeModal()
   })

@@ -11,18 +11,18 @@ export default function QuestionnaireScreen({ questions, onDone }) {
     if (revealed) return
     setPicked(i)
     setRevealed(true)
+  }, [revealed])
 
-    setTimeout(() => {
-      const next = qIndex + 1
-      if (next < questions.length) {
-        setQIndex(next)
-        setPicked(null)
-        setRevealed(false)
-      } else {
-        onDone()
-      }
-    }, 2000)
-  }, [qIndex, revealed, questions, onDone])
+  const handleNext = useCallback(() => {
+    const next = qIndex + 1
+    if (next < questions.length) {
+      setQIndex(next)
+      setPicked(null)
+      setRevealed(false)
+    } else {
+      onDone()
+    }
+  }, [qIndex, questions, onDone])
 
   return (
     <div className="screen center">
@@ -49,9 +49,14 @@ export default function QuestionnaireScreen({ questions, onDone }) {
         })}
       </div>
       {revealed && (
-        <p className="q-feedback">
-          {picked === question.correct ? 'Riktig!' : `Svaret var: ${question.a[question.correct]}`}
-        </p>
+        <>
+          <p className="q-feedback">
+            {picked === question.correct ? 'Riktig!' : `Svaret var: ${question.a[question.correct]}`}
+          </p>
+          <button className="btn-primary" onClick={handleNext}>
+            {qIndex + 1 < questions.length ? 'Neste' : 'Fortsett'}
+          </button>
+        </>
       )}
     </div>
   )
