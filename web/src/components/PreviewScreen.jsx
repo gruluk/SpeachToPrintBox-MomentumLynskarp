@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 // camera permission once per session instead of on every retake.
 let _cachedStream = null
 
-const ZOOM = 3.6  // increase to zoom in more
+const ZOOM = 1.8  // increase to zoom in more
 
 export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
   const videoRef = useRef(null)
