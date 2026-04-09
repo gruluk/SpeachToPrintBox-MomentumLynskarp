@@ -95,24 +95,24 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str = "")
 
     canvas = Image.new("RGB", (target_w, content_h), "white")
     draw   = ImageDraw.Draw(canvas)
-    PAD    = 14
+    PAD    = 30
 
-    # Left column: character image (square, full height)
+    # Left column: character image (square, 70% of height to avoid clipping)
     split_x   = int(target_w * 0.40)
-    char_size = min(split_x - PAD * 2, content_h - PAD * 2)
+    char_size = int(min(split_x - PAD * 2, content_h - PAD * 2) * 0.70)
     char = character.convert("RGBA").resize((char_size, char_size), Image.NEAREST)
     canvas.paste(char, ((split_x - char_size) // 2, (content_h - char_size) // 2), char)
 
     right_x = split_x + PAD
     right_w = target_w - right_x - PAD
 
-    # Logo
+    # Logo (smaller — 20% of label height)
     logo_bottom = PAD
     try:
         logo = Image.open(
             os.path.join(ASSETS_DIR, "SopraSteria", "sopra_steria_logo.png")
         ).convert("RGBA")
-        logo_h = content_h // 3
+        logo_h = content_h // 5
         logo_w = int(logo.width * logo_h / logo.height)
         if logo_w > right_w:
             logo_w = right_w
@@ -123,10 +123,10 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str = "")
     except Exception:
         pass
 
-    # Name — fills all remaining vertical space below the logo
+    # Name — fills remaining vertical space below the logo
     name_area_top = logo_bottom + PAD
     name_area_h   = content_h - name_area_top - PAD
-    font_size = min(int(name_area_h * 0.80), 200)
+    font_size = min(int(name_area_h * 0.65), 150)
     while font_size > 12:
         font = _find_font(font_size)
         bbox = font.getbbox(user_name)
