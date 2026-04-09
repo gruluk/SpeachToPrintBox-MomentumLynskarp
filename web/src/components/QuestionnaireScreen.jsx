@@ -1,43 +1,58 @@
-import { useState } from 'react'
-import SceneDecorations from './SceneDecorations'
+import { useState, useCallback } from 'react'
 
-export default function QuestionnaireScreen({ questions, onDone, onBack }) {
-  const [step, setStep] = useState(0)
-  const [answers, setAnswers] = useState([])
+export default function QuestionnaireScreen({ questions, onDone }) {
+  const [qIndex, setQIndex] = useState(0)
+  const [picked, setPicked] = useState(null)
+  const [revealed, setRevealed] = useState(false)
 
-  function pick(value) {
-    const newAnswers = [...answers, value]
-    if (step + 1 < questions.length) {
-      setAnswers(newAnswers)
-      setStep(step + 1)
-    } else {
-      onDone(newAnswers)
-    }
-  }
+  const question = questions[qIndex]
 
-  function goBack() {
-    if (step === 0) {
-      onBack()
-    } else {
-      setAnswers(answers.slice(0, -1))
-      setStep(step - 1)
-    }
-  }
+  const handlePick = useCallback((i) => {
+    if (revealed) return
+    setPicked(i)
+    setRevealed(true)
 
-  const q = questions[step]
+    setTimeout(() => {
+      const next = qIndex + 1
+      if (next < questions.length) {
+        setQIndex(next)
+        setPicked(null)
+        setRevealed(false)
+      } else {
+        onDone()
+      }
+    }, 2000)
+  }, [qIndex, revealed, questions, onDone])
+
   return (
     <div className="screen center">
-      <SceneDecorations seed={4} />
-      <p className="q-progress">{step + 1} / {questions.length}</p>
-      <h2 className="q-text">{q.q}</h2>
+      <p className="q-progress">{qIndex + 1} / {questions.length}</p>
+      <h2 className="q-text">{question.q}</h2>
       <div className="q-answers">
-        {q.a.map(([label, value]) => (
-          <button key={value} className="btn-answer" onClick={() => pick(value)}>
-            {label}
-          </button>
-        ))}
+        {question.a.map((ans, i) => {
+          let cls = 'btn-answer'
+          if (revealed) {
+            if (i === question.correct) cls += ' answer-correct'
+            else if (i === picked) cls += ' answer-wrong'
+            else cls += ' answer-dim'
+          }
+          return (
+            <button
+              key={i}
+              className={cls}
+              onClick={() => handlePick(i)}
+              disabled={revealed}
+            >
+              {ans}
+            </button>
+          )
+        })}
       </div>
-      <button className="btn-secondary q-back" onClick={goBack}>← Tilbake</button>
+      {revealed && (
+        <p className="q-feedback">
+          {picked === question.correct ? 'Riktig!' : `Svaret var: ${question.a[question.correct]}`}
+        </p>
+      )}
     </div>
   )
 }

@@ -5,9 +5,28 @@ import PreviewScreen from './components/PreviewScreen'
 import ValidatingScreen from './components/ValidatingScreen'
 import ReviewScreen from './components/ReviewScreen'
 import NameInputScreen from './components/NameInputScreen'
+import QuestionnaireScreen from './components/QuestionnaireScreen'
 import WaitingScreen from './components/WaitingScreen'
 import ResultScreen from './components/ResultScreen'
 import InfoScreen from './components/InfoScreen'
+
+const QUESTIONS = [
+  {
+    q: "Hvor mange ansatte er det i Sopra Steria i Norge?",
+    a: ["1000", "3500", "7000"],
+    correct: 1,
+  },
+  {
+    q: "Hva heter husbandet til Sopra Steria?",
+    a: ["Kjells Angels", "Posthusetdruse", "The Ozzy Osbournes"],
+    correct: 0,
+  },
+  {
+    q: "Hva er ikke en sosial gruppe i Sopra Steria?",
+    a: ["Surfegruppe", "Poker-gruppe", "Vinsmaking", "Badminton"],
+    correct: 3,
+  },
+]
 
 export default function App() {
   const [state, setState] = useState('START')
@@ -82,7 +101,10 @@ export default function App() {
 
   const handleNameSubmit = useCallback((n) => {
     setName(n)
-    // After name, go straight to waiting (generation already started)
+    setState('QUESTIONNAIRE')
+  }, [])
+
+  const handleQuizDone = useCallback(() => {
     setState('WAITING')
   }, [])
 
@@ -139,6 +161,9 @@ export default function App() {
       )}
       {state === 'NAME_INPUT' && (
         <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('REVIEW')} />
+      )}
+      {state === 'QUESTIONNAIRE' && (
+        <QuestionnaireScreen questions={QUESTIONS} onDone={handleQuizDone} />
       )}
       {state === 'WAITING' && (
         <WaitingScreen
