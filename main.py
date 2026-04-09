@@ -1,7 +1,6 @@
 import base64
 import os
 import threading
-from collections import Counter
 from io import BytesIO
 
 import requests
@@ -12,15 +11,15 @@ from PIL import Image, ImageDraw, ImageFont, ImageTk
 from camera import Camera
 from config import (
     BG, MUTED, WARNING,
-    START, INFO, PREVIEW, VALIDATING, REVIEW, NAME_INPUT, QUESTIONNAIRE,
+    START, INFO, PREVIEW, VALIDATING, REVIEW, NAME_INPUT,
     WAITING, PROCESSING, RESULT,
-    QUESTIONS, ASSETS_DIR, SERVER_URL,
+    ASSETS_DIR, SERVER_URL,
     PRINTER_VENDOR, PRINTER_PRODUCT, ENABLE_LOCAL_PRINT,
 )
 from printing import composite_label, print_image
 from screens import (
     StartScreen, PreviewControls, ValidatingControls, ReviewControls,
-    NameInputScreen, QuestionnaireScreen, WaitingScreen, ResultControls,
+    NameInputScreen, WaitingScreen, ResultControls,
     PrinterDot, InfoScreen,
 )
 
@@ -33,9 +32,6 @@ class App:
         self.state = START
 
         self.user_name = ""
-        self.dino_type = "1"
-        self._answers: list[str] = []
-        self._question_idx = 0
 
         self._gen_result: Image.Image | None = None
         self._gen_ready = False
@@ -51,7 +47,7 @@ class App:
         self._update_preview()
 
     def _setup_window(self):
-        self.root.title("Speech To Print Box")
+        self.root.title("Sopra Steria Pixel Booth")
         self.root.configure(bg=BG)
         self.root.overrideredirect(True)
         self.root.after(50, self._post_geometry)
@@ -72,7 +68,6 @@ class App:
         self.valid_ctrl   = ValidatingControls(self.root, on_retake=self._retake)
         self.review_ctrl  = ReviewControls(self.root, on_retake=self._retake, on_next=self._proceed_to_name)
         self.name_scr     = NameInputScreen(self.root, on_next=self._on_name_next, on_retake=self._retake)
-        self.quiz_scr     = QuestionnaireScreen(self.root, on_answer=self._on_answer, on_retake=self._retake)
         self.waiting_scr  = WaitingScreen(self.root, on_retake=self._retake)
         self.result_ctrl  = ResultControls(self.root, on_done=self._on_done)
         self.printer_dot  = PrinterDot(self.root)
@@ -80,7 +75,7 @@ class App:
 
         self._all_screens = [
             self.start_scr, self.info_scr, self.preview_ctrl, self.valid_ctrl,
-            self.review_ctrl, self.name_scr, self.quiz_scr, self.waiting_scr,
+            self.review_ctrl, self.name_scr, self.waiting_scr,
             self.result_ctrl, self.printer_dot,
         ]
 
@@ -142,8 +137,6 @@ class App:
         elif state == NAME_INPUT:
             self.name_scr.show()
             self.root.after(100, self.name_scr.focus)
-        elif state == QUESTIONNAIRE:
-            self.quiz_scr.show()
         elif state == WAITING:
             self.waiting_scr.show()
         elif state in (PROCESSING, RESULT):
@@ -235,9 +228,6 @@ class App:
     def _reset_session(self):
         self.captured_photo = None
         self.user_name = ""
-        self.dino_type = "1"
-        self._answers = []
-        self._question_idx = 0
         self._gen_result = None
         self._gen_ready = False
         self._gen_error = ""
@@ -262,24 +252,7 @@ class App:
         if not name:
             return
         self.user_name = name
-        self._question_idx = 0
-        self._answers = []
-        self.quiz_scr.set_question(QUESTIONS[0], 0, len(QUESTIONS))
-        self._show_state(QUESTIONNAIRE)
-
-    def _on_answer(self, dino: str):
-        self._answers.append(dino)
-        self._question_idx += 1
-        if self._question_idx < len(QUESTIONS):
-            self.quiz_scr.set_question(
-                QUESTIONS[self._question_idx], self._question_idx, len(QUESTIONS)
-            )
-        else:
-            self.dino_type = Counter(self._answers).most_common(1)[0][0]
-            threading.Thread(target=self._publish, daemon=True).start()
-            self._on_questionnaire_done()
-
-    def _on_questionnaire_done(self):
+        threading.Thread(target=self._publish, daemon=True).start()
         if self._gen_ready:
             if self._gen_result is not None:
                 self._show_result(self._gen_result)
@@ -326,7 +299,7 @@ class App:
         try:
             requests.post(
                 f"{SERVER_URL}/publish/{self._gen_char_id}",
-                data={"name": self.user_name, "dino_type": self.dino_type},
+                data={"name": self.user_name},
                 timeout=10,
             )
         except Exception:
@@ -335,14 +308,13 @@ class App:
     # --- Result / print ---
 
     def _show_result(self, image: Image.Image):
-        composited = composite_label(image, self.user_name, self.dino_type)
+        composited = composite_label(image, self.user_name)
         self._display_composited(composited)
 
     def _debug_print(self):
         name = self.user_name or "Debug User"
-        dino = self.dino_type or "1"
         image = Image.open(os.path.join(ASSETS_DIR, "style_reference.PNG"))
-        composited = composite_label(image, name, dino)
+        composited = composite_label(image, name)
         self._display_composited(composited)
 
     def _display_composited(self, composited: Image.Image):

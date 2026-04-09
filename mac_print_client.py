@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Bytefest '26 — Mac print client
+Sopra Steria @ UiO — Mac print client
 
 Polls InstantDB for unprinted characters and prints them on the Brother
 QL-1110NWB label printer.
@@ -42,19 +42,6 @@ WEB_PUBLIC_DIR  = os.path.join(os.path.dirname(__file__), "web", "public")
 LABEL_W_MM      = 103
 CONTENT_H_MM    = 45
 
-DINO_NAMES = {
-    "1": "Brachiosaurus",
-    "2": "Triceratops",
-    "3": "Stegosaurus",
-    "4": "Pterodactyl",
-}
-
-DINO_IMAGES = {
-    "Brachiosaurus": "dino_1.png",
-    "Triceratops":   "dino_2.png",
-    "Stegosaurus":   "dino_3.png",
-    "Pterodactyl":   "dino_4.png",
-}
 
 # ── InstantDB ─────────────────────────────────────────────────────────────────
 
@@ -101,7 +88,7 @@ def _find_font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
-def composite_label(character: Image.Image, user_name: str, dino_type: str) -> Image.Image:
+def composite_label(character: Image.Image, user_name: str, dino_type: str = "") -> Image.Image:
     DPI = 300
     target_w  = round(LABEL_W_MM   * DPI / 25.4)
     content_h = round(CONTENT_H_MM * DPI / 25.4)
@@ -118,48 +105,25 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
 
     right_x = split_x + PAD
     right_w = target_w - right_x - PAD
-    dino_box = content_h * 2 // 5   # height for logo + dino icon row
 
-    # Load dino sprite (pixel art — use NEAREST to keep crisp)
-    dino_img = None
-    if dino_type and dino_type in DINO_IMAGES:
-        dino_path = os.path.join(WEB_PUBLIC_DIR, DINO_IMAGES[dino_type])
-        try:
-            dino_img = Image.open(dino_path).convert("RGBA")
-            # Fit within dino_box while preserving aspect ratio
-            scale = min(dino_box / dino_img.width, dino_box / dino_img.height)
-            dino_w = int(dino_img.width * scale)
-            dino_h = int(dino_img.height * scale)
-            dino_img = dino_img.resize((dino_w, dino_h), Image.NEAREST)
-        except Exception:
-            dino_img = None
-
-    # Logo — shrink width to leave room for dino sprite
+    # Logo
     logo_bottom = PAD
     try:
         logo = Image.open(
-            os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
+            os.path.join(ASSETS_DIR, "SopraSteria", "sopra_steria_logo.png")
         ).convert("RGBA")
-        max_logo_w = right_w - (dino_box + PAD) if dino_img else right_w
-        logo_h = dino_box
+        logo_h = content_h // 3
         logo_w = int(logo.width * logo_h / logo.height)
-        if logo_w > max_logo_w:
-            logo_w = max_logo_w
+        if logo_w > right_w:
+            logo_w = right_w
             logo_h = int(logo.height * logo_w / logo.width)
         logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
-        logo_y = PAD + (dino_box - logo_h) // 2
-        canvas.paste(logo, (right_x, logo_y), logo)
-        logo_bottom = PAD + dino_box
+        canvas.paste(logo, (right_x, PAD), logo)
+        logo_bottom = PAD + logo_h
     except Exception:
-        logo_bottom = PAD + dino_box
+        pass
 
-    # Dino sprite — right-aligned in the top row, next to logo
-    if dino_img:
-        dino_x = right_x + right_w - dino_img.width
-        dino_y = PAD + (dino_box - dino_img.height) // 2
-        canvas.paste(dino_img, (dino_x, dino_y), dino_img)
-
-    # Name — fills all remaining vertical space below the logo/dino row
+    # Name — fills all remaining vertical space below the logo
     name_area_top = logo_bottom + PAD
     name_area_h   = content_h - name_area_top - PAD
     font_size = min(int(name_area_h * 0.80), 200)
@@ -171,7 +135,7 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
         font_size -= 4
     font  = _find_font(font_size)
     name_y = name_area_top + (name_area_h - font_size) // 2
-    draw.text((right_x, name_y), user_name, fill="#2d5c6a", font=font)
+    draw.text((right_x, name_y), user_name, fill="#3c1c71", font=font)
 
     return canvas
 
@@ -271,7 +235,7 @@ def poll_loop() -> None:
         print("[error] INSTANT_APP_ID and INSTANT_ADMIN_TOKEN must be set in .env")
         return
 
-    print(f"Bytefest '26 print client — printer: {PRINTER_NAME}")
+    print(f"Sopra Steria print client — printer: {PRINTER_NAME}")
     check_printer()
     print(f"Polling InstantDB every {POLL_INTERVAL}s for unprinted characters...")
 

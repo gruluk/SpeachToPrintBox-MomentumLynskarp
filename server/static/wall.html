@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Bytefest '26 — The Wall</title>
+  <title>Sopra Steria — The Wall</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      background: linear-gradient(180deg, #c2e8f7 0%, #96cfe0 100%);
+      background: linear-gradient(180deg, #ede9f2 0%, #d5cce3 100%);
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      font-family: 'Press Start 2P', monospace;
+      font-family: 'DM Sans', system-ui, sans-serif;
       cursor: none;
     }
 
@@ -22,8 +22,8 @@
       position: fixed;
       inset: 0;
       background-image:
-        linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+        linear-gradient(rgba(60,28,113,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(60,28,113,0.04) 1px, transparent 1px);
       background-size: 8px 8px;
       pointer-events: none;
       z-index: 0;
@@ -44,29 +44,27 @@
     #header-logo {
       height: 80px;
       width: auto;
-      image-rendering: pixelated;
     }
 
     #count {
-      color: #2d5c6a;
-      font-size: 9px;
+      color: #3c1c71;
+      font-size: 11px;
+      font-weight: 700;
       background: rgba(255,255,255,0.55);
       border: 2px solid rgba(255,255,255,0.85);
       padding: 10px 16px;
       letter-spacing: 1px;
       transition: background 0.4s, color 0.4s;
     }
-    #count.pulse { background: rgba(255,255,255,0.9); color: #5b8c3e; }
-
-    /* Only show header on screen 0 */
-    body.not-screen-0 #header { display: none; }
+    #count.pulse { background: rgba(255,255,255,0.9); color: #bf022b; }
 
     /* ── Screen indicator ────────────────────────────────── */
     #screen-label {
       position: fixed;
       bottom: 26px; right: 12px;
-      font-size: 7px;
-      color: rgba(45,92,106,0.25);
+      font-size: 9px;
+      font-weight: 500;
+      color: rgba(60,28,113,0.25);
       z-index: 400;
       pointer-events: none;
       letter-spacing: 1px;
@@ -76,7 +74,7 @@
     #sky {
       position: fixed;
       top: 0; left: 0;
-      width: 7680px;
+      width: 1920px;
       height: 300px;
       pointer-events: none;
       z-index: 1;
@@ -84,38 +82,20 @@
     }
 
     /* ── Pixel clouds ─────────────────────────────────────── */
-    /* Clouds animate left→right in world-space coordinates */
     @keyframes drift-world {
       from { left: -400px; }
-      to   { left: 8080px; }
+      to   { left: 2320px; }
     }
 
     .cloud { position: absolute; pointer-events: none; }
-    .cb    { position: absolute; background: rgba(255,255,255,0.72); }
-
-    /* ── Meteor ─────────────────────────────────────────── */
-    .wall-meteor {
-      position: fixed;
-      right: -12vw;
-      width: 7vw;
-      min-width: 80px;
-      image-rendering: pixelated;
-      pointer-events: none;
-      z-index: 3;
-      animation: meteor-wall 2.6s linear forwards;
-    }
-
-    @keyframes meteor-wall {
-      from { transform: translate(0, 0); }
-      to   { transform: translate(-130vw, 80vh); }
-    }
+    .cb    { position: absolute; background: rgba(255,255,255,0.55); }
 
     /* ── Ground strip ───────────────────────────────────── */
     #ground {
       position: fixed;
       bottom: 0; left: 0; right: 0;
       height: 20px;
-      background: #5ba4c0;
+      background: #3c1c71;
       z-index: 200;
     }
     #ground::before {
@@ -123,35 +103,17 @@
       position: absolute;
       top: -8px; left: 0; right: 0;
       height: 8px;
-      background: #7bbdd4;
-    }
-
-    /* ── World-ground container (world-space, holds dinos/bushes) */
-    #world-ground {
-      position: fixed;
-      bottom: 20px; left: 0;
-      width: 7680px;
-      pointer-events: none;
-      z-index: 205;
-      overflow: visible;
-    }
-
-    .ground-dino, .ground-bush {
-      position: absolute;
-      bottom: 0;
-      image-rendering: pixelated;
+      background: #7a1c71;
     }
 
     /* ── Characters ─────────────────────────────────────── */
     #world { position: fixed; inset: 0; z-index: 10; overflow: visible; }
 
-    /* Outer: positioning layer — will-change applied only when visible */
     .char-pos {
       position: absolute;
       top: 0; left: 0;
     }
 
-    /* Inner: visual animations only, no position */
     .char-wrap {
       text-align: center;
       opacity: 0;
@@ -169,26 +131,12 @@
     }
 
     .char-name {
-      color: #2d5c6a;
-      font-size: 8px;
+      color: #3c1c71;
+      font-size: 10px;
+      font-weight: 700;
       margin-top: 5px;
       letter-spacing: 1px;
       text-shadow: 1px 1px 0 rgba(255,255,255,0.85);
-    }
-
-    .char-dino-flair {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      line-height: 0;
-    }
-
-    .char-dino-icon {
-      display: block;
-      width: calc(var(--size, 144px) * 0.22);
-      height: calc(var(--size, 144px) * 0.22);
-      object-fit: contain;
-      image-rendering: pixelated;
     }
 
     @keyframes arrive {
@@ -214,7 +162,7 @@
       50%       { opacity: 0.45; transform: scale(1.4); }
     }
 
-    /* ── Empty state (screen 0 only) ────────────────────── */
+    /* ── Empty state ────────────────────────────────────── */
     #empty {
       position: fixed;
       top: 50%; left: 50%;
@@ -223,26 +171,24 @@
       z-index: 5;
       pointer-events: none;
     }
-    body.not-screen-0 #empty { display: none; }
-    #empty-main { color: rgba(45,92,106,0.22); font-size: 13px; line-height: 2.5; }
-    #empty-sub  { color: rgba(45,92,106,0.14); font-size: 8px; margin-top: 8px; letter-spacing: 1px; }
+    #empty-main { color: rgba(60,28,113,0.22); font-size: 15px; font-weight: 700; line-height: 2.5; }
+    #empty-sub  { color: rgba(60,28,113,0.14); font-size: 10px; font-weight: 500; margin-top: 8px; letter-spacing: 1px; }
   </style>
 </head>
 <body>
 
   <div id="header">
-    <img id="header-logo" src="/booth/logo.png" alt="Bytefest '26" />
-    <div id="count">WAITING FOR PLAYERS...</div>
+    <img id="header-logo" src="/booth/logo.png" alt="Sopra Steria" />
+    <div id="count">WAITING FOR VISITORS...</div>
   </div>
 
   <div id="sky"></div>
   <div id="world"></div>
   <div id="ground"></div>
-  <div id="world-ground"></div>
 
   <div id="empty">
     <div id="empty-main">NO CHARACTERS YET</div>
-    <div id="empty-sub">HEAD TO A BOOTH TO JOIN THE WALL</div>
+    <div id="empty-sub">HEAD TO THE BOOTH TO GET YOUR AVATAR</div>
   </div>
 
   <div id="screen-label"></div>
@@ -252,19 +198,14 @@
     const PARAMS        = new URLSearchParams(location.search);
     const SCREEN_INDEX  = parseInt(PARAMS.get('screen') ?? '0', 10);
     const LOGICAL_W     = 1920;
-    const WORLD_W       = 7680;
+    const WORLD_W       = 1920;
     const SCREEN_OFFSET = SCREEN_INDEX * LOGICAL_W;
 
     if (SCREEN_INDEX !== 0) document.body.classList.add('not-screen-0');
     document.getElementById('screen-label').textContent = `S${SCREEN_INDEX}`;
 
-    // ── Apply world-space offset to shared containers ─────
-    // Each of these is 7680px wide. By shifting left by SCREEN_OFFSET,
-    // the viewport shows only the slice [SCREEN_OFFSET, SCREEN_OFFSET+1920).
     const skyEl    = document.getElementById('sky');
-    const groundEl = document.getElementById('world-ground');
-    skyEl.style.transform    = `translateX(-${SCREEN_OFFSET}px)`;
-    groundEl.style.transform = `translateX(-${SCREEN_OFFSET}px)`;
+    skyEl.style.transform = `translateX(-${SCREEN_OFFSET}px)`;
 
     const world   = document.getElementById('world');
     const countEl = document.getElementById('count');
@@ -274,18 +215,7 @@
     const HEADER_H  = 120;
     const GROUND_H  = Math.round(window.innerHeight * 0.22);
 
-    const DINO_ICONS = {
-      'Brachiosaurus': '/booth/dino_1.png',
-      'Triceratops':   '/booth/dino_2.png',
-      'Stegosaurus':   '/booth/dino_3.png',
-      'Pterodactyl':   '/booth/dino_4.png',
-    };
-
-    // ── Pixel clouds (world-space) ─────────────────────────
-    // Clouds animate from world x=-400 to world x=8080.
-    // A negative animationDelay of -startFrac*duration places the cloud
-    // at world x = -400 + startFrac*(8080+400) = startFrac*8480-400.
-    // This distributes clouds evenly across the world at load time.
+    // ── Pixel clouds ─────────────────────────────────────
     const CLOUD_SHAPE = [
       [0,0,1,1,1,1,0,0],
       [0,1,1,1,1,1,1,0],
@@ -315,51 +245,14 @@
       skyEl.appendChild(el);
     }
 
-    // 5 clouds spread across the world — each clearly visible on a different screen at load
-    // startFrac × 8480 − 400 = approximate world x at load:
-    //   0.06 → ~109px  (screen 0)
-    //   0.28 → ~1974px (screen 1)
-    //   0.50 → ~3840px (screen 2)
-    //   0.72 → ~5706px (screen 3)
-    //   0.39 → ~2907px (screen 1/2 boundary)
-    spawnCloud( 35, 2.2, 210, 0.06);
-    spawnCloud( 90, 1.4, 290, 0.28);
-    spawnCloud(145, 1.8, 250, 0.50);
-    spawnCloud( 65, 2.0, 240, 0.72);
-    spawnCloud(115, 1.6, 270, 0.39);
+    spawnCloud( 35, 2.2, 120, 0.10);
+    spawnCloud( 90, 1.4, 160, 0.40);
+    spawnCloud(145, 1.8, 140, 0.70);
+    spawnCloud( 65, 2.0, 130, 0.25);
+    spawnCloud(115, 1.6, 150, 0.55);
 
-    // ── Ground scene (world-space) ─────────────────────────
-    // Dinos and bushes are placed at absolute world-pixel x positions.
-    // Each screen sees only the portion that falls in its 1920px slice.
-    const GROUND_SCENE = [
-      { src: 'bush_4', x:    0, w: 192 },
-      { src: 'dino_3', x:  192, w: 230 },
-      { src: 'bush_2', x:  520, w: 134 },
-      { src: 'bush_1', x: 1050, w: 211 },
-      { src: 'bush_3', x: 1600, w: 173 },
-      { src: 'bush_4', x: 2300, w: 192 },
-      { src: 'bush_2', x: 2750, w: 134 },
-      { src: 'dino_1', x: 3753, w: 173 }, // centered at world mid-point (3840)
-      { src: 'bush_1', x: 4100, w: 211 },
-      { src: 'bush_3', x: 4700, w: 173 },
-      { src: 'bush_4', x: 5300, w: 192 },
-      { src: 'bush_2', x: 5800, w: 134 },
-      { src: 'bush_1', x: 6300, w: 211 },
-      { src: 'dino_2', x: 6700, w: 230 },
-      { src: 'bush_3', x: 7488, w: 173 }, // right edge (7680-173≈7507, bumped left a touch)
-    ];
-
-    GROUND_SCENE.forEach(({ src, x, w }) => {
-      const img = document.createElement('img');
-      img.src       = `/booth/${src}.png`;
-      img.className = src.startsWith('dino') ? 'ground-dino' : 'ground-bush';
-      img.style.left  = x + 'px';
-      img.style.width = w + 'px';
-      groundEl.appendChild(img);
-    });
-
-    // ── Scattered pixel decorations (per-screen ambient) ──
-    const DECO_COLORS = ['#2d5c6a','#5ba4c0','#5b8c3e','#7bbdd4','#4a8a9e'];
+    // ── Scattered pixel decorations ──────────────────────
+    const DECO_COLORS = ['#3c1c71','#7a1c71','#bf022b','#e06c00','#a7a7a6'];
     for (let i = 0; i < 22; i++) {
       const d = document.createElement('div');
       d.className = 'deco';
@@ -375,50 +268,27 @@
       document.body.appendChild(d);
     }
 
-    // ── Meteor (per-screen ambient) ────────────────────────
-    function spawnMeteor() {
-      const DURATION = 2600;
-      const FRAMES   = 5;
-      const el = document.createElement('img');
-      el.src = '/booth/meteor_1.png';
-      el.className = 'wall-meteor';
-      el.style.top = `${Math.random() * 30 - 5}vh`;
-      document.body.appendChild(el);
-      let f = 1;
-      const frameInterval = setInterval(() => {
-        f = Math.min(f + 1, FRAMES);
-        el.src = `/booth/meteor_${f}.png`;
-        if (f === FRAMES) clearInterval(frameInterval);
-      }, DURATION / FRAMES);
-      el.addEventListener('animationend', () => { clearInterval(frameInterval); el.remove(); }, { once: true });
-      setTimeout(spawnMeteor, 12000 + Math.random() * 18000);
-    }
-    setTimeout(spawnMeteor, 8000 + Math.random() * 12000);
-
     // ── Character management ──────────────────────────────
-    // O(1) id→element lookup — replaces querySelector in hot paths
     const charMap = new Map();
 
     function updateCount() {
       const n = charMap.size;
       if (n === 0) {
         emptyEl.style.display = '';
-        countEl.textContent = 'WAITING FOR PLAYERS...';
+        countEl.textContent = 'WAITING FOR VISITORS...';
       } else {
         emptyEl.style.display = 'none';
-        countEl.textContent = `${n} PLAYER${n !== 1 ? 'S' : ''} JOINED`;
+        countEl.textContent = `${n} AVATAR${n !== 1 ? 'S' : ''} CREATED`;
       }
     }
 
-    function addCharacter(imageB64, name, id, worldX, worldY, dinoType) {
+    function addCharacter(imageB64, name, id, worldX, worldY) {
       const localX = worldX - SCREEN_OFFSET;
 
-      // Outer positioning layer — moved by transform, GPU-composited
       const pos = document.createElement('div');
       pos.className = 'char-pos';
       pos.style.transform = `translate(${localX}px, ${worldY}px)`;
 
-      // Inner visual layer — handles arrive + float animations
       const wrap = document.createElement('div');
       wrap.className = 'char-wrap';
       wrap.style.setProperty('--size',        CHAR_SIZE + 'px');
@@ -436,33 +306,19 @@
         wrap.appendChild(nameEl);
       }
 
-      if (dinoType && DINO_ICONS[dinoType]) {
-        const flair = document.createElement('div');
-        flair.className = 'char-dino-flair';
-        const dinoImg = document.createElement('img');
-        dinoImg.src = DINO_ICONS[dinoType];
-        dinoImg.className = 'char-dino-icon';
-        flair.appendChild(dinoImg);
-        wrap.appendChild(flair);
-      }
-
       pos.appendChild(wrap);
       world.appendChild(pos);
       if (id) charMap.set(id, pos);
       updateCount();
 
-      if (SCREEN_INDEX === 0) {
-        countEl.classList.add('pulse');
-        setTimeout(() => countEl.classList.remove('pulse'), 1500);
-      }
+      countEl.classList.add('pulse');
+      setTimeout(() => countEl.classList.remove('pulse'), 1500);
 
-      // Enable smooth position transitions after arrive animation finishes
       setTimeout(() => {
         pos.style.transition = 'transform 120ms linear';
       }, 800);
     }
 
-    // Batch position update — buffered and flushed in rAF to sync with browser paint
     let _pendingPositions = null;
     function applyPositions(chars) {
       _pendingPositions = chars;
@@ -478,7 +334,6 @@
           const visible = localX > -CHAR_SIZE && localX < 1920 + CHAR_SIZE;
           if (visible !== (el.style.visibility !== 'hidden')) {
             el.style.visibility = visible ? '' : 'hidden';
-            // Only promote visible elements to compositor layers
             el.style.willChange = visible ? 'transform' : 'auto';
           }
           if (visible) el.style.transform = `translate(${localX}px, ${y}px)`;
@@ -509,16 +364,12 @@
       });
     }
 
-    function patchCharacter(id, name, dinoType) {
+    function patchCharacter(id, name) {
       const el = charMap.get(id);
       if (!el) return;
       if (name !== undefined) {
         const nameEl = el.querySelector('.char-name');
         if (nameEl) nameEl.textContent = name.toUpperCase();
-      }
-      if (dinoType !== undefined && DINO_ICONS[dinoType]) {
-        const dinoIcon = el.querySelector('.char-dino-icon');
-        if (dinoIcon) dinoIcon.src = DINO_ICONS[dinoType];
       }
     }
 
@@ -528,7 +379,6 @@
       const ws = new WebSocket(`${proto}//${location.host}/ws`);
 
       ws.onopen = () => {
-        // Clear stale characters so reconnect doesn't create duplicates
         world.innerHTML = '';
         charMap.clear();
         updateCount();
@@ -536,14 +386,13 @@
 
       ws.onmessage = ({ data }) => {
         const msg = JSON.parse(data);
-        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id, msg.x, msg.y, msg.dino_type);
+        if (msg.type === 'new_character')    addCharacter(msg.image_b64, msg.name, msg.id, msg.x, msg.y);
         if (msg.type === 'positions')        applyPositions(msg.chars);
         if (msg.type === 'remove_character') removeCharacter(msg.id);
-        if (msg.type === 'update_character') patchCharacter(msg.id, msg.name, msg.dino_type);
+        if (msg.type === 'update_character') patchCharacter(msg.id, msg.name);
         if (msg.type === 'char_size')        setCharSize(msg.size);
       };
 
-      // Keepalive ping every 25s — prevents Railway's proxy from closing idle WS
       const ping = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) ws.send('ping');
       }, 25000);

@@ -64,7 +64,7 @@ def generate_image(photo: Image.Image) -> Image.Image:
         images.append(_to_png(Image.open(LOGO_PATH)))
         theme_clause = (
             "Draw colour inspiration from the event logo image: "
-            "teal/blue tones, the Bytefest '26 gaming aesthetic. "
+            "purple/red tones, a modern corporate-tech aesthetic. "
         )
 
     prompt = (

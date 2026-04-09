@@ -10,11 +10,11 @@ from brother_ql.labels import ALL_LABELS
 
 from config import (
     PRINTER_MODEL, PRINTER_VENDOR, PRINTER_PRODUCT,
-    LABEL, PRINT_HEIGHT_MM, ASSETS_DIR, DINO_NAMES,
+    LABEL, PRINT_HEIGHT_MM, ASSETS_DIR,
 )
 
 
-def composite_label(character: Image.Image, user_name: str, dino_type: str) -> Image.Image:
+def composite_label(character: Image.Image, user_name: str) -> Image.Image:
     label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
     target_w, _ = label_info.dots_printable
     content_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
@@ -42,7 +42,7 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
     logo_bottom = PAD
     try:
         logo = Image.open(
-            os.path.join(ASSETS_DIR, "Figma assets", "logo_figma.png")
+            os.path.join(ASSETS_DIR, "SopraSteria", "sopra_steria_logo.png")
         ).convert("RGBA")
         logo_h = content_h // 3
         logo_w = int(logo.width * logo_h / logo.height)
@@ -55,23 +55,9 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
     except Exception:
         pass
 
-    # Dino name label (bottom right, small text)
-    dino_label_size = max(16, content_h // 16)
-    try:
-        small_font = ImageFont.truetype(font_path, dino_label_size)
-    except Exception:
-        small_font = ImageFont.load_default()
-    draw.text(
-        (right_x, content_h - PAD - dino_label_size),
-        DINO_NAMES[dino_type],
-        fill="#4a8a9e",
-        font=small_font,
-    )
-    dino_label_top = content_h - PAD - dino_label_size
-
-    # Name (right middle, fills space between logo and dino label)
+    # Name (right, fills space below logo)
     name_area_top = logo_bottom + PAD
-    name_area_h = dino_label_top - name_area_top - PAD
+    name_area_h = content_h - name_area_top - PAD
     font_size = min(int(name_area_h * 0.80), 200)
     try:
         font = ImageFont.truetype(font_path, font_size)
@@ -85,7 +71,7 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str) -> I
         font = ImageFont.load_default()
 
     name_y = name_area_top + (name_area_h - font_size) // 2
-    draw.text((right_x, name_y), user_name, fill="#2d5c6a", font=font)
+    draw.text((right_x, name_y), user_name, fill="#3c1c71", font=font)
 
     return canvas
 

@@ -1,8 +1,8 @@
 """
-Bytefest '26 — Central server
+Sopra Steria @ UiO — Central server
 
 Endpoints:
-  GET  /          — TV wall display (open in browser on each TV)
+  GET  /          — TV wall display (open in browser on the screen)
   GET  /health    — health check
   POST /validate  — photo quality gate (gpt-4o-mini)
   POST /generate  — pixel art generation (gpt-image-1), stores + broadcasts result
@@ -34,7 +34,7 @@ import db as instant_db
 from generate import generate_image
 from validate import validate_photo
 
-_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "bytefest26")
+_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "soprasteria")
 _security = HTTPBasic()
 
 
@@ -53,7 +53,7 @@ connections: List[WebSocket] = []
 # The wall is 4 screens side-by-side. Each Pi opens /wall?screen=N and offsets
 # its rendering by N × _LOGICAL_SCREEN_W pixels.
 _LOGICAL_SCREEN_W = 1920   # configure each Pi to output 1920×1080
-_WORLD_W          = _LOGICAL_SCREEN_W * 4   # 7680 — full 4-screen width
+_WORLD_W          = _LOGICAL_SCREEN_W * 1   # 1920 — single screen
 _WORLD_H          = 1080
 _WALL_HEADER_H    = 120    # keep characters below the header
 _WALL_GROUND_H    = 220    # keep characters above the ground-dino scene
@@ -251,24 +251,6 @@ async def publish_character(
 @app.get("/characters")
 def get_characters():
     return characters
-
-
-# --- Dino assignment ---
-
-_DINO_TYPES = ["Brachiosaurus", "Triceratops", "Stegosaurus", "Pterodactyl"]
-
-@app.get("/next-dino")
-def next_dino(preference: str = ""):
-    """Return the least-represented dino type, using preference as a tiebreaker."""
-    counts = {d: 0 for d in _DINO_TYPES}
-    for c in characters:
-        dt = c.get("dino_type", "")
-        if dt in counts:
-            counts[dt] += 1
-    min_count = min(counts.values())
-    least = [d for d in _DINO_TYPES if counts[d] == min_count]
-    assigned = preference if preference in least else least[0]
-    return {"dino_type": assigned}
 
 
 # --- TV wall WebSocket ---

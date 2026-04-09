@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import SceneDecorations from './SceneDecorations'
 
 export default function NameInputScreen({ onSubmit, onBack }) {
   const [value, setValue] = useState('')
@@ -11,7 +10,6 @@ export default function NameInputScreen({ onSubmit, onBack }) {
 
   return (
     <div className="screen center">
-      <SceneDecorations seed={3} />
       <h2>Hva heter du?</h2>
       <form onSubmit={handleSubmit} className="name-form">
         <input

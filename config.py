@@ -3,31 +3,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- Bytefest '26 brand palette ---
-BLUE_PALE    = "#C1E6F2"
-BLUE_LIGHT   = "#ADDDEC"
-BLUE_BRAND   = "#32ABD0"
-BLUE_DARK    = "#1D7B91"
-ORANGE_BRAND = "#FB9214"
-ORANGE_MID   = "#F5B166"
-ORANGE_PALE  = "#F9CB99"
-GREEN_BRAND  = "#539227"
-GREEN_MID    = "#80963A"
-GREEN_DARK   = "#5A6731"
-GREEN_LIGHT  = "#73C78C"
-BROWN        = "#8F5741"
-BEIGE        = "#D1B7AD"
+# --- Sopra Steria brand palette ---
+PURPLE       = "#3c1c71"
+PURPLE_BG    = "#ede9f2"
+PURPLE_DARK  = "#2a1338"
+PURPLE_WARM  = "#7a1c71"
+BEIGE        = "#ece1d4"
+RED          = "#bf022b"
+ORANGE       = "#e06c00"
+GREY         = "#a7a7a6"
+LIGHT_GREY   = "#ededed"
+BLACK        = "#1c1c1a"
 
 # --- Semantic colors (mapped from palette) ---
-BG             = BLUE_PALE
-DISPLAY_BG     = BLUE_LIGHT
-TEXT           = BLUE_DARK
-MUTED          = BLUE_BRAND
-ACCENT         = BLUE_DARK
-ACCENT_ACTIVE  = "#155e6e"   # BLUE_DARK darkened for pressed state
-SUCCESS        = GREEN_BRAND
-SUCCESS_ACTIVE = GREEN_MID
-WARNING        = ORANGE_BRAND
+BG             = PURPLE_BG
+DISPLAY_BG     = LIGHT_GREY
+TEXT           = PURPLE_DARK
+MUTED          = PURPLE
+ACCENT         = PURPLE
+ACCENT_ACTIVE  = "#2a1338"
+SUCCESS        = RED
+SUCCESS_ACTIVE = "#8a0120"
+WARNING        = ORANGE
 
 # --- Printer ---
 PRINTER_MODEL   = "QL-1110NWB"
@@ -45,7 +42,6 @@ PREVIEW       = "preview"
 VALIDATING    = "validating"
 REVIEW        = "review"
 NAME_INPUT    = "name_input"
-QUESTIONNAIRE = "questionnaire"
 WAITING       = "waiting"
 PROCESSING    = "processing"
 RESULT        = "result"
@@ -53,41 +49,3 @@ RESULT        = "result"
 # --- Assets / server ---
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
 SERVER_URL  = os.getenv("SERVER_URL", "http://localhost:8000")
-
-# --- Questionnaire ---
-QUESTIONS = [
-    {
-        "q": "Produksjon brenner 🔥. Du...",
-        "a": [
-            ("Skylder på praktikanten", "1"),
-            ("Åpner 3 saker, lukker 2 med én gang", "2"),
-            ("Pusher en hotfix uten testing", "3"),
-            ("Er allerede på ferie", "4"),
-        ],
-    },
-    {
-        "q": "Din README er...",
-        "a": [
-            ("En detaljert roman på 40 sider", "1"),
-            ("En skarp advarsel", "2"),
-            ("Tre emojier og et ødelagt badge", "3"),
-            ("Hva er en README?", "4"),
-        ],
-    },
-    {
-        "q": "Du på et hackathon:",
-        "a": [
-            ("Planlegger perfekt arkitektur", "1"),
-            ("Forsvarer teknologivalgene dine høylytt", "2"),
-            ("Skriver om i et nytt rammeverk klokken 2", "3"),
-            ("Pitcher 5 ideer til alle i nærheten", "4"),
-        ],
-    },
-]
-
-DINO_NAMES = {
-    "1": "Brachiosaurus",
-    "2": "Triceratops",
-    "3": "Stegosaurus",
-    "4": "Pterodactyl",
-}

@@ -5,63 +5,15 @@ import PreviewScreen from './components/PreviewScreen'
 import ValidatingScreen from './components/ValidatingScreen'
 import ReviewScreen from './components/ReviewScreen'
 import NameInputScreen from './components/NameInputScreen'
-import QuestionnaireScreen from './components/QuestionnaireScreen'
 import WaitingScreen from './components/WaitingScreen'
 import ResultScreen from './components/ResultScreen'
-import DinoRevealScreen from './components/DinoRevealScreen'
-import DinoIntroScreen from './components/DinoIntroScreen'
 import InfoScreen from './components/InfoScreen'
-
-const QUESTIONS = [
-  {
-    q: "Produksjon brenner 🔥. Du...",
-    a: [
-      ["Skylder på praktikanten", "1"],
-      ["Åpner 3 saker, lukker 2 med én gang", "2"],
-      ["Pusher en hotfix uten testing", "3"],
-      ["Er allerede på ferie", "4"],
-    ],
-  },
-  {
-    q: "Din README er...",
-    a: [
-      ["En detaljert roman på 40 sider", "1"],
-      ["En skarp advarsel", "2"],
-      ["Tre emojier og et ødelagt badge", "3"],
-      ["Hva er en README?", "4"],
-    ],
-  },
-  {
-    q: "Du på et hackathon:",
-    a: [
-      ["Planlegger perfekt arkitektur", "1"],
-      ["Forsvarer teknologivalgene dine høylytt", "2"],
-      ["Skriver om i nytt rammeverk klokken 2", "3"],
-      ["Pitcher 5 ideer til alle i nærheten", "4"],
-    ],
-  },
-]
-
-const DINO_NAMES = {
-  "1": "Brachiosaurus",
-  "2": "Triceratops",
-  "3": "Stegosaurus",
-  "4": "Pterodactyl",
-}
-
-function scoreDino(answers) {
-  const counts = {}
-  for (const a of answers) counts[a] = (counts[a] || 0) + 1
-  return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0]
-}
 
 export default function App() {
   const [state, setState] = useState('START')
   const [photoBlob, setPhotoBlob] = useState(null)
   const [photoUrl, setPhotoUrl] = useState(null)
   const [name, setName] = useState('')
-  const [answers, setAnswers] = useState([])
-  const [assignedDino, setAssignedDino] = useState('')
   const [resultData, setResultData] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [validating, setValidating] = useState(false)
@@ -130,20 +82,8 @@ export default function App() {
 
   const handleNameSubmit = useCallback((n) => {
     setName(n)
-    setState('DINO_INTRO')
-  }, [])
-
-  const handleQuestionsDone = useCallback(async (ans) => {
-    setAnswers(ans)
-    const preference = DINO_NAMES[scoreDino(ans)] || ''
-    try {
-      const res = await fetch(`/next-dino?preference=${encodeURIComponent(preference)}`)
-      const data = await res.json()
-      setAssignedDino(data.dino_type)
-    } catch {
-      setAssignedDino(preference) // fall back to questionnaire result on error
-    }
-    setState('DINO_REVEAL')
+    // After name, go straight to waiting (generation already started)
+    setState('WAITING')
   }, [])
 
   const handleGenReady = useCallback((result) => {
@@ -156,14 +96,11 @@ export default function App() {
     setState('START')
   }, [])
 
-  const handlePublish = useCallback(async (currentAnswers, currentName) => {
+  const handlePublish = useCallback(async (currentName) => {
     const charId = genCharIdRef.current
     if (!charId) return
-    const dinoKey = currentAnswers.length ? scoreDino(currentAnswers) : '1'
-    const dinoType = DINO_NAMES[dinoKey] || ''
     const fd = new FormData()
     fd.append('name', currentName)
-    fd.append('dino_type', dinoType)
     try {
       await fetch(`/publish/${charId}`, { method: 'POST', body: fd })
     } catch (e) {
@@ -176,17 +113,12 @@ export default function App() {
     setPhotoBlob(null)
     setPhotoUrl(null)
     setName('')
-    setAnswers([])
-    setAssignedDino('')
     setResultData(null)
     setErrorMsg('')
     setValidating(false)
     resetGen()
     setState('START')
   }, [photoUrl])
-
-  const dinoKey = Object.keys(DINO_NAMES).find(k => DINO_NAMES[k] === assignedDino) || (answers.length ? scoreDino(answers) : '1')
-  const dinoName = assignedDino || DINO_NAMES[dinoKey] || ''
 
   return (
     <div className="app">
@@ -208,15 +140,6 @@ export default function App() {
       {state === 'NAME_INPUT' && (
         <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('REVIEW')} />
       )}
-      {state === 'DINO_INTRO' && (
-        <DinoIntroScreen onContinue={() => setState('QUESTIONNAIRE')} />
-      )}
-      {state === 'QUESTIONNAIRE' && (
-        <QuestionnaireScreen questions={QUESTIONS} onDone={handleQuestionsDone} onBack={() => setState('DINO_INTRO')} />
-      )}
-      {state === 'DINO_REVEAL' && (
-        <DinoRevealScreen dinoKey={dinoKey} dinoName={dinoName} onContinue={() => setState('WAITING')} />
-      )}
       {state === 'WAITING' && (
         <WaitingScreen
           genReadyRef={genReadyRef}
@@ -230,8 +153,6 @@ export default function App() {
         <ResultScreen
           resultData={resultData}
           name={name}
-          dinoName={dinoName}
-          answers={answers}
           onPublish={handlePublish}
           onDone={handleDone}
         />
