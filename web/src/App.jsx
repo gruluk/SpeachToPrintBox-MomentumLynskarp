@@ -186,13 +186,14 @@ export default function App() {
 
   // --- Demo flow ---
 
-  const handleDemoSelect = useCallback(async (demo) => {
-    setDemoChoice(demo)
+  const handleDemoSelect = useCallback(async (demoIds) => {
+    setDemoChoice(demoIds)
     if (matchedUser) {
-      const fd = new FormData()
-      fd.append('user_id', matchedUser.id)
-      fd.append('demo', demo)
-      fetch('/demo-choice', { method: 'POST', body: fd }).catch(e => console.error('[demo-choice]', e))
+      fetch('/demo-choice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: matchedUser.id, demo_ids: demoIds }),
+      }).catch(e => console.error('[demo-choice]', e))
     }
     setState('DEMO_DONE')
   }, [matchedUser])
@@ -276,7 +277,7 @@ export default function App() {
         />
       )}
       {state === 'DEMO_MATCHED' && (
-        <DemoMatchedScreen matchedUser={matchedUser} onSelectDemo={handleDemoSelect} onBack={handleDone} />
+        <DemoMatchedScreen matchedUser={matchedUser} onSelectDemos={handleDemoSelect} onBack={handleDone} />
       )}
       {state === 'DEMO_NO_MATCH' && (
         <DemoNoMatchScreen
@@ -286,7 +287,7 @@ export default function App() {
         />
       )}
       {state === 'DEMO_DONE' && (
-        <DemoDoneScreen name={matchedUser?.name} demo={demoChoice} onDone={handleDone} />
+        <DemoDoneScreen name={matchedUser?.name} demoCount={Array.isArray(demoChoice) ? demoChoice.length : 0} onDone={handleDone} />
       )}
     </div>
   )

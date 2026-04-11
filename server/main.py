@@ -599,16 +599,20 @@ async def admin_add_registered_user(body: dict, _=Depends(require_admin)):
 # --- Demo choices ---
 
 @app.post("/demo-choice")
-async def demo_choice(user_id: str = Form(...), demo: str = Form(...)):
-    """Store a demo choice for an enrolled face user."""
+async def demo_choice(body: dict):
+    """Store demo choices (list of presentation IDs) for an enrolled face user."""
+    user_id = body.get("user_id")
+    demo_ids = body.get("demo_ids", [])
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id required")
     user = next((u for u in face_users if u["id"] == user_id), None)
     if not user:
         raise HTTPException(status_code=404, detail="user not found")
-    user["demo_choice"] = demo
+    user["demo_ids"] = demo_ids
     user["demo_chosen_at"] = int(time.time() * 1000)
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None, instant_db.update_face_user_demo, user_id, demo
+            None, instant_db.update_face_user_demos, user_id, demo_ids
         )
     except Exception as e:
         print(f"[demo] DB write failed: {e}")
@@ -746,6 +750,18 @@ def booth_config(number: int):
 @app.get("/admin/api/users-merged")
 def admin_users_merged(_=Depends(require_admin)):
     """Merged view of registered_users + face_users for the admin panel."""
+    # Build presentation name lookup
+    pres_names = {p["id"]: p["name"] for p in presentations}
+
+    def resolve_demos(fu):
+        if not fu:
+            return []
+        ids = fu.get("demo_ids", [])
+        # Backwards compat: old single demo_choice field
+        if not ids and fu.get("demo_choice"):
+            return [fu["demo_choice"]]
+        return [pres_names.get(did, did) for did in ids]
+
     # Build lookup of face_users by name (lowercased)
     face_by_name = {}
     for fu in face_users:
@@ -767,7 +783,7 @@ def admin_users_merged(_=Depends(require_admin)):
             "registered_at": ru.get("created_at", 0),
             "has_face": fu is not None,
             "face_user_id": fu["id"] if fu else None,
-            "demo_choice": fu.get("demo_choice", "") if fu else "",
+            "demos": resolve_demos(fu),
         })
 
     # Add face_users not in registered_users
@@ -782,7 +798,7 @@ def admin_users_merged(_=Depends(require_admin)):
                 "registered_at": fu.get("created_at", 0),
                 "has_face": True,
                 "face_user_id": fu["id"],
-                "demo_choice": fu.get("demo_choice", ""),
+                "demos": resolve_demos(fu),
             })
 
     merged.sort(key=lambda u: u.get("name", "").lower())

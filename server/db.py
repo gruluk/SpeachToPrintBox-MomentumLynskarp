@@ -164,12 +164,12 @@ def get_face_user(user_id: str) -> dict | None:
     return users[0] if users else None
 
 
-def update_face_user_demo(user_id: str, demo: str) -> None:
-    """Store a demo choice on a face user record."""
+def update_face_user_demos(user_id: str, demo_ids: list[str]) -> None:
+    """Store demo choices (list of presentation IDs) on a face user record."""
     payload = {
         "steps": [[
             "update", "face_users", user_id,
-            {"demo_choice": demo, "demo_chosen_at": int(time.time() * 1000)},
+            {"demo_ids": demo_ids, "demo_chosen_at": int(time.time() * 1000)},
         ]]
     }
     r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
