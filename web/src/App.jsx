@@ -11,7 +11,7 @@ import QuestionnaireScreen from './components/QuestionnaireScreen'
 import WaitingScreen from './components/WaitingScreen'
 import ResultScreen from './components/ResultScreen'
 import InfoScreen from './components/InfoScreen'
-import DemoCameraScreen from './components/DemoCameraScreen'
+import DemoAutoRecognize from './components/DemoAutoRecognize'
 import DemoMatchedScreen from './components/DemoMatchedScreen'
 import DemoNoMatchScreen from './components/DemoNoMatchScreen'
 import DemoDoneScreen from './components/DemoDoneScreen'
@@ -72,7 +72,6 @@ export default function App() {
   // Demo flow state
   const [matchedUser, setMatchedUser] = useState(null)
   const [demoChoice, setDemoChoice] = useState('')
-  const [recognizing, setRecognizing] = useState(false)
 
   // Gen state in refs — avoids re-renders while WaitingScreen polls
   const genReadyRef = useRef(false)
@@ -187,31 +186,6 @@ export default function App() {
 
   // --- Demo flow ---
 
-  const handleDemoCapture = useCallback(async (blob) => {
-    setRecognizing(true)
-    setState('DEMO_RECOGNIZING')
-
-    const fd = new FormData()
-    fd.append('image', blob, 'photo.jpg')
-    fd.append('threshold', '0.6')
-    try {
-      const res = await fetch('/face/recognize', { method: 'POST', body: fd })
-      const data = await res.json()
-      setRecognizing(false)
-
-      if (data.ok && data.matched) {
-        setMatchedUser({ id: data.user_id, name: data.name, interest: data.interest })
-        setState('DEMO_MATCHED')
-      } else {
-        setState('DEMO_NO_MATCH')
-      }
-    } catch (e) {
-      console.error('[recognize]', e)
-      setRecognizing(false)
-      setState('DEMO_NO_MATCH')
-    }
-  }, [])
-
   const handleDemoSelect = useCallback(async (demo) => {
     setDemoChoice(demo)
     if (matchedUser) {
@@ -237,7 +211,6 @@ export default function App() {
     setFlow(null)
     setMatchedUser(null)
     setDemoChoice('')
-    setRecognizing(false)
     resetGen()
     setState('START')
   }, [photoUrl])
@@ -248,7 +221,7 @@ export default function App() {
         <StartScreen
           mode={boothMode}
           onRegister={() => { setErrorMsg(''); setFlow('register'); setState('INFO') }}
-          onDemo={() => { setErrorMsg(''); setFlow('demo'); setState('DEMO_CAMERA') }}
+          onDemo={() => { setErrorMsg(''); setFlow('demo'); setState('DEMO_AUTO_RECOGNIZE') }}
           errorMsg={errorMsg}
         />
       )}
@@ -295,21 +268,19 @@ export default function App() {
       )}
 
       {/* Demo flow */}
-      {state === 'DEMO_CAMERA' && (
-        <DemoCameraScreen onCapture={handleDemoCapture} onCancel={handleDone} />
-      )}
-      {state === 'DEMO_RECOGNIZING' && (
-        <div className="screen center">
-          <div className="spinner" />
-          <p className="status-text">Recognizing...</p>
-        </div>
+      {state === 'DEMO_AUTO_RECOGNIZE' && (
+        <DemoAutoRecognize
+          onMatched={(user) => { setMatchedUser(user); setState('DEMO_MATCHED') }}
+          onNoMatch={() => setState('DEMO_NO_MATCH')}
+          onCancel={handleDone}
+        />
       )}
       {state === 'DEMO_MATCHED' && (
         <DemoMatchedScreen matchedUser={matchedUser} onSelectDemo={handleDemoSelect} onBack={handleDone} />
       )}
       {state === 'DEMO_NO_MATCH' && (
         <DemoNoMatchScreen
-          onRetry={() => setState('DEMO_CAMERA')}
+          onRetry={() => setState('DEMO_AUTO_RECOGNIZE')}
           onRegister={() => { setFlow('register'); setState('INFO') }}
           onBack={handleDone}
         />
