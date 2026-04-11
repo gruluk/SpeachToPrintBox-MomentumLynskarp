@@ -5,3 +5,5 @@ openai
 Pillow
 python-dotenv
 httpx
+face_recognition
+numpy

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import './App.css'
+import FaceDebugScreen from './components/FaceDebugScreen'
 import StartScreen from './components/StartScreen'
 import PreviewScreen from './components/PreviewScreen'
 import ValidatingScreen from './components/ValidatingScreen'
@@ -141,6 +142,15 @@ export default function App() {
     resetGen()
     setState('START')
   }, [photoUrl])
+
+  // Route to face debug screen if path matches
+  if (window.location.pathname.includes('face-debug')) {
+    return (
+      <div className="app">
+        <FaceDebugScreen />
+      </div>
+    )
+  }
 
   return (
     <div className="app">

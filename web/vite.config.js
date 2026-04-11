@@ -10,6 +10,7 @@ export default defineConfig({
       '/validate': 'http://localhost:8000',
       '/generate': 'http://localhost:8000',
       '/publish': 'http://localhost:8000',
+      '/face': 'http://localhost:8000',
     }
   }
 })

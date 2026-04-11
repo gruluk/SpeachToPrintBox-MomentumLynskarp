@@ -31,6 +31,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 import db as instant_db
+from face import compute_embedding, find_match, FACE_AVAILABLE
 from generate import generate_image
 from validate import validate_photo
 
@@ -48,6 +49,7 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(_security)):
 # In-memory store — populated from InstantDB on startup
 characters: List[dict] = []
 connections: List[WebSocket] = []
+face_users: List[dict] = []
 
 # ── TV wall world coordinates ─────────────────────────────────────────────────
 # The wall is 4 screens side-by-side. Each Pi opens /wall?screen=N and offsets
@@ -131,6 +133,13 @@ async def lifespan(app: FastAPI):
         print(f"[startup] Restored {len(existing)} characters from InstantDB")
     except Exception as e:
         print(f"[startup] Could not restore characters from InstantDB: {e}")
+    # Restore face users
+    try:
+        fu = await loop.run_in_executor(None, instant_db.get_all_face_users)
+        face_users.extend(fu)
+        print(f"[startup] Restored {len(fu)} face users from InstantDB (face_recognition={'available' if FACE_AVAILABLE else 'NOT available'})")
+    except Exception as e:
+        print(f"[startup] Could not restore face users from InstantDB: {e}")
     # Start the wall movement loop
     move_task = asyncio.create_task(_character_movement_loop())
     yield
@@ -426,6 +435,103 @@ async def admin_sync(_=Depends(require_admin)):
     except Exception as e:
         print(f"[db] sync failed: {e}")
     return characters
+
+
+# --- Face recognition ---
+
+@app.post("/face/enroll")
+async def face_enroll(
+    image: UploadFile = File(...),
+    name: str = Form(...),
+    interest: str = Form(""),
+):
+    if not FACE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="face_recognition library not available")
+
+    data = await image.read()
+    result = await asyncio.get_event_loop().run_in_executor(
+        None, compute_embedding, data
+    )
+
+    if not result["found"]:
+        return {"ok": False, "error": "no_face", "time_ms": result["time_ms"]}
+
+    user_id = str(uuid.uuid4())
+    user = {
+        "id": user_id,
+        "name": name,
+        "interest": interest,
+        "embedding": result["embedding"],
+        "created_at": int(time.time() * 1000),
+    }
+    face_users.append(user)
+
+    # Persist to InstantDB
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None,
+            instant_db.create_face_user,
+            user_id, name, interest, result["embedding"],
+        )
+    except Exception as e:
+        print(f"[face] InstantDB write failed: {e}")
+
+    return {
+        "ok": True,
+        "user_id": user_id,
+        "name": name,
+        "interest": interest,
+        "embedding_dims": len(result["embedding"]),
+        "time_ms": result["time_ms"],
+    }
+
+
+@app.post("/face/recognize")
+async def face_recognize(
+    image: UploadFile = File(...),
+    threshold: float = Form(0.6),
+):
+    if not FACE_AVAILABLE:
+        raise HTTPException(status_code=503, detail="face_recognition library not available")
+
+    data = await image.read()
+    result = await asyncio.get_event_loop().run_in_executor(
+        None, compute_embedding, data
+    )
+
+    if not result["found"]:
+        return {"ok": False, "error": "no_face", "time_ms": result["time_ms"]}
+
+    match = find_match(result["embedding"], face_users, threshold)
+    return {
+        "ok": True,
+        "time_ms": result["time_ms"],
+        **match,
+    }
+
+
+@app.get("/face/users")
+def face_list_users():
+    return [
+        {"id": u["id"], "name": u["name"], "interest": u.get("interest", ""),
+         "created_at": u.get("created_at", 0)}
+        for u in face_users
+    ]
+
+
+@app.delete("/face/users/{user_id}")
+async def face_delete_user(user_id: str):
+    user = next((u for u in face_users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="not found")
+    face_users.remove(user)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.delete_face_user, user_id
+        )
+    except Exception as e:
+        print(f"[face] delete failed: {e}")
+    return {"ok": True}
 
 
 # --- Web booth SPA ---

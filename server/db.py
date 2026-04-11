@@ -111,3 +111,52 @@ def get_unprinted() -> list[dict]:
     r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
     return r.json().get("characters", [])
+
+
+# ── Face users ────────────────────────────────────────────────────────────────
+
+def create_face_user(user_id: str, name: str, interest: str, embedding: list[float]) -> None:
+    """Insert a new face user record."""
+    payload = {
+        "steps": [
+            [
+                "update",
+                "face_users",
+                user_id,
+                {
+                    "name": name,
+                    "interest": interest,
+                    "embedding": embedding,
+                    "created_at": int(time.time() * 1000),
+                },
+            ]
+        ]
+    }
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=15)
+    r.raise_for_status()
+
+
+def get_all_face_users() -> list[dict]:
+    """Return all face user records from InstantDB, sorted by created_at."""
+    payload = {"query": {"face_users": {}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=15)
+    r.raise_for_status()
+    users = r.json().get("face_users", [])
+    users.sort(key=lambda u: u.get("created_at", 0))
+    return users
+
+
+def delete_face_user(user_id: str) -> None:
+    """Delete a face user record from InstantDB."""
+    payload = {"steps": [["delete", "face_users", user_id]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+def get_face_user(user_id: str) -> dict | None:
+    """Return a single face user by id, or None."""
+    payload = {"query": {"face_users": {"$": {"where": {"id": user_id}}}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+    users = r.json().get("face_users", [])
+    return users[0] if users else None

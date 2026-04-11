@@ -1,3 +1,6 @@
+[phases.setup]
+nixPkgs = ["cmake", "gcc", "gnumake", "openblas"]
+
 [phases.build]
 cmds = [
   "cd web && npm install && npm run build",
