@@ -685,6 +685,7 @@ h2 {
 
 .recognize-eye {
   margin-bottom: 1rem;
+  filter: brightness(0) saturate(100%) invert(10%) sepia(50%) saturate(4000%) hue-rotate(255deg) brightness(60%);
 }
 
 .recognize-failed {
