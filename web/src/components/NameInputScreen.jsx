@@ -1,63 +1,78 @@
 import { useState, useEffect, useRef } from 'react'
 
 export default function NameInputScreen({ onSubmit, onBack }) {
-  const [value, setValue] = useState('')
-  const [suggestions, setSuggestions] = useState([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const debounceRef = useRef(null)
+  const [filter, setFilter] = useState('')
+  const [allUsers, setAllUsers] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
+  const inputRef = useRef(null)
 
+  // Load all registered users on mount
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (!value.trim()) {
-      setSuggestions([])
-      return
-    }
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/registered-users?q=${encodeURIComponent(value.trim())}`)
-        const data = await res.json()
-        setSuggestions(data)
-        setShowSuggestions(data.length > 0)
-      } catch (e) {
-        console.error('[autocomplete]', e)
-      }
-    }, 300)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [value])
+    fetch('/registered-users')
+      .then(r => r.json())
+      .then(data => setAllUsers(data))
+      .catch(e => console.error('[users]', e))
+  }, [])
+
+  // Auto-focus input for keyboard
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  const filtered = allUsers.filter(u =>
+    u.name.toLowerCase().includes(filter.toLowerCase())
+  )
+
+  const selectedUser = allUsers.find(u => u.id === selectedId)
+
+  function handleSelect(user) {
+    setSelectedId(user.id)
+    setFilter(user.name)
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (value.trim()) {
-      setShowSuggestions(false)
-      onSubmit(value.trim())
+    if (selectedUser) {
+      onSubmit(selectedUser.name)
     }
   }
 
-  function selectSuggestion(name) {
-    setValue(name)
-    setShowSuggestions(false)
+  function handleInputChange(val) {
+    setFilter(val)
+    // Clear selection if user edits the text away from the selected name
+    if (selectedUser && val !== selectedUser.name) {
+      setSelectedId(null)
+    }
   }
 
   return (
     <div className="screen center">
       <h2>What's your name?</h2>
       <form onSubmit={handleSubmit} className="name-form">
-        <div className="autocomplete-wrap">
-          <input
-            className="name-input"
-            type="text"
-            placeholder="Your name"
-            value={value}
-            onChange={e => { setValue(e.target.value); setShowSuggestions(true) }}
-            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-            autoFocus
-            maxLength={40}
-          />
-          {showSuggestions && suggestions.length > 0 && (
-            <ul className="autocomplete-list">
-              {suggestions.slice(0, 8).map(s => (
-                <li key={s.id} className="autocomplete-item" onClick={() => selectSuggestion(s.name)}>
-                  {s.name}
+        <input
+          ref={inputRef}
+          className="name-input"
+          type="text"
+          placeholder="Search your name..."
+          value={filter}
+          onChange={e => handleInputChange(e.target.value)}
+          autoFocus
+          maxLength={40}
+        />
+        <div className="name-list-wrap">
+          {filtered.length === 0 ? (
+            <p className="name-list-empty">
+              {allUsers.length === 0 ? 'Loading...' : 'No matching names found'}
+            </p>
+          ) : (
+            <ul className="name-list">
+              {filtered.map(u => (
+                <li
+                  key={u.id}
+                  className={`name-list-item ${selectedId === u.id ? 'name-list-selected' : ''}`}
+                  onClick={() => handleSelect(u)}
+                >
+                  {u.name}
                 </li>
               ))}
             </ul>
@@ -65,7 +80,7 @@ export default function NameInputScreen({ onSubmit, onBack }) {
         </div>
         <div className="btn-row">
           <button className="btn-secondary" type="button" onClick={onBack}>Back</button>
-          <button className="btn-primary" type="submit" disabled={!value.trim()}>Next</button>
+          <button className="btn-primary" type="submit" disabled={!selectedUser}>Next</button>
         </div>
       </form>
     </div>
