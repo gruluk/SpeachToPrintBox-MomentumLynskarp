@@ -52,6 +52,7 @@ characters: List[dict] = []
 connections: List[WebSocket] = []
 face_users: List[dict] = []
 registered_users: List[dict] = []
+booths: List[dict] = []
 
 # ── TV wall world coordinates ─────────────────────────────────────────────────
 # The wall is 4 screens side-by-side. Each Pi opens /wall?screen=N and offsets
@@ -149,6 +150,19 @@ async def lifespan(app: FastAPI):
         print(f"[startup] Restored {len(ru)} registered users from InstantDB")
     except Exception as e:
         print(f"[startup] Could not restore registered users from InstantDB: {e}")
+    # Restore booths (create default if none exist)
+    try:
+        bs = await loop.run_in_executor(None, instant_db.get_all_booths)
+        booths.extend(bs)
+        if not booths:
+            default_id = str(uuid.uuid4())
+            default_booth = {"id": default_id, "name": "Booth 1", "number": 1, "mode": "both"}
+            booths.append(default_booth)
+            await loop.run_in_executor(None, instant_db.create_booth, default_id, "Booth 1", 1, "both")
+            print("[startup] Created default booth 1")
+        print(f"[startup] Restored {len(booths)} booths from InstantDB")
+    except Exception as e:
+        print(f"[startup] Could not restore booths from InstantDB: {e}")
     # Start the wall movement loop
     move_task = asyncio.create_task(_character_movement_loop())
     yield
@@ -538,6 +552,42 @@ def admin_list_registered(_=Depends(require_admin)):
              "created_at": u.get("created_at", 0)} for u in registered_users]
 
 
+@app.delete("/admin/api/registered-users/{user_id}")
+async def admin_delete_registered_user(user_id: str, _=Depends(require_admin)):
+    user = next((u for u in registered_users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="not found")
+    registered_users.remove(user)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.delete_registered_user, user_id
+        )
+    except Exception as e:
+        print(f"[admin] delete registered user failed: {e}")
+    return {"ok": True}
+
+
+@app.post("/admin/api/registered-users")
+async def admin_add_registered_user(body: dict, _=Depends(require_admin)):
+    name = (body.get("name") or "").strip()
+    email = (body.get("email") or "").strip()
+    if not name or not email:
+        raise HTTPException(status_code=400, detail="name and email required")
+    # Check duplicate
+    if any(u.get("email", "").lower() == email.lower() for u in registered_users):
+        raise HTTPException(status_code=409, detail="email already exists")
+    user_id = str(uuid.uuid4())
+    user = {"id": user_id, "name": name, "email": email, "created_at": int(time.time() * 1000)}
+    registered_users.append(user)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.create_registered_user, user_id, name, email
+        )
+    except Exception as e:
+        print(f"[admin] create registered user failed: {e}")
+    return {"ok": True, **user}
+
+
 # --- Demo choices ---
 
 @app.post("/demo-choice")
@@ -555,6 +605,117 @@ async def demo_choice(user_id: str = Form(...), demo: str = Form(...)):
     except Exception as e:
         print(f"[demo] DB write failed: {e}")
     return {"ok": True}
+
+
+# --- Booths ---
+
+@app.get("/admin/api/booths")
+def admin_list_booths(_=Depends(require_admin)):
+    return booths
+
+
+@app.post("/admin/api/booths")
+async def admin_create_booth(_=Depends(require_admin)):
+    next_number = max((b.get("number", 0) for b in booths), default=0) + 1
+    booth_id = str(uuid.uuid4())
+    booth = {"id": booth_id, "name": f"Booth {next_number}", "number": next_number, "mode": "both"}
+    booths.append(booth)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.create_booth, booth_id, booth["name"], next_number, "both"
+        )
+    except Exception as e:
+        print(f"[booth] create failed: {e}")
+    return booth
+
+
+@app.patch("/admin/api/booths/{booth_id}")
+async def admin_update_booth(booth_id: str, body: dict, _=Depends(require_admin)):
+    booth = next((b for b in booths if b["id"] == booth_id), None)
+    if not booth:
+        raise HTTPException(status_code=404, detail="not found")
+    mode = body.get("mode")
+    if mode and mode in ("both", "register", "demo"):
+        booth["mode"] = mode
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, instant_db.update_booth, booth_id, mode
+            )
+        except Exception as e:
+            print(f"[booth] update failed: {e}")
+    return {"ok": True, **booth}
+
+
+@app.delete("/admin/api/booths/{booth_id}")
+async def admin_delete_booth(booth_id: str, _=Depends(require_admin)):
+    booth = next((b for b in booths if b["id"] == booth_id), None)
+    if not booth:
+        raise HTTPException(status_code=404, detail="not found")
+    booths.remove(booth)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.delete_booth, booth_id
+        )
+    except Exception as e:
+        print(f"[booth] delete failed: {e}")
+    return {"ok": True}
+
+
+@app.get("/booth-config/{number}")
+def booth_config(number: int):
+    """No auth — booth SPA reads this to know its mode."""
+    booth = next((b for b in booths if b.get("number") == number), None)
+    if not booth:
+        return {"mode": "both"}
+    return {"mode": booth.get("mode", "both")}
+
+
+# --- Merged users view ---
+
+@app.get("/admin/api/users-merged")
+def admin_users_merged(_=Depends(require_admin)):
+    """Merged view of registered_users + face_users for the admin panel."""
+    # Build lookup of face_users by name (lowercased)
+    face_by_name = {}
+    for fu in face_users:
+        key = fu.get("name", "").strip().lower()
+        if key:
+            face_by_name[key] = fu
+
+    merged = []
+    seen_names = set()
+    for ru in registered_users:
+        name_key = ru.get("name", "").strip().lower()
+        seen_names.add(name_key)
+        fu = face_by_name.get(name_key)
+        merged.append({
+            "id": ru["id"],
+            "name": ru.get("name", ""),
+            "email": ru.get("email", ""),
+            "interest": fu.get("interest", "") if fu else "",
+            "registered_at": ru.get("created_at", 0),
+            "has_face": fu is not None,
+            "face_user_id": fu["id"] if fu else None,
+            "demo_choice": fu.get("demo_choice", "") if fu else "",
+        })
+
+    # Add face_users not in registered_users
+    for fu in face_users:
+        key = fu.get("name", "").strip().lower()
+        if key and key not in seen_names:
+            merged.append({
+                "id": fu["id"],
+                "name": fu.get("name", ""),
+                "email": "",
+                "interest": fu.get("interest", ""),
+                "registered_at": fu.get("created_at", 0),
+                "has_face": True,
+                "face_user_id": fu["id"],
+                "demo_choice": fu.get("demo_choice", ""),
+            })
+
+    merged.sort(key=lambda u: u.get("name", "").lower())
+    return merged
 
 
 # --- Face recognition ---

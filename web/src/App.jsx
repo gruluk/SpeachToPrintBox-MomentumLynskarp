@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import './App.css'
 import FaceDebugScreen from './components/FaceDebugScreen'
 import StartScreen from './components/StartScreen'
@@ -43,6 +43,21 @@ export default function App() {
       </div>
     )
   }
+
+  // Extract booth number from URL (e.g., /booth/2 → 2)
+  const boothNumber = (() => {
+    const match = window.location.pathname.match(/\/booth\/(\d+)/)
+    return match ? parseInt(match[1], 10) : 1
+  })()
+
+  const [boothMode, setBoothMode] = useState('both') // 'both' | 'register' | 'demo'
+
+  useEffect(() => {
+    fetch(`/booth-config/${boothNumber}`)
+      .then(r => r.json())
+      .then(data => setBoothMode(data.mode || 'both'))
+      .catch(() => {})
+  }, [boothNumber])
 
   const [state, setState] = useState('START')
   const [flow, setFlow] = useState(null) // 'register' | 'demo'
@@ -231,6 +246,7 @@ export default function App() {
     <div className="app">
       {state === 'START' && (
         <StartScreen
+          mode={boothMode}
           onRegister={() => { setErrorMsg(''); setFlow('register'); setState('INFO') }}
           onDemo={() => { setErrorMsg(''); setFlow('demo'); setState('DEMO_CAMERA') }}
           errorMsg={errorMsg}

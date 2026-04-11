@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sopra Steria — Admin</title>
+  <title>Momentum Lynskarp — Admin</title>
   <style>
     :root {
       --bg: #0f1117;
@@ -42,6 +42,8 @@
       z-index: 100;
     }
 
+    .header-left { display: flex; align-items: center; gap: 1rem; }
+
     .header-title {
       font-size: 1rem;
       font-weight: 700;
@@ -50,13 +52,11 @@
     }
     .header-title span { color: var(--muted); font-weight: 400; }
 
-    #stats {
-      display: flex;
-      gap: 1.5rem;
-      color: var(--muted);
-      font-size: 0.8rem;
+    .back-btn {
+      background: none; border: none; color: var(--muted); font-size: 1.2rem;
+      cursor: pointer; padding: 0.25rem 0.5rem; display: none;
     }
-    #stats strong { color: var(--text); }
+    .back-btn:hover { color: var(--text); }
 
     main {
       max-width: 1200px;
@@ -64,211 +64,251 @@
       padding: 1.5rem 2rem;
     }
 
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1.25rem;
-      flex-wrap: wrap;
+    /* Dashboard cards */
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1rem;
     }
 
-    .toolbar input {
+    .dash-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-      outline: none;
-      width: 220px;
+      border-radius: 12px;
+      padding: 2rem;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
     }
-    .toolbar input:focus { border-color: var(--purple); }
+    .dash-card:hover { border-color: var(--purple); transform: translateY(-2px); }
+    .dash-card h3 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .dash-card p { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; }
+    .dash-card .card-stat { font-size: 1.5rem; font-weight: 700; color: var(--purple-light); }
 
+    /* Sections */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Shared */
+    .toolbar {
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 1.25rem; flex-wrap: wrap;
+    }
+    .toolbar input[type="search"] {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px; padding: 0.5rem 0.75rem;
+      font-size: 0.875rem; outline: none; width: 220px;
+    }
+    .toolbar input[type="search"]:focus { border-color: var(--purple); }
     .toolbar-spacer { flex: 1; }
 
     .btn {
-      border: none;
-      border-radius: 6px;
-      padding: 0.5rem 1rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
+      border: none; border-radius: 6px; padding: 0.5rem 1rem;
+      font-size: 0.875rem; font-weight: 600; cursor: pointer;
       transition: opacity 0.15s;
     }
     .btn:hover { opacity: 0.85; }
     .btn:disabled { opacity: 0.4; cursor: default; }
-
     .btn-purple { background: var(--purple); color: #fff; }
     .btn-red    { background: var(--red);    color: #fff; }
-    .btn-ghost  {
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
+    .btn-ghost  { background: transparent; color: var(--muted); border: 1px solid var(--border); }
     .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
     .btn-orange { background: #c97010; color: #fff; }
+    .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.775rem; border-radius: 5px; }
 
     .size-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
-      color: var(--muted);
-      font-size: 0.8rem;
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1.25rem; color: var(--muted); font-size: 0.8rem;
     }
     .size-row strong { color: var(--text); }
-    .size-row input[type="range"] {
-      flex: 1;
-      max-width: 280px;
-      accent-color: var(--purple);
-      cursor: pointer;
-    }
+    .size-row input[type="range"] { flex: 1; max-width: 280px; accent-color: var(--purple); cursor: pointer; }
 
-    .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-    }
-
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
     table { width: 100%; border-collapse: collapse; }
-
     th {
-      background: var(--surface);
-      color: var(--muted);
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 0.75rem 1rem;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
+      background: var(--surface); color: var(--muted); font-size: 0.75rem;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border);
     }
-
-    td {
-      padding: 0.65rem 1rem;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
+    td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(255,255,255,0.02); }
 
     .thumb {
-      width: 56px; height: 56px;
-      object-fit: contain;
-      image-rendering: pixelated;
-      border-radius: 4px;
-      background: #111;
-      border: 1px solid var(--border);
+      width: 56px; height: 56px; object-fit: contain; image-rendering: pixelated;
+      border-radius: 4px; background: #111; border: 1px solid var(--border);
     }
-
     .badge {
-      display: inline-block;
-      padding: 0.2rem 0.55rem;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
+      display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
     }
-    .badge-green { background: rgba(83,146,39,0.2);  color: var(--green); }
+    .badge-green { background: rgba(83,146,39,0.2); color: var(--green); }
     .badge-muted { background: rgba(122,127,150,0.15); color: var(--muted); }
-
     .action-row { display: flex; gap: 0.5rem; align-items: center; }
 
-    .btn-sm {
-      padding: 0.35rem 0.65rem;
-      font-size: 0.775rem;
-      border-radius: 5px;
-    }
-
+    /* Modal */
     .modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 200; align-items: center; justify-content: center;
     }
     .modal-backdrop.open { display: flex; }
-
     .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.75rem;
-      width: 380px;
-      max-width: 95vw;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.75rem; width: 380px; max-width: 95vw;
     }
     .modal h3 { margin-bottom: 1.25rem; font-size: 1rem; }
-
     .field { margin-bottom: 1rem; }
     .field label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.4rem; }
-    .field input {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 0.6rem 0.75rem;
-      font-size: 0.9rem;
-      outline: none;
+    .field input, .field select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px; padding: 0.6rem 0.75rem;
+      font-size: 0.9rem; outline: none;
     }
-    .field input:focus { border-color: var(--purple); }
-
+    .field input:focus, .field select:focus { border-color: var(--purple); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
-
     .empty { text-align: center; padding: 4rem; color: var(--muted); }
-    #loading { text-align: center; padding: 3rem; color: var(--muted); }
+
+    /* Booth cards */
+    .booth-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .booth-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    .booth-card strong { min-width: 80px; }
+    .booth-card .url-text {
+      color: var(--muted); font-family: monospace; font-size: 0.8rem;
+      background: var(--bg); padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;
+    }
+    .booth-card .url-text:hover { color: var(--text); }
+    .booth-card select {
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.8rem;
+    }
+
+    /* Add user form */
+    .inline-form {
+      display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    }
+    .inline-form input {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.85rem; outline: none;
+    }
+    .inline-form input:focus { border-color: var(--purple); }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="header-title">SOPRA STERIA <span>/ Admin</span></div>
-  <div id="stats">Loading...</div>
+  <div class="header-left">
+    <button class="back-btn" id="back-btn" onclick="showDashboard()">← Back</button>
+    <div class="header-title">MOMENTUM LYNSKARP <span>/ Admin</span></div>
+  </div>
+  <div id="header-right"></div>
 </header>
 
 <main>
-  <div class="toolbar">
-    <input type="search" id="search" placeholder="Search name…" oninput="renderTable()" />
-    <button class="btn btn-ghost" onclick="load()">↺ Sync &amp; Refresh</button>
-    <div class="toolbar-spacer"></div>
-    <label class="btn btn-ghost" style="cursor:pointer">
-      📁 Import CSV
-      <input type="file" id="csv-file" accept=".csv,.xlsx" onchange="importCSV()" style="display:none" />
-    </label>
-    <span id="reg-count" style="color:var(--muted);font-size:0.8rem"></span>
-    <button class="btn btn-red" onclick="clearAll()">Clear All</button>
+  <!-- Dashboard -->
+  <div id="view-dashboard">
+    <div class="dashboard">
+      <div class="dash-card" onclick="showSection('screen')">
+        <h3>Screen</h3>
+        <p>Wall display & avatar management</p>
+        <div class="card-stat" id="stat-chars">—</div>
+        <span style="color:var(--muted);font-size:0.8rem">characters</span>
+      </div>
+      <div class="dash-card" onclick="showSection('users')">
+        <h3>Users</h3>
+        <p>Manage attendees & registrations</p>
+        <div class="card-stat" id="stat-users">—</div>
+        <span style="color:var(--muted);font-size:0.8rem">users</span>
+      </div>
+      <div class="dash-card" onclick="showSection('booths')">
+        <h3>Booths</h3>
+        <p>Configure iPads & flows</p>
+        <div class="card-stat" id="stat-booths">—</div>
+        <span style="color:var(--muted);font-size:0.8rem">booths</span>
+      </div>
+    </div>
   </div>
 
-  <div class="size-row">
-    <span>Avatar size:</span>
-    <input type="range" id="size-slider" min="48" max="400" step="8" value="144" oninput="onSizeSlider(this.value)" />
-    <strong id="size-val">144</strong><span>px</span>
+  <!-- Screen section -->
+  <div id="view-screen" class="section">
+    <div class="toolbar">
+      <input type="search" id="char-search" placeholder="Search name…" oninput="renderCharTable()" />
+      <button class="btn btn-ghost" onclick="loadChars()">↺ Refresh</button>
+      <div class="toolbar-spacer"></div>
+      <button class="btn btn-red" onclick="clearAll()">Clear All</button>
+    </div>
+    <div class="size-row">
+      <span>Avatar size:</span>
+      <input type="range" id="size-slider" min="48" max="400" step="8" value="144" oninput="onSizeSlider(this.value)" />
+      <strong id="size-val">144</strong><span>px</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:72px">Art</th>
+            <th>Name</th>
+            <th>Interest</th>
+            <th>Created</th>
+            <th>Printed</th>
+            <th style="width:160px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="char-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:72px">Art</th>
-          <th>Name</th>
-          <th>Created</th>
-          <th>Printed</th>
-          <th style="width:140px">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr><td colspan="5" id="loading">Loading…</td></tr>
-      </tbody>
-    </table>
+  <!-- Users section -->
+  <div id="view-users" class="section">
+    <div class="toolbar">
+      <input type="search" id="user-search" placeholder="Search name…" oninput="renderUserTable()" />
+      <button class="btn btn-ghost" onclick="loadUsers()">↺ Refresh</button>
+      <div class="toolbar-spacer"></div>
+      <label class="btn btn-ghost" style="cursor:pointer">
+        📁 Import XLSX/CSV
+        <input type="file" id="import-file" accept=".csv,.xlsx" onchange="importFile()" style="display:none" />
+      </label>
+    </div>
+    <div class="inline-form" style="margin-bottom:1rem">
+      <input type="text" id="add-name" placeholder="Name" style="width:180px" />
+      <input type="email" id="add-email" placeholder="Email" style="width:220px" />
+      <button class="btn btn-purple btn-sm" onclick="addUser()">+ Add User</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Interest</th>
+            <th>Registered</th>
+            <th>Face</th>
+            <th>Demo</th>
+            <th style="width:80px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="user-tbody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Booths section -->
+  <div id="view-booths" class="section">
+    <div class="toolbar">
+      <button class="btn btn-purple" onclick="addBooth()">+ Add Booth</button>
+      <button class="btn btn-ghost" onclick="loadBooths()">↺ Refresh</button>
+    </div>
+    <div class="booth-list" id="booth-list"></div>
   </div>
 </main>
 
 <!-- Edit modal -->
 <div class="modal-backdrop" id="modal">
   <div class="modal">
-    <h3>Edit character</h3>
+    <h3 id="modal-title">Edit</h3>
     <div class="field">
       <label>Name</label>
       <input type="text" id="edit-name" maxlength="60" />
@@ -282,156 +322,128 @@
 
 <script>
   let characters = []
+  let mergedUsers = []
+  let boothList = []
   let editingId = null
   let currentCharSize = 144
+  let currentSection = null
 
-  async function importCSV() {
-    const input = document.getElementById('csv-file')
-    const file = input.files[0]
-    if (!file) return
-    const fd = new FormData()
-    fd.append('file', file)
-    try {
-      const res = await fetch('/admin/api/import-users', { method: 'POST', body: fd })
-      if (res.status === 401) { location.reload(); return }
-      const data = await res.json()
-      alert(`Imported ${data.imported} users, skipped ${data.skipped}. Total: ${data.total}`)
-      loadRegisteredCount()
-    } catch (e) {
-      alert('Import failed: ' + e.message)
-    }
-    input.value = ''
+  // ── Navigation ────────────────────────────────────────────
+
+  function showDashboard() {
+    currentSection = null
+    document.getElementById('view-dashboard').style.display = ''
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
+    document.getElementById('back-btn').style.display = 'none'
+    refreshDashboardStats()
   }
 
-  async function loadRegisteredCount() {
+  function showSection(name) {
+    currentSection = name
+    document.getElementById('view-dashboard').style.display = 'none'
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
+    document.getElementById(`view-${name}`).classList.add('active')
+    document.getElementById('back-btn').style.display = ''
+
+    if (name === 'screen') loadChars()
+    if (name === 'users') loadUsers()
+    if (name === 'booths') loadBooths()
+  }
+
+  async function refreshDashboardStats() {
     try {
-      const res = await fetch('/admin/api/registered-users')
-      if (res.ok) {
-        const users = await res.json()
-        document.getElementById('reg-count').textContent = `${users.length} registered`
+      const [charRes, userRes, boothRes] = await Promise.all([
+        fetch('/admin/api/sync'),
+        fetch('/admin/api/users-merged'),
+        fetch('/admin/api/booths'),
+      ])
+      if (charRes.ok) {
+        characters = await charRes.json()
+        document.getElementById('stat-chars').textContent = characters.length
+      }
+      if (userRes.ok) {
+        mergedUsers = await userRes.json()
+        document.getElementById('stat-users').textContent = mergedUsers.length
+      }
+      if (boothRes.ok) {
+        boothList = await boothRes.json()
+        document.getElementById('stat-booths').textContent = boothList.length
       }
     } catch (e) {}
   }
 
-  async function load() {
+  // ── Screen section ────────────────────────────────────────
+
+  async function loadChars() {
     try {
       const res = await fetch('/admin/api/sync')
-      if (res.status === 401) { location.reload(); return; }
+      if (res.status === 401) { location.reload(); return }
       characters = await res.json()
-      renderTable()
-      renderStats()
+      renderCharTable()
     } catch (e) {
-      document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="5" class="empty">Failed to load — check server</td></tr>'
+      document.getElementById('char-tbody').innerHTML =
+        '<tr><td colspan="6" class="empty">Failed to load</td></tr>'
     }
   }
 
-  function renderStats() {
-    const total   = characters.length
-    const printed = characters.filter(c => c.printed).length
-    document.getElementById('stats').innerHTML =
-      `<span><strong>${total}</strong> characters</span>` +
-      `<span><strong>${printed}</strong> printed</span>`
-  }
-
-  function renderTable() {
-    const q     = document.getElementById('search').value.toLowerCase()
-    const tbody = document.getElementById('tbody')
-    const rows  = characters.filter(c =>
-      !q || (c.name || '').toLowerCase().includes(q)
-    )
+  function renderCharTable() {
+    const q = document.getElementById('char-search').value.toLowerCase()
+    const tbody = document.getElementById('char-tbody')
+    const rows = characters.filter(c => !q || (c.name || '').toLowerCase().includes(q))
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty">No characters found</td></tr>'
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No characters found</td></tr>'
       return
     }
-
     tbody.innerHTML = rows.map(c => `
       <tr id="row-${c.id}">
-        <td>
-          <img class="thumb"
-               src="data:image/png;base64,${c.image_b64}"
-               alt="${esc(c.name)}" />
-        </td>
+        <td><img class="thumb" src="data:image/png;base64,${c.image_b64}" alt="${esc(c.name)}" /></td>
         <td>${esc(c.name) || '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="color:var(--muted)">${esc(c.interest || '')}</td>
         <td style="color:var(--muted)">${fmtDate(c.created_at)}</td>
-        <td>
-          <span class="badge ${c.printed ? 'badge-green' : 'badge-muted'}">
-            ${c.printed ? 'Printed' : 'Pending'}
-          </span>
-        </td>
+        <td><span class="badge ${c.printed ? 'badge-green' : 'badge-muted'}">${c.printed ? 'Printed' : 'Pending'}</span></td>
         <td>
           <div class="action-row">
             <button class="btn btn-purple btn-sm" onclick="openEdit('${c.id}')">Edit</button>
-            <button class="btn btn-orange btn-sm" onclick="reprint('${c.id}')" title="Queue for reprint">↻ Print</button>
-            <button class="btn btn-red    btn-sm" onclick="deleteChar('${c.id}')">Delete</button>
+            <button class="btn btn-orange btn-sm" onclick="reprint('${c.id}')">↻ Print</button>
+            <button class="btn btn-red btn-sm" onclick="deleteChar('${c.id}')">Delete</button>
           </div>
         </td>
       </tr>
     `).join('')
   }
 
-  // ── Clear All ───────────────────────────────────────────────
-
   async function clearAll() {
-    if (!confirm(`Delete ALL ${characters.length} characters? This cannot be undone.`)) return
-    if (!confirm('Are you really sure? This will remove everything from the wall and database.')) return
-
+    if (!confirm(`Delete ALL ${characters.length} characters?`)) return
+    if (!confirm('Are you really sure?')) return
     const res = await fetch('/admin/api/characters', { method: 'DELETE' })
-    if (res.ok) {
-      characters = []
-      renderTable()
-      renderStats()
-    } else {
-      alert('Clear all failed — see server logs')
-    }
+    if (res.ok) { characters = []; renderCharTable() }
+    else alert('Clear all failed')
   }
-
-  // ── Delete ──────────────────────────────────────────────────
 
   async function deleteChar(id) {
     const char = characters.find(c => c.id === id)
-    const label = char?.name ? `"${char.name}"` : 'this character'
-    if (!confirm(`Delete ${label}? This cannot be undone.`)) return
-
-    const row = document.getElementById(`row-${id}`)
-    if (row) row.style.opacity = '0.4'
-
+    if (!confirm(`Delete ${char?.name ? '"'+char.name+'"' : 'this character'}?`)) return
     const res = await fetch(`/admin/api/characters/${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      characters = characters.filter(c => c.id !== id)
-      renderTable()
-      renderStats()
-    } else {
-      if (row) row.style.opacity = ''
-      alert('Delete failed — see server logs')
-    }
+    if (res.ok) { characters = characters.filter(c => c.id !== id); renderCharTable() }
+    else alert('Delete failed')
   }
 
-  // ── Reprint ─────────────────────────────────────────────────
-
   async function reprint(id) {
-    const char = characters.find(c => c.id === id)
-    const label = char?.name ? `"${char.name}"` : 'this character'
-    if (!confirm(`Queue ${label} for reprint?`)) return
-
+    if (!confirm('Queue for reprint?')) return
     const res = await fetch(`/admin/api/characters/${id}/reprint`, { method: 'POST' })
     if (res.ok) {
       const c = characters.find(c => c.id === id)
       if (c) c.printed = false
-      renderTable()
-      renderStats()
-    } else {
-      alert('Reprint failed — see server logs')
+      renderCharTable()
     }
   }
-
-  // ── Edit ────────────────────────────────────────────────────
 
   function openEdit(id) {
     const char = characters.find(c => c.id === id)
     if (!char) return
     editingId = id
+    document.getElementById('modal-title').textContent = 'Edit character'
     document.getElementById('edit-name').value = char.name || ''
     document.getElementById('modal').classList.add('open')
     document.getElementById('edit-name').focus()
@@ -445,27 +457,21 @@
   async function saveEdit() {
     if (!editingId) return
     const name = document.getElementById('edit-name').value.trim()
-
     const res = await fetch(`/admin/api/characters/${editingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     })
-
     if (res.ok) {
       const updated = characters.find(c => c.id === editingId)
       if (updated) updated.name = name
       closeModal()
-      renderTable()
-    } else {
-      alert('Save failed — see server logs')
-    }
+      renderCharTable()
+    } else alert('Save failed')
   }
 
-  // ── Avatar size ─────────────────────────────────────────────
-
+  // Avatar size
   let _sizeTimer = null
-
   async function loadCharSize() {
     try {
       const res = await fetch('/admin/api/char-size')
@@ -477,35 +483,171 @@
       }
     } catch (e) {}
   }
-
   function onSizeSlider(val) {
-    const size = parseInt(val, 10)
-    document.getElementById('size-val').textContent = size
+    document.getElementById('size-val').textContent = parseInt(val, 10)
     clearTimeout(_sizeTimer)
-    _sizeTimer = setTimeout(() => commitSize(size), 150)
+    _sizeTimer = setTimeout(() => commitSize(parseInt(val, 10)), 150)
   }
-
   async function commitSize(size) {
     if (size === currentCharSize) return
     try {
       const res = await fetch('/admin/api/char-size', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ char_size: size }),
       })
       if (res.ok) currentCharSize = size
+    } catch (e) {}
+  }
+
+  // ── Users section ─────────────────────────────────────────
+
+  async function loadUsers() {
+    try {
+      const res = await fetch('/admin/api/users-merged')
+      if (res.status === 401) { location.reload(); return }
+      mergedUsers = await res.json()
+      renderUserTable()
     } catch (e) {
-      alert('Failed to update size')
+      document.getElementById('user-tbody').innerHTML =
+        '<tr><td colspan="7" class="empty">Failed to load</td></tr>'
     }
   }
 
-  // ── Helpers ─────────────────────────────────────────────────
+  function renderUserTable() {
+    const q = document.getElementById('user-search').value.toLowerCase()
+    const tbody = document.getElementById('user-tbody')
+    const rows = mergedUsers.filter(u => !q || (u.name || '').toLowerCase().includes(q))
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No users found</td></tr>'
+      return
+    }
+    tbody.innerHTML = rows.map(u => `
+      <tr>
+        <td>${esc(u.name)}</td>
+        <td style="color:var(--muted)">${esc(u.email)}</td>
+        <td style="color:var(--muted)">${esc(u.interest || '')}</td>
+        <td style="color:var(--muted)">${fmtDate(u.registered_at)}</td>
+        <td><span class="badge ${u.has_face ? 'badge-green' : 'badge-muted'}">${u.has_face ? 'Yes' : 'No'}</span></td>
+        <td style="color:var(--muted)">${esc(u.demo_choice || '')}</td>
+        <td>
+          <button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}', ${u.has_face}, '${u.face_user_id || ''}')">Delete</button>
+        </td>
+      </tr>
+    `).join('')
+  }
+
+  async function deleteUser(id, hasFace, faceUserId) {
+    if (!confirm('Delete this user?')) return
+    // Delete registered user
+    try { await fetch(`/admin/api/registered-users/${id}`, { method: 'DELETE' }) } catch (e) {}
+    // Also delete face user if enrolled
+    if (hasFace && faceUserId) {
+      try { await fetch(`/face/users/${faceUserId}`, { method: 'DELETE' }) } catch (e) {}
+    }
+    loadUsers()
+  }
+
+  async function addUser() {
+    const name = document.getElementById('add-name').value.trim()
+    const email = document.getElementById('add-email').value.trim()
+    if (!name || !email) { alert('Name and email required'); return }
+    try {
+      const res = await fetch('/admin/api/registered-users', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email }),
+      })
+      if (res.status === 409) { alert('Email already exists'); return }
+      if (res.ok) {
+        document.getElementById('add-name').value = ''
+        document.getElementById('add-email').value = ''
+        loadUsers()
+      }
+    } catch (e) { alert('Failed to add user') }
+  }
+
+  async function importFile() {
+    const input = document.getElementById('import-file')
+    const file = input.files[0]
+    if (!file) return
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch('/admin/api/import-users', { method: 'POST', body: fd })
+      if (res.status === 401) { location.reload(); return }
+      const data = await res.json()
+      alert(`Imported ${data.imported} users, skipped ${data.skipped}. Total: ${data.total}`)
+      loadUsers()
+    } catch (e) { alert('Import failed: ' + e.message) }
+    input.value = ''
+  }
+
+  // ── Booths section ────────────────────────────────────────
+
+  async function loadBooths() {
+    try {
+      const res = await fetch('/admin/api/booths')
+      if (res.status === 401) { location.reload(); return }
+      boothList = await res.json()
+      renderBooths()
+    } catch (e) {
+      document.getElementById('booth-list').innerHTML = '<p class="empty">Failed to load</p>'
+    }
+  }
+
+  function renderBooths() {
+    const container = document.getElementById('booth-list')
+    if (!boothList.length) {
+      container.innerHTML = '<p class="empty">No booths configured</p>'
+      return
+    }
+    const host = window.location.origin
+    container.innerHTML = boothList.map(b => `
+      <div class="booth-card">
+        <strong>${esc(b.name)}</strong>
+        <span class="url-text" onclick="copyUrl('${host}/booth/${b.number}')" title="Click to copy">${host}/booth/${b.number}</span>
+        <select onchange="updateBoothMode('${b.id}', this.value)">
+          <option value="both" ${b.mode === 'both' ? 'selected' : ''}>Both</option>
+          <option value="register" ${b.mode === 'register' ? 'selected' : ''}>Register only</option>
+          <option value="demo" ${b.mode === 'demo' ? 'selected' : ''}>Demo only</option>
+        </select>
+        <div class="toolbar-spacer"></div>
+        <button class="btn btn-red btn-sm" onclick="deleteBooth('${b.id}')">Delete</button>
+      </div>
+    `).join('')
+  }
+
+  async function addBooth() {
+    const res = await fetch('/admin/api/booths', { method: 'POST' })
+    if (res.ok) loadBooths()
+  }
+
+  async function updateBoothMode(id, mode) {
+    await fetch(`/admin/api/booths/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    })
+  }
+
+  async function deleteBooth(id) {
+    if (!confirm('Delete this booth?')) return
+    const res = await fetch(`/admin/api/booths/${id}`, { method: 'DELETE' })
+    if (res.ok) loadBooths()
+  }
+
+  function copyUrl(url) {
+    navigator.clipboard.writeText(url).then(() => {
+      // Brief visual feedback — could enhance later
+      alert('Copied: ' + url)
+    })
+  }
+
+  // ── Helpers ───────────────────────────────────────────────
 
   function esc(s) {
     if (!s) return ''
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
   }
-
   function fmtDate(ts) {
     if (!ts) return '—'
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -514,13 +656,12 @@
   document.getElementById('modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeModal()
   })
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal()
-  })
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal() })
 
-  load()
+  // ── Init ──────────────────────────────────────────────────
+
+  refreshDashboardStats()
   loadCharSize()
-  loadRegisteredCount()
 </script>
 </body>
 </html>

@@ -13,6 +13,7 @@ export default defineConfig({
       '/face': 'http://localhost:8000',
       '/registered-users': 'http://localhost:8000',
       '/demo-choice': 'http://localhost:8000',
+      '/booth-config': 'http://localhost:8000',
     }
   }
 })

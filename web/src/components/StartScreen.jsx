@@ -1,6 +1,6 @@
 const base = import.meta.env.BASE_URL
 
-export default function StartScreen({ onRegister, onDemo, errorMsg }) {
+export default function StartScreen({ mode = 'both', onRegister, onDemo, errorMsg }) {
   return (
     <div className="screen start-screen">
       <div className="start-content">
@@ -8,8 +8,12 @@ export default function StartScreen({ onRegister, onDemo, errorMsg }) {
         <p className="subtitle">Welcome!</p>
         {errorMsg && <p className="error">{errorMsg}</p>}
         <div className="start-buttons">
-          <button className="btn-start" onClick={onRegister}>Register</button>
-          <button className="btn-primary" onClick={onDemo}>Get a Demo</button>
+          {(mode === 'both' || mode === 'register') && (
+            <button className="btn-start" onClick={onRegister}>Register</button>
+          )}
+          {(mode === 'both' || mode === 'demo') && (
+            <button className="btn-primary" onClick={onDemo}>Get a Demo</button>
+          )}
         </div>
       </div>
     </div>

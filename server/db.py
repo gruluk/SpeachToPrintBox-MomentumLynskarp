@@ -209,3 +209,49 @@ def get_registered_user_by_email(email: str) -> dict | None:
         if u.get("email", "").lower() == email.lower():
             return u
     return None
+
+
+def delete_registered_user(user_id: str) -> None:
+    """Delete a registered user from InstantDB."""
+    payload = {"steps": [["delete", "registered_users", user_id]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+# ── Booths ─────────────────────────────────────────────────────────────────────
+
+def create_booth(booth_id: str, name: str, number: int, mode: str) -> None:
+    """Insert a booth config record."""
+    payload = {
+        "steps": [[
+            "update", "booths", booth_id,
+            {"name": name, "number": number, "mode": mode,
+             "created_at": int(time.time() * 1000)},
+        ]]
+    }
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+def get_all_booths() -> list[dict]:
+    """Return all booth configs, sorted by number."""
+    payload = {"query": {"booths": {}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+    booths = r.json().get("booths", [])
+    booths.sort(key=lambda b: b.get("number", 0))
+    return booths
+
+
+def update_booth(booth_id: str, mode: str) -> None:
+    """Update booth mode."""
+    payload = {"steps": [["update", "booths", booth_id, {"mode": mode}]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+def delete_booth(booth_id: str) -> None:
+    """Delete a booth config."""
+    payload = {"steps": [["delete", "booths", booth_id]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
