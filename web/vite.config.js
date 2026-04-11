@@ -14,6 +14,7 @@ export default defineConfig({
       '/registered-users': 'http://localhost:8000',
       '/demo-choice': 'http://localhost:8000',
       '/booth-config': 'http://localhost:8000',
+      '/presentations': 'http://localhost:8000',
     }
   }
 })

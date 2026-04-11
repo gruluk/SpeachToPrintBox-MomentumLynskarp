@@ -53,6 +53,7 @@ connections: List[WebSocket] = []
 face_users: List[dict] = []
 registered_users: List[dict] = []
 booths: List[dict] = []
+presentations: List[dict] = []
 
 # ── TV wall world coordinates ─────────────────────────────────────────────────
 # The wall is 4 screens side-by-side. Each Pi opens /wall?screen=N and offsets
@@ -163,6 +164,13 @@ async def lifespan(app: FastAPI):
         print(f"[startup] Restored {len(booths)} booths from InstantDB")
     except Exception as e:
         print(f"[startup] Could not restore booths from InstantDB: {e}")
+    # Restore presentations
+    try:
+        ps = await loop.run_in_executor(None, instant_db.get_all_presentations)
+        presentations.extend(ps)
+        print(f"[startup] Restored {len(ps)} presentations from InstantDB")
+    except Exception as e:
+        print(f"[startup] Could not restore presentations from InstantDB: {e}")
     # Start the wall movement loop
     move_task = asyncio.create_task(_character_movement_loop())
     yield
@@ -604,6 +612,69 @@ async def demo_choice(user_id: str = Form(...), demo: str = Form(...)):
         )
     except Exception as e:
         print(f"[demo] DB write failed: {e}")
+    return {"ok": True}
+
+
+# --- Presentations ---
+
+@app.get("/presentations")
+def list_presentations():
+    """No auth — booth fetches this to show demo options."""
+    return [{"id": p["id"], "name": p["name"]} for p in presentations]
+
+
+@app.get("/admin/api/presentations")
+def admin_list_presentations(_=Depends(require_admin)):
+    return presentations
+
+
+@app.post("/admin/api/presentations")
+async def admin_create_presentation(body: dict, _=Depends(require_admin)):
+    name = (body.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    pres_id = str(uuid.uuid4())
+    pres = {"id": pres_id, "name": name, "created_at": int(time.time() * 1000)}
+    presentations.append(pres)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.create_presentation, pres_id, name
+        )
+    except Exception as e:
+        print(f"[presentations] create failed: {e}")
+    return {"ok": True, **pres}
+
+
+@app.patch("/admin/api/presentations/{pres_id}")
+async def admin_update_presentation(pres_id: str, body: dict, _=Depends(require_admin)):
+    pres = next((p for p in presentations if p["id"] == pres_id), None)
+    if not pres:
+        raise HTTPException(status_code=404, detail="not found")
+    name = (body.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    pres["name"] = name
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.update_presentation, pres_id, name
+        )
+    except Exception as e:
+        print(f"[presentations] update failed: {e}")
+    return {"ok": True, **pres}
+
+
+@app.delete("/admin/api/presentations/{pres_id}")
+async def admin_delete_presentation(pres_id: str, _=Depends(require_admin)):
+    pres = next((p for p in presentations if p["id"] == pres_id), None)
+    if not pres:
+        raise HTTPException(status_code=404, detail="not found")
+    presentations.remove(pres)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.delete_presentation, pres_id
+        )
+    except Exception as e:
+        print(f"[presentations] delete failed: {e}")
     return {"ok": True}
 
 

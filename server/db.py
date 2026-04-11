@@ -255,3 +255,41 @@ def delete_booth(booth_id: str) -> None:
     payload = {"steps": [["delete", "booths", booth_id]]}
     r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
+
+
+# ── Presentations ──────────────────────────────────────────────────────────────
+
+def create_presentation(pres_id: str, name: str) -> None:
+    """Insert a presentation."""
+    payload = {
+        "steps": [[
+            "update", "presentations", pres_id,
+            {"name": name, "created_at": int(time.time() * 1000)},
+        ]]
+    }
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+def get_all_presentations() -> list[dict]:
+    """Return all presentations, sorted by created_at."""
+    payload = {"query": {"presentations": {}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+    presos = r.json().get("presentations", [])
+    presos.sort(key=lambda p: p.get("created_at", 0))
+    return presos
+
+
+def update_presentation(pres_id: str, name: str) -> None:
+    """Update presentation name."""
+    payload = {"steps": [["update", "presentations", pres_id, {"name": name}]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+def delete_presentation(pres_id: str) -> None:
+    """Delete a presentation."""
+    payload = {"steps": [["delete", "presentations", pres_id]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()

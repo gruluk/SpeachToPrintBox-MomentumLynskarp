@@ -4,19 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Momentum Lynskarp — Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --border: #2a2d3a;
-      --text: #e8eaf0;
-      --muted: #7a7f96;
       --purple: #3c1c71;
-      --purple-light: #7a1c71;
+      --purple-bg: #ede9f2;
+      --purple-dark: #2a1338;
+      --purple-warm: #7a1c71;
+      --beige: #ece1d4;
+      --red: #bf022b;
       --orange: #e06c00;
+      --grey: #a7a7a6;
+      --light-grey: #ededed;
+      --black: #1c1c1a;
       --green: #539227;
-      --red: #e05252;
-      --red-dark: #b33c3c;
+
+      --bg: var(--purple-bg);
+      --surface: #fff;
+      --border: #d4cde0;
+      --text: var(--purple-dark);
+      --muted: var(--purple);
+
+      --px: 4px;
+      --pixel-shadow: calc(-1 * var(--px)) 0 0 0 #111,
+        var(--px) 0 0 0 #111,
+        0 var(--px) 0 0 #111,
+        0 calc(-1 * var(--px)) 0 0 #111;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,15 +37,16 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: "DM Sans", system-ui, -apple-system, sans-serif;
       font-size: 14px;
       min-height: 100vh;
+      min-height: 100dvh;
+      -webkit-tap-highlight-color: transparent;
     }
 
     header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
+      background: var(--purple);
+      padding: 0 1rem;
       height: 56px;
       display: flex;
       align-items: center;
@@ -42,147 +56,240 @@
       z-index: 100;
     }
 
-    .header-left { display: flex; align-items: center; gap: 1rem; }
+    .header-left { display: flex; align-items: center; gap: 0.75rem; }
 
     .header-title {
       font-size: 1rem;
       font-weight: 700;
-      color: var(--purple-light);
+      color: #fff;
       letter-spacing: 0.05em;
     }
-    .header-title span { color: var(--muted); font-weight: 400; }
+    .header-title span { color: rgba(255,255,255,0.6); font-weight: 400; }
 
     .back-btn {
-      background: none; border: none; color: var(--muted); font-size: 1.2rem;
-      cursor: pointer; padding: 0.25rem 0.5rem; display: none;
+      display: none;
+      align-items: center;
+      gap: 0.35rem;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.8);
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0;
+      box-shadow: var(--pixel-shadow);
+      background: rgba(255,255,255,0.15);
+      transition: transform 0.08s;
+      min-height: 44px;
     }
-    .back-btn:hover { color: var(--text); }
+    .back-btn:active { transform: translateY(2px); }
+    .back-btn .chevron-back {
+      display: inline-block;
+      width: 0.55em;
+      height: 0.55em;
+      border-left: 2.5px solid currentColor;
+      border-bottom: 2.5px solid currentColor;
+      transform: rotate(45deg);
+      margin-right: 0.15em;
+    }
 
     main {
-      max-width: 1200px;
+      max-width: 600px;
       margin: 0 auto;
-      padding: 1.5rem 2rem;
+      padding: 1rem;
     }
 
     /* Dashboard cards */
     .dashboard {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 0.5rem;
     }
 
     .dash-card {
+      position: relative;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 2rem;
+      border: none;
+      border-radius: 0;
+      padding: 1.25rem 1.25rem 1.25rem 1.25rem;
       cursor: pointer;
-      transition: border-color 0.15s, transform 0.1s;
+      box-shadow: var(--pixel-shadow);
+      margin: var(--px);
+      transition: transform 0.08s;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
     }
-    .dash-card:hover { border-color: var(--purple); transform: translateY(-2px); }
-    .dash-card h3 { font-size: 1.2rem; margin-bottom: 0.5rem; }
-    .dash-card p { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; }
-    .dash-card .card-stat { font-size: 1.5rem; font-weight: 700; color: var(--purple-light); }
+    .dash-card:active { transform: translateY(3px); }
+    .dash-card-body { flex: 1; min-width: 0; }
+    .dash-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.2rem;
+      color: var(--text);
+    }
+    .dash-card p {
+      color: var(--grey);
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+    }
+    .dash-card .card-stat {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--purple);
+      line-height: 1;
+    }
+    .dash-card .card-stat-label {
+      color: var(--grey);
+      font-size: 0.75rem;
+    }
+    .dash-card .card-chevron {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      color: var(--purple);
+    }
+    .card-chevron svg {
+      width: 20px;
+      height: 20px;
+    }
 
     /* Sections */
     .section { display: none; }
     .section.active { display: block; }
 
+    /* Section titles */
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 1rem;
+    }
+
     /* Shared */
     .toolbar {
-      display: flex; align-items: center; gap: 1rem;
-      margin-bottom: 1.25rem; flex-wrap: wrap;
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 1rem; flex-wrap: wrap;
     }
     .toolbar input[type="search"] {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); border-radius: 6px; padding: 0.5rem 0.75rem;
-      font-size: 0.875rem; outline: none; width: 220px;
+      background: var(--surface); border: none;
+      color: var(--text); border-radius: 0; padding: 0.6rem 0.75rem;
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 0.85rem; outline: none; flex: 1; min-width: 0;
+      box-shadow: var(--pixel-shadow);
+      margin: var(--px);
     }
-    .toolbar input[type="search"]:focus { border-color: var(--purple); }
+    .toolbar input[type="search"]:focus { outline: 2px solid var(--purple); outline-offset: 0; }
     .toolbar-spacer { flex: 1; }
 
     .btn {
-      border: none; border-radius: 6px; padding: 0.5rem 1rem;
-      font-size: 0.875rem; font-weight: 600; cursor: pointer;
-      transition: opacity 0.15s;
+      border: none; border-radius: 0; padding: 0.55rem 1rem;
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      transition: transform 0.08s;
+      box-shadow: var(--pixel-shadow);
+      margin: var(--px);
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
-    .btn:hover { opacity: 0.85; }
+    .btn:active:not(:disabled) { transform: translateY(3px); }
     .btn:disabled { opacity: 0.4; cursor: default; }
     .btn-purple { background: var(--purple); color: #fff; }
     .btn-red    { background: var(--red);    color: #fff; }
-    .btn-ghost  { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
-    .btn-orange { background: #c97010; color: #fff; }
-    .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.775rem; border-radius: 5px; }
+    .btn-ghost  { background: var(--surface); color: var(--text); }
+    .btn-ghost:active { background: var(--light-grey); }
+    .btn-orange { background: var(--orange); color: #fff; }
+    .btn-sm { padding: 0.4rem 0.65rem; font-size: 0.75rem; min-height: 36px; }
 
     .size-row {
       display: flex; align-items: center; gap: 0.75rem;
-      margin-bottom: 1.25rem; color: var(--muted); font-size: 0.8rem;
+      margin-bottom: 1rem; color: var(--grey); font-size: 0.8rem;
     }
     .size-row strong { color: var(--text); }
     .size-row input[type="range"] { flex: 1; max-width: 280px; accent-color: var(--purple); cursor: pointer; }
 
-    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
-    table { width: 100%; border-collapse: collapse; }
+    .table-wrap { overflow-x: auto; border: none; border-radius: 0; box-shadow: var(--pixel-shadow); margin: var(--px); }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); }
     th {
-      background: var(--surface); color: var(--muted); font-size: 0.75rem;
-      font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
-      padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border);
+      background: var(--light-grey); color: var(--purple); font-size: 0.7rem;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 0.65rem 0.75rem; text-align: left; border-bottom: 2px solid var(--border);
     }
-    td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 0.85rem; }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,255,255,0.02); }
+    tr:active td { background: var(--light-grey); }
 
     .thumb {
-      width: 56px; height: 56px; object-fit: contain; image-rendering: pixelated;
-      border-radius: 4px; background: #111; border: 1px solid var(--border);
+      width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated;
+      border-radius: 0; background: var(--light-grey); box-shadow: var(--pixel-shadow);
+      margin: var(--px);
     }
     .badge {
-      display: inline-block; padding: 0.2rem 0.55rem; border-radius: 4px;
+      display: inline-block; padding: 0.2rem 0.55rem; border-radius: 0;
       font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
     }
-    .badge-green { background: rgba(83,146,39,0.2); color: var(--green); }
-    .badge-muted { background: rgba(122,127,150,0.15); color: var(--muted); }
-    .action-row { display: flex; gap: 0.5rem; align-items: center; }
+    .badge-green { background: rgba(83,146,39,0.15); color: var(--green); }
+    .badge-muted { background: rgba(167,167,166,0.2); color: var(--grey); }
+    .action-row { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
 
     /* Modal */
     .modal-backdrop {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
       z-index: 200; align-items: center; justify-content: center;
+      padding: 1rem;
     }
     .modal-backdrop.open { display: flex; }
     .modal {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 1.75rem; width: 380px; max-width: 95vw;
+      background: var(--surface); border: none;
+      border-radius: 0; padding: 1.5rem; width: 380px; max-width: 100%;
+      box-shadow: var(--pixel-shadow);
+      margin: var(--px);
     }
-    .modal h3 { margin-bottom: 1.25rem; font-size: 1rem; }
+    .modal h3 { margin-bottom: 1.25rem; font-size: 1rem; font-weight: 700; }
     .field { margin-bottom: 1rem; }
-    .field label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.4rem; }
+    .field label { display: block; color: var(--grey); font-size: 0.8rem; margin-bottom: 0.4rem; font-weight: 600; }
     .field input, .field select {
-      width: 100%; background: var(--bg); border: 1px solid var(--border);
-      color: var(--text); border-radius: 6px; padding: 0.6rem 0.75rem;
+      width: 100%; background: var(--bg); border: none;
+      color: var(--text); border-radius: 0; padding: 0.6rem 0.75rem;
+      font-family: "DM Sans", system-ui, sans-serif;
       font-size: 0.9rem; outline: none;
+      box-shadow: var(--pixel-shadow);
+      margin: var(--px);
     }
-    .field input:focus, .field select:focus { border-color: var(--purple); }
+    .field input:focus, .field select:focus { outline: 2px solid var(--purple); outline-offset: 0; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
-    .empty { text-align: center; padding: 4rem; color: var(--muted); }
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--grey); }
 
     /* Booth cards */
     .booth-list { display: flex; flex-direction: column; gap: 0.75rem; }
     .booth-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-      padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+      background: var(--surface); border: none; border-radius: 0;
+      padding: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      box-shadow: var(--pixel-shadow);
+      margin: var(--px);
     }
-    .booth-card strong { min-width: 80px; }
+    .booth-card strong { min-width: 70px; font-size: 0.9rem; }
     .booth-card .url-text {
-      color: var(--muted); font-family: monospace; font-size: 0.8rem;
-      background: var(--bg); padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;
+      color: var(--purple); font-family: monospace; font-size: 0.75rem;
+      background: var(--bg); padding: 0.3rem 0.5rem; border-radius: 0; cursor: pointer;
+      word-break: break-all;
     }
-    .booth-card .url-text:hover { color: var(--text); }
+    .booth-card .url-text:active { background: var(--light-grey); }
     .booth-card select {
-      background: var(--bg); border: 1px solid var(--border); color: var(--text);
-      border-radius: 6px; padding: 0.35rem 0.5rem; font-size: 0.8rem;
+      background: var(--bg); border: none; color: var(--text);
+      border-radius: 0; padding: 0.4rem 0.5rem; font-size: 0.8rem;
+      font-family: "DM Sans", system-ui, sans-serif;
+      box-shadow: var(--pixel-shadow);
+      margin: var(--px);
+      min-height: 36px;
     }
 
     /* Add user form */
@@ -190,17 +297,30 @@
       display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
     }
     .inline-form input {
-      background: var(--surface); border: 1px solid var(--border); color: var(--text);
-      border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.85rem; outline: none;
+      background: var(--surface); border: none; color: var(--text);
+      border-radius: 0; padding: 0.55rem 0.75rem; font-size: 0.85rem; outline: none;
+      font-family: "DM Sans", system-ui, sans-serif;
+      box-shadow: var(--pixel-shadow);
+      margin: var(--px);
+      min-height: 44px;
     }
-    .inline-form input:focus { border-color: var(--purple); }
+    .inline-form input:focus { outline: 2px solid var(--purple); outline-offset: 0; }
+
+    /* Mobile-first: stack inline-form on small screens */
+    @media (max-width: 480px) {
+      .inline-form { flex-direction: column; align-items: stretch; }
+      .inline-form input { width: 100% !important; }
+      .action-row { gap: 0.25rem; }
+      .btn-sm { padding: 0.35rem 0.5rem; font-size: 0.7rem; }
+      .booth-card { flex-direction: column; align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
 
 <header>
   <div class="header-left">
-    <button class="back-btn" id="back-btn" onclick="showDashboard()">← Back</button>
+    <button class="back-btn" id="back-btn" onclick="showDashboard()"><span class="chevron-back"></span> Back</button>
     <div class="header-title">MOMENTUM LYNSKARP <span>/ Admin</span></div>
   </div>
   <div id="header-right"></div>
@@ -211,22 +331,48 @@
   <div id="view-dashboard">
     <div class="dashboard">
       <div class="dash-card" onclick="showSection('screen')">
-        <h3>Screen</h3>
-        <p>Wall display & avatar management</p>
-        <div class="card-stat" id="stat-chars">—</div>
-        <span style="color:var(--muted);font-size:0.8rem">characters</span>
+        <div class="dash-card-body">
+          <h3>Screen</h3>
+          <p>Wall display & avatar management</p>
+          <div class="card-stat" id="stat-chars">—</div>
+          <span class="card-stat-label">characters</span>
+        </div>
+        <div class="card-chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
       </div>
       <div class="dash-card" onclick="showSection('users')">
-        <h3>Users</h3>
-        <p>Manage attendees & registrations</p>
-        <div class="card-stat" id="stat-users">—</div>
-        <span style="color:var(--muted);font-size:0.8rem">users</span>
+        <div class="dash-card-body">
+          <h3>Users</h3>
+          <p>Manage attendees & registrations</p>
+          <div class="card-stat" id="stat-users">—</div>
+          <span class="card-stat-label">users</span>
+        </div>
+        <div class="card-chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
       </div>
       <div class="dash-card" onclick="showSection('booths')">
-        <h3>Booths</h3>
-        <p>Configure iPads & flows</p>
-        <div class="card-stat" id="stat-booths">—</div>
-        <span style="color:var(--muted);font-size:0.8rem">booths</span>
+        <div class="dash-card-body">
+          <h3>Booths</h3>
+          <p>Configure iPads & flows</p>
+          <div class="card-stat" id="stat-booths">—</div>
+          <span class="card-stat-label">booths</span>
+        </div>
+        <div class="card-chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+      <div class="dash-card" onclick="showSection('presentations')">
+        <div class="dash-card-body">
+          <h3>Presentations</h3>
+          <p>Manage demo options for attendees</p>
+          <div class="card-stat" id="stat-presentations">—</div>
+          <span class="card-stat-label">presentations</span>
+        </div>
+        <div class="card-chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
       </div>
     </div>
   </div>
@@ -303,6 +449,15 @@
     </div>
     <div class="booth-list" id="booth-list"></div>
   </div>
+
+  <!-- Presentations section -->
+  <div id="view-presentations" class="section">
+    <div class="inline-form" style="margin-bottom:1rem">
+      <input type="text" id="add-pres-name" placeholder="Presentation name" style="flex:1;min-width:0" />
+      <button class="btn btn-purple" onclick="addPresentation()">+ Add</button>
+    </div>
+    <div class="booth-list" id="pres-list"></div>
+  </div>
 </main>
 
 <!-- Edit modal -->
@@ -324,7 +479,9 @@
   let characters = []
   let mergedUsers = []
   let boothList = []
+  let presList = []
   let editingId = null
+  let editingPresId = null
   let currentCharSize = 144
   let currentSection = null
 
@@ -343,19 +500,21 @@
     document.getElementById('view-dashboard').style.display = 'none'
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
     document.getElementById(`view-${name}`).classList.add('active')
-    document.getElementById('back-btn').style.display = ''
+    document.getElementById('back-btn').style.display = 'flex'
 
     if (name === 'screen') loadChars()
     if (name === 'users') loadUsers()
     if (name === 'booths') loadBooths()
+    if (name === 'presentations') loadPresentations()
   }
 
   async function refreshDashboardStats() {
     try {
-      const [charRes, userRes, boothRes] = await Promise.all([
+      const [charRes, userRes, boothRes, presRes] = await Promise.all([
         fetch('/admin/api/sync'),
         fetch('/admin/api/users-merged'),
         fetch('/admin/api/booths'),
+        fetch('/admin/api/presentations'),
       ])
       if (charRes.ok) {
         characters = await charRes.json()
@@ -368,6 +527,10 @@
       if (boothRes.ok) {
         boothList = await boothRes.json()
         document.getElementById('stat-booths').textContent = boothList.length
+      }
+      if (presRes.ok) {
+        presList = await presRes.json()
+        document.getElementById('stat-presentations').textContent = presList.length
       }
     } catch (e) {}
   }
@@ -451,23 +614,41 @@
 
   function closeModal() {
     editingId = null
+    editingPresId = null
     document.getElementById('modal').classList.remove('open')
   }
 
   async function saveEdit() {
-    if (!editingId) return
     const name = document.getElementById('edit-name').value.trim()
-    const res = await fetch(`/admin/api/characters/${editingId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    })
-    if (res.ok) {
-      const updated = characters.find(c => c.id === editingId)
-      if (updated) updated.name = name
-      closeModal()
-      renderCharTable()
-    } else alert('Save failed')
+
+    if (editingPresId) {
+      const res = await fetch(`/admin/api/presentations/${editingPresId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (res.ok) {
+        const updated = presList.find(p => p.id === editingPresId)
+        if (updated) updated.name = name
+        closeModal()
+        renderPresentations()
+      } else alert('Save failed')
+      return
+    }
+
+    if (editingId) {
+      const res = await fetch(`/admin/api/characters/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (res.ok) {
+        const updated = characters.find(c => c.id === editingId)
+        if (updated) updated.name = name
+        closeModal()
+        renderCharTable()
+      } else alert('Save failed')
+    }
   }
 
   // Avatar size
@@ -640,6 +821,65 @@
       // Brief visual feedback — could enhance later
       alert('Copied: ' + url)
     })
+  }
+
+  // ── Presentations section ────────────────────────────────
+
+  async function loadPresentations() {
+    try {
+      const res = await fetch('/admin/api/presentations')
+      if (res.status === 401) { location.reload(); return }
+      presList = await res.json()
+      renderPresentations()
+    } catch (e) {
+      document.getElementById('pres-list').innerHTML = '<p class="empty">Failed to load</p>'
+    }
+  }
+
+  function renderPresentations() {
+    const container = document.getElementById('pres-list')
+    if (!presList.length) {
+      container.innerHTML = '<p class="empty">No presentations added yet</p>'
+      return
+    }
+    container.innerHTML = presList.map(p => `
+      <div class="booth-card">
+        <strong style="flex:1;min-width:0">${esc(p.name)}</strong>
+        <button class="btn btn-ghost btn-sm" onclick="editPresentation('${p.id}')">Edit</button>
+        <button class="btn btn-red btn-sm" onclick="deletePresentation('${p.id}')">Delete</button>
+      </div>
+    `).join('')
+  }
+
+  async function addPresentation() {
+    const input = document.getElementById('add-pres-name')
+    const name = input.value.trim()
+    if (!name) return
+    try {
+      const res = await fetch('/admin/api/presentations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (res.ok) { input.value = ''; loadPresentations() }
+    } catch (e) { alert('Failed to add presentation') }
+  }
+
+  function editPresentation(id) {
+    const pres = presList.find(p => p.id === id)
+    if (!pres) return
+    editingPresId = id
+    document.getElementById('modal-title').textContent = 'Edit presentation'
+    document.getElementById('edit-name').value = pres.name || ''
+    document.getElementById('modal').classList.add('open')
+    document.getElementById('edit-name').focus()
+  }
+
+  async function deletePresentation(id) {
+    const pres = presList.find(p => p.id === id)
+    if (!confirm(`Delete "${pres?.name || 'this presentation'}"?`)) return
+    const res = await fetch(`/admin/api/presentations/${id}`, { method: 'DELETE' })
+    if (res.ok) loadPresentations()
+    else alert('Delete failed')
   }
 
   // ── Helpers ───────────────────────────────────────────────
