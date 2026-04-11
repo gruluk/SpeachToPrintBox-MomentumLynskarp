@@ -8,9 +8,9 @@ const INTERESTS = [
 
 export default function InterestSelectScreen({ onSelect, onBack }) {
   return (
-    <div className="screen center-content">
+    <div className="screen center">
       <h2>What area interests you?</h2>
-      <div className="q-answers">
+      <div className="demo-options">
         {INTERESTS.map((interest) => (
           <button
             key={interest}
@@ -21,7 +21,7 @@ export default function InterestSelectScreen({ onSelect, onBack }) {
           </button>
         ))}
       </div>
-      <button className="btn-secondary" onClick={onBack}>Back</button>
+      <button className="btn-secondary" onClick={onBack} style={{ marginTop: '1rem' }}>Back</button>
     </div>
   )
 }

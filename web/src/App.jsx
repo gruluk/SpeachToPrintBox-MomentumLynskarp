@@ -7,7 +7,6 @@ import ValidatingScreen from './components/ValidatingScreen'
 import ReviewScreen from './components/ReviewScreen'
 import NameInputScreen from './components/NameInputScreen'
 import InterestSelectScreen from './components/InterestSelectScreen'
-import QuestionnaireScreen from './components/QuestionnaireScreen'
 import WaitingScreen from './components/WaitingScreen'
 import ResultScreen from './components/ResultScreen'
 import InfoScreen from './components/InfoScreen'
@@ -15,24 +14,6 @@ import DemoAutoRecognize from './components/DemoAutoRecognize'
 import DemoMatchedScreen from './components/DemoMatchedScreen'
 import DemoNoMatchScreen from './components/DemoNoMatchScreen'
 import DemoDoneScreen from './components/DemoDoneScreen'
-
-const QUESTIONS = [
-  {
-    q: "Hvor mange ansatte er det i Sopra Steria i Norge?",
-    a: ["1000", "3500", "7000"],
-    correct: 1,
-  },
-  {
-    q: "Hva heter husbandet til Sopra Steria?",
-    a: ["Kjells Angels", "Posthusetdruse", "The Ozzy Osbournes"],
-    correct: 0,
-  },
-  {
-    q: "Hva er ikke en sosial gruppe i Sopra Steria?",
-    a: ["Surfegruppe", "Poker-gruppe", "Vinsmaking", "Badminton"],
-    correct: 3,
-  },
-]
 
 export default function App() {
   // Route to face debug screen if path matches
@@ -146,10 +127,6 @@ export default function App() {
 
   const handleInterestSelect = useCallback((i) => {
     setInterest(i)
-    setState('QUESTIONNAIRE')
-  }, [])
-
-  const handleQuizDone = useCallback(() => {
     setState('WAITING')
   }, [])
 
@@ -248,9 +225,6 @@ export default function App() {
       )}
       {state === 'INTEREST_SELECT' && (
         <InterestSelectScreen onSelect={handleInterestSelect} onBack={() => setState('NAME_INPUT')} />
-      )}
-      {state === 'QUESTIONNAIRE' && (
-        <QuestionnaireScreen questions={QUESTIONS} onDone={handleQuizDone} />
       )}
       {state === 'WAITING' && (
         <WaitingScreen
