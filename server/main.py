@@ -464,25 +464,48 @@ def search_registered(q: str = ""):
     ]
 
 
+def _parse_spreadsheet(raw: bytes, filename: str) -> list[dict]:
+    """Parse CSV or XLSX into a list of dicts with 'name' and 'email' keys."""
+    if filename.endswith(".xlsx"):
+        from openpyxl import load_workbook
+        wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+        ws = wb.active
+        rows = list(ws.iter_rows(values_only=True))
+        wb.close()
+        if not rows:
+            raise HTTPException(status_code=400, detail="Empty spreadsheet")
+        headers = [str(h or "").strip().lower() for h in rows[0]]
+        return [{headers[i]: (str(cell) if cell is not None else "") for i, cell in enumerate(row)}
+                for row in rows[1:]]
+    else:
+        content = raw.decode("utf-8-sig")
+        reader = csv_mod.DictReader(io.StringIO(content))
+        if not reader.fieldnames:
+            raise HTTPException(status_code=400, detail="Empty CSV or no header row")
+        return [{f.strip().lower(): (row.get(f) or "").strip() for f in reader.fieldnames}
+                for row in reader]
+
+
 @app.post("/admin/api/import-users")
 async def admin_import_users(file: UploadFile = File(...), _=Depends(require_admin)):
-    """Import pre-registered users from CSV. Skips duplicates by email."""
-    content = (await file.read()).decode("utf-8-sig")
-    reader = csv_mod.DictReader(io.StringIO(content))
+    """Import pre-registered users from CSV or XLSX. Skips duplicates by email."""
+    raw = await file.read()
+    rows = _parse_spreadsheet(raw, file.filename or "")
+
+    if not rows:
+        raise HTTPException(status_code=400, detail="No data rows found")
 
     # Find name and email columns (case-insensitive)
-    if not reader.fieldnames:
-        raise HTTPException(status_code=400, detail="Empty CSV or no header row")
-    col_map = {f.strip().lower(): f for f in reader.fieldnames}
-    name_col = col_map.get("name")
-    email_col = col_map.get("email")
+    col_keys = list(rows[0].keys())
+    name_col = next((k for k in col_keys if "name" in k), None)
+    email_col = next((k for k in col_keys if "email" in k), None)
     if not name_col or not email_col:
-        raise HTTPException(status_code=400, detail=f"CSV must have 'Name' and 'Email' columns. Found: {reader.fieldnames}")
+        raise HTTPException(status_code=400, detail=f"File must have 'Name' and 'Email' columns. Found: {col_keys}")
 
     existing_emails = {u.get("email", "").lower() for u in registered_users}
     imported, skipped = 0, 0
 
-    for row in reader:
+    for row in rows:
         name = (row.get(name_col) or "").strip()
         email = (row.get(email_col) or "").strip()
         if not name or not email:
