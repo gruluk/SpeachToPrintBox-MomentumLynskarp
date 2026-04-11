@@ -68,7 +68,7 @@ export default function DemoCameraScreen({ onCapture, onCancel }) {
   return (
     <div className="screen preview-screen">
       {capturing && <div className="ring-light-overlay" />}
-      <p className="camera-hint">Let's see who you are!</p>
+      <p className="camera-hint">La oss se hvem du er!</p>
       <div className="camera-circle">
         <video
           ref={videoRef}
@@ -84,10 +84,10 @@ export default function DemoCameraScreen({ onCapture, onCancel }) {
       </div>
       <div className="capture-bar">
         <button className="btn-secondary btn-cancel" onClick={onCancel} disabled={capturing}>
-          Back
+          Tilbake
         </button>
         <button className="btn-capture" onClick={capture} disabled={capturing}>
-          {capturing ? '...' : 'Take photo'}
+          {capturing ? '...' : 'Ta bilde'}
         </button>
       </div>
     </div>

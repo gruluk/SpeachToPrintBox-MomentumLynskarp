@@ -5,14 +5,14 @@ export default function StartScreen({ mode = 'both', onRegister, onDemo, errorMs
     <div className="screen start-screen">
       <div className="start-content">
         <img src={`${base}logo.png`} className="start-logo" alt="Momentum Lynskarp" />
-        <p className="subtitle">Welcome!</p>
+        <p className="subtitle">Velkommen!</p>
         {errorMsg && <p className="error">{errorMsg}</p>}
         <div className="start-buttons">
           {(mode === 'both' || mode === 'register') && (
-            <button className="btn-start" onClick={onRegister}>Register</button>
+            <button className="btn-start" onClick={onRegister}>Registrer deg</button>
           )}
           {(mode === 'both' || mode === 'demo') && (
-            <button className="btn-primary" onClick={onDemo}>Get a Demo</button>
+            <button className="btn-primary" onClick={onDemo}>Få en demo</button>
           )}
         </div>
       </div>

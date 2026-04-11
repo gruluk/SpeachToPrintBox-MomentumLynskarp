@@ -75,10 +75,10 @@ export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
   }, [onMatched])
 
   const statusText = failed
-    ? "We don't recognize you"
+    ? 'Vi kjenner deg ikke igjen'
     : attempt <= 2
-      ? 'Finding your information...'
-      : 'Still trying to figure it out...'
+      ? 'Finner informasjonen din...'
+      : 'Prøver fortsatt...'
 
   return (
     <div className="screen center">
@@ -104,19 +104,19 @@ export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
 
       {failed ? (
         <div className="recognize-failed">
-          <p className="status-sub">You may need to register first.</p>
+          <p className="status-sub">Du må kanskje registrere deg først.</p>
           <div className="start-buttons" style={{ marginTop: '1.5rem' }}>
             <button className="btn-primary" onClick={() => { cancelledRef.current = true; onNoMatch() }}>
-              Try again
+              Prøv igjen
             </button>
             <button className="btn-secondary" onClick={() => { cancelledRef.current = true; onCancel() }}>
-              Back
+              Tilbake
             </button>
           </div>
         </div>
       ) : (
         <button className="btn-secondary" onClick={() => { cancelledRef.current = true; onCancel() }} style={{ marginTop: '2rem' }}>
-          Cancel
+          Avbryt
         </button>
       )}
     </div>

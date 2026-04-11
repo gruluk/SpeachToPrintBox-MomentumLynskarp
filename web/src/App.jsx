@@ -106,7 +106,7 @@ export default function App() {
         startGeneration(blob) // fire and forget
         setValidating(false)
       } else {
-        setErrorMsg(data.message || 'Photo not valid. Try again.')
+        setErrorMsg(data.message || 'Bildet er ikke gyldig. Prøv igjen.')
         setValidating(false)
         setState('PREVIEW')
       }
@@ -136,7 +136,7 @@ export default function App() {
   }, [])
 
   const handleGenError = useCallback(() => {
-    setErrorMsg('Generation failed. Try again.')
+    setErrorMsg('Generering feilet. Prøv igjen.')
     setState('START')
   }, [])
 

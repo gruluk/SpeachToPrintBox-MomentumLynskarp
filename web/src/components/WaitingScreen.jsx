@@ -17,8 +17,8 @@ export default function WaitingScreen({ genReadyRef, genResultRef, genErrorRef, 
   return (
     <div className="screen center">
       <div className="spinner" />
-      <p className="status-text">Creating your label...</p>
-      <p className="status-sub">This takes about 30–60 seconds</p>
+      <p className="status-text">Lager etiketten din...</p>
+      <p className="status-sub">Dette tar omtrent 30–60 sekunder</p>
     </div>
   )
 }

@@ -13,12 +13,12 @@ export default function DemoNoMatchScreen({ onRetry, onRegister, onBack }) {
           style={{ width: '140px', height: '140px' }}
         />
       </div>
-      <h2>We don't recognize you</h2>
-      <p className="status-sub">You may need to register first.</p>
+      <h2>Vi kjenner deg ikke igjen</h2>
+      <p className="status-sub">Du må kanskje registrere deg først.</p>
       <div className="demo-options" style={{ marginTop: '1.5rem' }}>
-        <button className="btn-primary" onClick={onRetry}>Try again</button>
-        <button className="btn-secondary" onClick={onRegister}>Register instead</button>
-        <button className="btn-secondary" onClick={onBack}>Back</button>
+        <button className="btn-primary" onClick={onRetry}>Prøv igjen</button>
+        <button className="btn-secondary" onClick={onRegister}>Registrer deg</button>
+        <button className="btn-secondary" onClick={onBack}>Tilbake</button>
       </div>
     </div>
   )

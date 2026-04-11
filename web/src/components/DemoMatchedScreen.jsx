@@ -34,12 +34,12 @@ export default function DemoMatchedScreen({ matchedUser, onSelectDemos, onBack }
       {avatarSrc && (
         <img src={avatarSrc} alt={matchedUser?.name} className="matched-avatar" />
       )}
-      <p className="demo-greeting">Hi {matchedUser?.name}!</p>
-      <h2>Which demos would you like?</h2>
+      <p className="demo-greeting">Hei {matchedUser?.name}!</p>
+      <h2>Hvilke demoer vil du ha?</h2>
       {loading ? (
-        <p className="status-sub">Loading options...</p>
+        <p className="status-sub">Laster alternativer...</p>
       ) : demos.length === 0 ? (
-        <p className="status-sub">No demos available right now.</p>
+        <p className="status-sub">Ingen demoer tilgjengelig akkurat nå.</p>
       ) : (
         <div className="demo-options">
           {demos.map((demo) => (
@@ -54,13 +54,13 @@ export default function DemoMatchedScreen({ matchedUser, onSelectDemos, onBack }
         </div>
       )}
       <div className="start-buttons" style={{ marginTop: '1.5rem' }}>
-        <button className="btn-secondary" onClick={onBack}>Back</button>
+        <button className="btn-secondary" onClick={onBack}>Tilbake</button>
         <button
           className="btn-primary"
           onClick={handleConfirm}
           disabled={selected.size === 0}
         >
-          Confirm ({selected.size})
+          Bekreft ({selected.size})
         </button>
       </div>
     </div>

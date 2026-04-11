@@ -16,14 +16,14 @@ export default function ResultScreen({ resultData, name, interest, onPublish, on
 
   return (
     <div className="screen center">
-      <h2>Your portrait is ready!</h2>
+      <h2>Portrettet ditt er klart!</h2>
       <p className="result-name">{name}</p>
       {interest && <p className="result-interest">{interest}</p>}
       {imgSrc && (
-        <img src={imgSrc} alt="Your pixel art portrait" className="result-image" />
+        <img src={imgSrc} alt="Ditt pikselkunst-portrett" className="result-image" />
       )}
-      <p className="result-hint">Check the screen to see yourself!</p>
-      <button className="btn-primary" onClick={onDone}>Done</button>
+      <p className="result-hint">Sjekk skjermen for å se deg selv!</p>
+      <button className="btn-primary" onClick={onDone}>Ferdig</button>
     </div>
   )
 }

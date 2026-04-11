@@ -53,13 +53,13 @@ export default function NameInputScreen({ onSubmit, onBack }) {
 
   return (
     <div className="screen center">
-      <h2>What's your name?</h2>
+      <h2>Hva heter du?</h2>
       <form onSubmit={handleSubmit} className="name-form">
         <input
           ref={inputRef}
           className="name-input"
           type="text"
-          placeholder="Search your name..."
+          placeholder="Søk etter navnet ditt..."
           value={filter}
           onChange={e => handleInputChange(e.target.value)}
           autoFocus
@@ -68,7 +68,7 @@ export default function NameInputScreen({ onSubmit, onBack }) {
         <div className="name-list-wrap">
           {filtered.length === 0 ? (
             <p className="name-list-empty">
-              {allUsers.length === 0 ? 'Loading...' : 'No matching names found'}
+              {allUsers.length === 0 ? 'Laster...' : 'Ingen treff'}
             </p>
           ) : (
             <ul className="name-list">
@@ -86,14 +86,14 @@ export default function NameInputScreen({ onSubmit, onBack }) {
         </div>
         {showReregister && (
           <div className="reregister-notice">
-            <p>You are already registered! Would you like to create a new avatar?</p>
-            <p className="reregister-sub">Your existing demo selections will be kept.</p>
+            <p>Du er allerede registrert! Vil du lage en ny avatar?</p>
+            <p className="reregister-sub">Dine eksisterende demovalg beholdes.</p>
           </div>
         )}
         <div className="btn-row">
-          <button className="btn-secondary" type="button" onClick={onBack}>Back</button>
+          <button className="btn-secondary" type="button" onClick={onBack}>Tilbake</button>
           <button className="btn-primary" type="submit" disabled={!selectedUser}>
-            {showReregister ? 'Re-register' : 'Next'}
+            {showReregister ? 'Registrer på nytt' : 'Neste'}
           </button>
         </div>
       </form>
