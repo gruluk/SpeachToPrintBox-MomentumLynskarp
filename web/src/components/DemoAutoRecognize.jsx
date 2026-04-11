@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
 let _cachedStream = null
 const ZOOM = 1.8
 const MAX_ATTEMPTS = 5
 const RETRY_DELAY = 1500 // ms between attempts
 
+const base = import.meta.env.BASE_URL
+
 export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
   const videoRef = useRef(null)
-  const attemptRef = useRef(0)
   const cancelledRef = useRef(false)
-  const [status, setStatus] = useState('Starting camera...')
   const [attempt, setAttempt] = useState(0)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     cancelledRef.current = false
 
     async function run() {
-      // Start camera (hidden)
       const stream = await getStream()
       if (!stream || cancelledRef.current) return
 
@@ -25,16 +26,12 @@ export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
       video.srcObject = stream
       await video.play()
 
-      // Wait a moment for camera to stabilize
       await sleep(500)
       if (cancelledRef.current) return
 
-      // Retry loop
       for (let i = 0; i < MAX_ATTEMPTS; i++) {
         if (cancelledRef.current) return
-        attemptRef.current = i + 1
         setAttempt(i + 1)
-        setStatus(i === 0 ? 'Recognizing...' : `Retrying... (${i + 1}/${MAX_ATTEMPTS})`)
 
         const blob = captureFrame(video)
         if (!blob) {
@@ -55,8 +52,6 @@ export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
             onMatched({ id: data.user_id, name: data.name, interest: data.interest })
             return
           }
-
-          // No match or no face — retry
         } catch (e) {
           console.error('[auto-recognize] attempt failed:', e)
         }
@@ -66,9 +61,8 @@ export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
         }
       }
 
-      // All attempts exhausted
       if (!cancelledRef.current) {
-        onNoMatch()
+        setFailed(true)
       }
     }
 
@@ -78,16 +72,17 @@ export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
       cancelledRef.current = true
       if (videoRef.current) videoRef.current.srcObject = null
     }
-  }, [onMatched, onNoMatch])
+  }, [onMatched])
 
-  function handleCancel() {
-    cancelledRef.current = true
-    onCancel()
-  }
+  const statusText = failed
+    ? "We don't recognize you"
+    : attempt <= 2
+      ? 'Finding your information...'
+      : 'Still trying to figure it out...'
 
   return (
     <div className="screen center">
-      {/* Hidden video element for frame capture */}
+      {/* Hidden video for frame capture */}
       <video
         ref={videoRef}
         autoPlay
@@ -95,14 +90,35 @@ export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
         muted
         style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
       />
-      <div className="spinner" />
-      <p className="status-text">{status}</p>
-      {attempt > 1 && (
-        <p className="status-sub">Hold still, looking for your face...</p>
+
+      <div className="recognize-eye">
+        <DotLottieReact
+          src={`${base}Eye.lottie`}
+          loop
+          autoplay
+          style={{ width: '180px', height: '180px' }}
+        />
+      </div>
+
+      <p className="status-text">{statusText}</p>
+
+      {failed ? (
+        <div className="recognize-failed">
+          <p className="status-sub">You may need to register first.</p>
+          <div className="start-buttons" style={{ marginTop: '1.5rem' }}>
+            <button className="btn-primary" onClick={() => { cancelledRef.current = true; onNoMatch() }}>
+              Try again
+            </button>
+            <button className="btn-secondary" onClick={() => { cancelledRef.current = true; onCancel() }}>
+              Back
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="btn-secondary" onClick={() => { cancelledRef.current = true; onCancel() }} style={{ marginTop: '2rem' }}>
+          Cancel
+        </button>
       )}
-      <button className="btn-secondary" onClick={handleCancel} style={{ marginTop: '2rem' }}>
-        Cancel
-      </button>
     </div>
   )
 }
@@ -134,7 +150,6 @@ function captureFrame(video) {
   canvas.height = video.videoHeight
   const ctx = canvas.getContext('2d')
   ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
-  // Synchronous blob creation via toDataURL → convert to blob
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
   const binary = atob(dataUrl.split(',')[1])
   const array = new Uint8Array(binary.length)

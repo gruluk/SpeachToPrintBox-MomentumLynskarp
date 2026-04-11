@@ -681,6 +681,19 @@ h2 {
   color: white !important;
 }
 
+/* --- Recognize animation --- */
+
+.recognize-eye {
+  margin-bottom: 1rem;
+}
+
+.recognize-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* --- Face Debug --- */
 
 .face-debug {
