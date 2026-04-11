@@ -11,7 +11,7 @@ export default defineConfig({
       '/generate': 'http://localhost:8000',
       '/publish': 'http://localhost:8000',
       '/face': 'http://localhost:8000',
-      '/registered-users': 'http://localhost:8000',
+      '/users': 'http://localhost:8000',
       '/demo-choice': 'http://localhost:8000',
       '/booth-config': 'http://localhost:8000',
       '/presentations': 'http://localhost:8000',

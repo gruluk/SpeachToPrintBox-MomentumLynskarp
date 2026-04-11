@@ -50,8 +50,7 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(_security)):
 # In-memory store — populated from InstantDB on startup
 characters: List[dict] = []
 connections: List[WebSocket] = []
-face_users: List[dict] = []
-registered_users: List[dict] = []
+users: List[dict] = []
 booths: List[dict] = []
 presentations: List[dict] = []
 
@@ -137,20 +136,14 @@ async def lifespan(app: FastAPI):
         print(f"[startup] Restored {len(existing)} characters from InstantDB")
     except Exception as e:
         print(f"[startup] Could not restore characters from InstantDB: {e}")
-    # Restore face users
+    # Restore users
     try:
-        fu = await loop.run_in_executor(None, instant_db.get_all_face_users)
-        face_users.extend(fu)
-        print(f"[startup] Restored {len(fu)} face users from InstantDB (face_recognition={'available' if FACE_AVAILABLE else 'NOT available'})")
+        us = await loop.run_in_executor(None, instant_db.get_all_users)
+        users.extend(us)
+        enrolled = sum(1 for u in us if u.get("embedding"))
+        print(f"[startup] Restored {len(us)} users ({enrolled} with face) from InstantDB (face_recognition={'available' if FACE_AVAILABLE else 'NOT available'})")
     except Exception as e:
-        print(f"[startup] Could not restore face users from InstantDB: {e}")
-    # Restore registered users
-    try:
-        ru = await loop.run_in_executor(None, instant_db.get_all_registered_users)
-        registered_users.extend(ru)
-        print(f"[startup] Restored {len(ru)} registered users from InstantDB")
-    except Exception as e:
-        print(f"[startup] Could not restore registered users from InstantDB: {e}")
+        print(f"[startup] Could not restore users from InstantDB: {e}")
     # Restore booths (create default if none exist)
     try:
         bs = await loop.run_in_executor(None, instant_db.get_all_booths)
@@ -267,6 +260,7 @@ async def publish_character(
     name: str = Form(""),
     dino_type: str = Form(""),
     interest: str = Form(""),
+    user_id: str = Form(""),
 ):
     char = next((c for c in characters if c["id"] == char_id), None)
     if not char:
@@ -274,6 +268,7 @@ async def publish_character(
     char["name"] = name
     char["dino_type"] = dino_type
     char["interest"] = interest
+    char["user_id"] = user_id
     _assign_world_pos(char, right_side=True)
     await broadcast({"type": "new_character", **char})
 
@@ -282,10 +277,23 @@ async def publish_character(
         await asyncio.get_event_loop().run_in_executor(
             None,
             instant_db.publish_character,
-            char_id, name, dino_type, char["image_b64"], interest,
+            char_id, name, dino_type, char["image_b64"], interest, user_id,
         )
     except Exception as e:
         print(f"[db] InstantDB write failed: {e}")
+
+    # Link character to user
+    if user_id:
+        user = next((u for u in users if u["id"] == user_id), None)
+        if user:
+            user["char_id"] = char_id
+            user["interest"] = interest
+            try:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: instant_db.update_user(user_id, char_id=char_id, interest=interest),
+                )
+            except Exception as e:
+                print(f"[db] user link failed: {e}")
 
     return {"ok": True}
 
@@ -470,24 +478,24 @@ async def admin_sync(_=Depends(require_admin)):
     return characters
 
 
-# --- Registered users + CSV import ---
+# --- Users ---
 
-@app.get("/registered-users")
-def search_registered(q: str = ""):
-    """Search pre-registered users by name prefix. No auth — booth needs this."""
+@app.get("/users")
+def search_users(q: str = ""):
+    """Search users by name. No auth — booth needs this."""
     q_lower = q.strip().lower()
     if not q_lower:
         return [{"id": u["id"], "name": u["name"], "email": u.get("email", "")}
-                for u in registered_users]
+                for u in users]
     return [
         {"id": u["id"], "name": u["name"], "email": u.get("email", "")}
-        for u in registered_users
+        for u in users
         if u.get("name", "").lower().startswith(q_lower)
     ]
 
 
 def _parse_spreadsheet(raw: bytes, filename: str) -> list[dict]:
-    """Parse CSV or XLSX into a list of dicts with 'name' and 'email' keys."""
+    """Parse CSV or XLSX into a list of dicts with lowercased keys."""
     if filename.endswith(".xlsx"):
         from openpyxl import load_workbook
         wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
@@ -510,21 +518,20 @@ def _parse_spreadsheet(raw: bytes, filename: str) -> list[dict]:
 
 @app.post("/admin/api/import-users")
 async def admin_import_users(file: UploadFile = File(...), _=Depends(require_admin)):
-    """Import pre-registered users from CSV or XLSX. Skips duplicates by email."""
+    """Import users from CSV or XLSX. Skips duplicates by email."""
     raw = await file.read()
     rows = _parse_spreadsheet(raw, file.filename or "")
 
     if not rows:
         raise HTTPException(status_code=400, detail="No data rows found")
 
-    # Find name and email columns (case-insensitive)
     col_keys = list(rows[0].keys())
     name_col = next((k for k in col_keys if "name" in k), None)
     email_col = next((k for k in col_keys if "email" in k), None)
     if not name_col or not email_col:
         raise HTTPException(status_code=400, detail=f"File must have 'Name' and 'Email' columns. Found: {col_keys}")
 
-    existing_emails = {u.get("email", "").lower() for u in registered_users}
+    existing_emails = {u.get("email", "").lower() for u in users}
     imported, skipped = 0, 0
 
     for row in rows:
@@ -539,80 +546,126 @@ async def admin_import_users(file: UploadFile = File(...), _=Depends(require_adm
 
         user_id = str(uuid.uuid4())
         user = {"id": user_id, "name": name, "email": email, "created_at": int(time.time() * 1000)}
-        registered_users.append(user)
+        users.append(user)
         existing_emails.add(email.lower())
 
         try:
             await asyncio.get_event_loop().run_in_executor(
-                None, instant_db.create_registered_user, user_id, name, email
+                None, instant_db.create_user, user_id, name, email
             )
         except Exception as e:
             print(f"[import] DB write failed for {email}: {e}")
         imported += 1
 
     print(f"[import] Imported {imported}, skipped {skipped}")
-    return {"ok": True, "imported": imported, "skipped": skipped, "total": len(registered_users)}
+    return {"ok": True, "imported": imported, "skipped": skipped, "total": len(users)}
 
 
-@app.get("/admin/api/registered-users")
-def admin_list_registered(_=Depends(require_admin)):
-    return [{"id": u["id"], "name": u["name"], "email": u.get("email", ""),
-             "created_at": u.get("created_at", 0)} for u in registered_users]
+@app.get("/admin/api/users")
+def admin_list_users(_=Depends(require_admin)):
+    """Full user list for admin panel — includes avatar info from characters."""
+    pres_names = {p["id"]: p["name"] for p in presentations}
+    char_by_user = {c.get("user_id"): c for c in characters if c.get("user_id")}
+
+    result = []
+    for u in users:
+        char = char_by_user.get(u["id"])
+        demo_ids = u.get("demo_ids", [])
+        result.append({
+            "id": u["id"],
+            "name": u.get("name", ""),
+            "email": u.get("email", ""),
+            "interest": u.get("interest", ""),
+            "has_face": bool(u.get("embedding")),
+            "demos": [pres_names.get(did, did) for did in demo_ids],
+            "image_b64": char.get("image_b64", "") if char else "",
+            "char_id": char["id"] if char else None,
+            "printed": char.get("printed", False) if char else False,
+            "created_at": u.get("created_at", 0),
+        })
+    result.sort(key=lambda u: u.get("name", "").lower())
+    return result
 
 
-@app.delete("/admin/api/registered-users/{user_id}")
-async def admin_delete_registered_user(user_id: str, _=Depends(require_admin)):
-    user = next((u for u in registered_users if u["id"] == user_id), None)
-    if not user:
-        raise HTTPException(status_code=404, detail="not found")
-    registered_users.remove(user)
-    try:
-        await asyncio.get_event_loop().run_in_executor(
-            None, instant_db.delete_registered_user, user_id
-        )
-    except Exception as e:
-        print(f"[admin] delete registered user failed: {e}")
-    return {"ok": True}
-
-
-@app.post("/admin/api/registered-users")
-async def admin_add_registered_user(body: dict, _=Depends(require_admin)):
+@app.post("/admin/api/users")
+async def admin_add_user(body: dict, _=Depends(require_admin)):
     name = (body.get("name") or "").strip()
     email = (body.get("email") or "").strip()
     if not name or not email:
         raise HTTPException(status_code=400, detail="name and email required")
-    # Check duplicate
-    if any(u.get("email", "").lower() == email.lower() for u in registered_users):
+    if any(u.get("email", "").lower() == email.lower() for u in users):
         raise HTTPException(status_code=409, detail="email already exists")
     user_id = str(uuid.uuid4())
     user = {"id": user_id, "name": name, "email": email, "created_at": int(time.time() * 1000)}
-    registered_users.append(user)
+    users.append(user)
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None, instant_db.create_registered_user, user_id, name, email
+            None, instant_db.create_user, user_id, name, email
         )
     except Exception as e:
-        print(f"[admin] create registered user failed: {e}")
+        print(f"[admin] create user failed: {e}")
     return {"ok": True, **user}
+
+
+@app.delete("/admin/api/users/{user_id}")
+async def admin_delete_user(user_id: str, _=Depends(require_admin)):
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="not found")
+    users.remove(user)
+    # Also delete linked character
+    char = next((c for c in characters if c.get("user_id") == user_id), None)
+    if char:
+        characters.remove(char)
+        await broadcast({"type": "remove_character", "id": char["id"]})
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, instant_db.delete_character, char["id"]
+            )
+        except Exception as e:
+            print(f"[admin] delete linked character failed: {e}")
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.delete_user, user_id
+        )
+    except Exception as e:
+        print(f"[admin] delete user failed: {e}")
+    return {"ok": True}
+
+
+@app.post("/admin/api/users/{user_id}/reprint")
+async def admin_reprint_user(user_id: str, _=Depends(require_admin)):
+    """Queue the user's character for reprint."""
+    char = next((c for c in characters if c.get("user_id") == user_id), None)
+    if not char:
+        raise HTTPException(status_code=404, detail="no character found for this user")
+    char["printed"] = False
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.set_printed, char["id"], False
+        )
+    except Exception as e:
+        print(f"[admin] reprint failed: {e}")
+    return {"ok": True}
 
 
 # --- Demo choices ---
 
 @app.post("/demo-choice")
 async def demo_choice(body: dict):
-    """Store demo choices (list of presentation IDs) for an enrolled face user."""
+    """Store demo choices (list of presentation IDs) for a user."""
     user_id = body.get("user_id")
     demo_ids = body.get("demo_ids", [])
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
-    user = next((u for u in face_users if u["id"] == user_id), None)
+    user = next((u for u in users if u["id"] == user_id), None)
     if not user:
         raise HTTPException(status_code=404, detail="user not found")
     user["demo_ids"] = demo_ids
     user["demo_chosen_at"] = int(time.time() * 1000)
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None, instant_db.update_face_user_demos, user_id, demo_ids
+            None, lambda: instant_db.update_user(user_id, demo_ids=demo_ids, demo_chosen_at=int(time.time() * 1000)),
         )
     except Exception as e:
         print(f"[demo] DB write failed: {e}")
@@ -745,76 +798,20 @@ def booth_config(number: int):
     return {"mode": booth.get("mode", "both")}
 
 
-# --- Merged users view ---
-
-@app.get("/admin/api/users-merged")
-def admin_users_merged(_=Depends(require_admin)):
-    """Merged view of registered_users + face_users for the admin panel."""
-    # Build presentation name lookup
-    pres_names = {p["id"]: p["name"] for p in presentations}
-
-    def resolve_demos(fu):
-        if not fu:
-            return []
-        ids = fu.get("demo_ids", [])
-        # Backwards compat: old single demo_choice field
-        if not ids and fu.get("demo_choice"):
-            return [fu["demo_choice"]]
-        return [pres_names.get(did, did) for did in ids]
-
-    # Build lookup of face_users by name (lowercased)
-    face_by_name = {}
-    for fu in face_users:
-        key = fu.get("name", "").strip().lower()
-        if key:
-            face_by_name[key] = fu
-
-    merged = []
-    seen_names = set()
-    for ru in registered_users:
-        name_key = ru.get("name", "").strip().lower()
-        seen_names.add(name_key)
-        fu = face_by_name.get(name_key)
-        merged.append({
-            "id": ru["id"],
-            "name": ru.get("name", ""),
-            "email": ru.get("email", ""),
-            "interest": fu.get("interest", "") if fu else "",
-            "registered_at": ru.get("created_at", 0),
-            "has_face": fu is not None,
-            "face_user_id": fu["id"] if fu else None,
-            "demos": resolve_demos(fu),
-        })
-
-    # Add face_users not in registered_users
-    for fu in face_users:
-        key = fu.get("name", "").strip().lower()
-        if key and key not in seen_names:
-            merged.append({
-                "id": fu["id"],
-                "name": fu.get("name", ""),
-                "email": "",
-                "interest": fu.get("interest", ""),
-                "registered_at": fu.get("created_at", 0),
-                "has_face": True,
-                "face_user_id": fu["id"],
-                "demos": resolve_demos(fu),
-            })
-
-    merged.sort(key=lambda u: u.get("name", "").lower())
-    return merged
-
-
 # --- Face recognition ---
 
 @app.post("/face/enroll")
 async def face_enroll(
     image: UploadFile = File(...),
-    name: str = Form(...),
-    interest: str = Form(""),
+    user_id: str = Form(...),
 ):
+    """Enroll a face for an existing user. Stores embedding on user record."""
     if not FACE_AVAILABLE:
         raise HTTPException(status_code=503, detail="face_recognition library not available")
+
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
 
     data = await image.read()
     result = await asyncio.get_event_loop().run_in_executor(
@@ -824,22 +821,11 @@ async def face_enroll(
     if not result["found"]:
         return {"ok": False, "error": "no_face", "time_ms": result["time_ms"]}
 
-    user_id = str(uuid.uuid4())
-    user = {
-        "id": user_id,
-        "name": name,
-        "interest": interest,
-        "embedding": result["embedding"],
-        "created_at": int(time.time() * 1000),
-    }
-    face_users.append(user)
+    user["embedding"] = result["embedding"]
 
-    # Persist to InstantDB
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None,
-            instant_db.create_face_user,
-            user_id, name, interest, result["embedding"],
+            None, lambda: instant_db.update_user(user_id, embedding=result["embedding"]),
         )
     except Exception as e:
         print(f"[face] InstantDB write failed: {e}")
@@ -847,8 +833,7 @@ async def face_enroll(
     return {
         "ok": True,
         "user_id": user_id,
-        "name": name,
-        "interest": interest,
+        "name": user.get("name", ""),
         "embedding_dims": len(result["embedding"]),
         "time_ms": result["time_ms"],
     }
@@ -870,36 +855,14 @@ async def face_recognize(
     if not result["found"]:
         return {"ok": False, "error": "no_face", "time_ms": result["time_ms"]}
 
-    match = find_match(result["embedding"], face_users, threshold)
+    # Filter to users with face embeddings
+    enrolled = [u for u in users if u.get("embedding")]
+    match = find_match(result["embedding"], enrolled, threshold)
     return {
         "ok": True,
         "time_ms": result["time_ms"],
         **match,
     }
-
-
-@app.get("/face/users")
-def face_list_users():
-    return [
-        {"id": u["id"], "name": u["name"], "interest": u.get("interest", ""),
-         "created_at": u.get("created_at", 0)}
-        for u in face_users
-    ]
-
-
-@app.delete("/face/users/{user_id}")
-async def face_delete_user(user_id: str):
-    user = next((u for u in face_users if u["id"] == user_id), None)
-    if not user:
-        raise HTTPException(status_code=404, detail="not found")
-    face_users.remove(user)
-    try:
-        await asyncio.get_event_loop().run_in_executor(
-            None, instant_db.delete_face_user, user_id
-        )
-    except Exception as e:
-        print(f"[face] delete failed: {e}")
-    return {"ok": True}
 
 
 # --- Web booth SPA ---

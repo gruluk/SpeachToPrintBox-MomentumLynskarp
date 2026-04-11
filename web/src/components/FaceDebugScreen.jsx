@@ -59,7 +59,7 @@ export default function FaceDebugScreen() {
 
   async function refreshUsers() {
     try {
-      const res = await fetch('/face/users')
+      const res = await fetch('/users')
       const data = await res.json()
       setUsers(data)
     } catch (e) {
@@ -89,14 +89,36 @@ export default function FaceDebugScreen() {
     setBusy(true)
     addLog('info', `Enrolling "${enrollName}"...`)
 
+    // Step 1: Create user if needed (use debug email)
+    let userId = null
+    const email = `debug+${Date.now()}@test.local`
+    try {
+      const createRes = await fetch('/admin/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: enrollName.trim(), email }),
+      })
+      if (createRes.ok) {
+        const created = await createRes.json()
+        userId = created.id
+        addLog('info', `Created user ${userId.slice(0, 8)}...`)
+      }
+    } catch (e) {
+      addLog('error', `Failed to create user: ${e.message}`)
+      setBusy(false)
+      return
+    }
+
+    if (!userId) { addLog('error', 'No user ID'); setBusy(false); return }
+
+    // Step 2: Capture and enroll face
     const blob = await captureFrame()
     if (!blob) { addLog('error', 'No frame captured'); setBusy(false); return }
     addLog('info', `Captured image (${(blob.size / 1024).toFixed(0)} KB)`)
 
     const fd = new FormData()
     fd.append('image', blob, 'photo.jpg')
-    fd.append('name', enrollName.trim())
-    fd.append('interest', enrollInterest.trim())
+    fd.append('user_id', userId)
 
     try {
       const res = await fetch('/face/enroll', { method: 'POST', body: fd })
@@ -159,10 +181,10 @@ export default function FaceDebugScreen() {
     setBusy(false)
   }
 
-  async function handleDeleteUser(userId) {
+  async function handleDeleteUser(uid) {
     try {
-      await fetch(`/face/users/${userId}`, { method: 'DELETE' })
-      addLog('info', `Deleted user ${userId.slice(0, 8)}...`)
+      await fetch(`/admin/api/users/${uid}`, { method: 'DELETE' })
+      addLog('info', `Deleted user ${uid.slice(0, 8)}...`)
       refreshUsers()
     } catch (e) {
       addLog('error', `Delete failed: ${e.message}`)

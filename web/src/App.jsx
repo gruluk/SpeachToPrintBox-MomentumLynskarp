@@ -63,6 +63,7 @@ export default function App() {
   const [flow, setFlow] = useState(null) // 'register' | 'demo'
   const [photoBlob, setPhotoBlob] = useState(null)
   const [photoUrl, setPhotoUrl] = useState(null)
+  const [userId, setUserId] = useState('')
   const [name, setName] = useState('')
   const [interest, setInterest] = useState('')
   const [resultData, setResultData] = useState(null)
@@ -137,8 +138,9 @@ export default function App() {
 
   const handleReviewOk = useCallback(() => setState('NAME_INPUT'), [])
 
-  const handleNameSubmit = useCallback((n) => {
-    setName(n)
+  const handleNameSubmit = useCallback((user) => {
+    setUserId(user.id)
+    setName(user.name)
     setState('INTEREST_SELECT')
   }, [])
 
@@ -164,25 +166,25 @@ export default function App() {
   const handlePublish = useCallback(async (currentName, currentInterest) => {
     const charId = genCharIdRef.current
     if (!charId) return
-    // Publish character (for wall + printing)
+    // Publish character (for wall + printing), linked to user
     const fd = new FormData()
     fd.append('name', currentName)
     fd.append('interest', currentInterest || '')
+    fd.append('user_id', userId)
     try {
       await fetch(`/publish/${charId}`, { method: 'POST', body: fd })
     } catch (e) {
       console.error('[publish]', e)
     }
 
-    // Also enroll face (fire and forget)
-    if (photoBlob) {
+    // Also enroll face on user record (fire and forget)
+    if (photoBlob && userId) {
       const enrollFd = new FormData()
       enrollFd.append('image', photoBlob, 'photo.jpg')
-      enrollFd.append('name', currentName)
-      enrollFd.append('interest', currentInterest || '')
+      enrollFd.append('user_id', userId)
       fetch('/face/enroll', { method: 'POST', body: enrollFd }).catch(e => console.error('[face enroll]', e))
     }
-  }, [photoBlob])
+  }, [photoBlob, userId])
 
   // --- Demo flow ---
 
@@ -204,6 +206,7 @@ export default function App() {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
     setPhotoBlob(null)
     setPhotoUrl(null)
+    setUserId('')
     setName('')
     setInterest('')
     setResultData(null)

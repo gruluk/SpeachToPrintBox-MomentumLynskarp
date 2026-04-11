@@ -382,31 +382,10 @@
 
   <!-- Screen section -->
   <div id="view-screen" class="section">
-    <div class="toolbar">
-      <input type="search" id="char-search" placeholder="Search name…" oninput="renderCharTable()" />
-      <button class="btn btn-ghost" onclick="loadChars()">↺ Refresh</button>
-      <div class="toolbar-spacer"></div>
-      <button class="btn btn-red" onclick="clearAll()">Clear All</button>
-    </div>
     <div class="size-row">
       <span>Avatar size:</span>
       <input type="range" id="size-slider" min="48" max="400" step="8" value="144" oninput="onSizeSlider(this.value)" />
       <strong id="size-val">144</strong><span>px</span>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:72px">Art</th>
-            <th>Name</th>
-            <th>Interest</th>
-            <th>Created</th>
-            <th>Printed</th>
-            <th style="width:160px">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="char-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
-      </table>
     </div>
   </div>
 
@@ -430,16 +409,17 @@
       <table>
         <thead>
           <tr>
+            <th style="width:60px">Avatar</th>
             <th>Name</th>
             <th>Email</th>
             <th>Interest</th>
-            <th>Registered</th>
             <th>Face</th>
-            <th>Demo</th>
-            <th style="width:80px">Actions</th>
+            <th>Printed</th>
+            <th>Demos</th>
+            <th style="width:120px">Actions</th>
           </tr>
         </thead>
-        <tbody id="user-tbody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+        <tbody id="user-tbody"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -483,7 +463,6 @@
   let mergedUsers = []
   let boothList = []
   let presList = []
-  let editingId = null
   let editingPresId = null
   let currentCharSize = 144
   let currentSection = null
@@ -509,7 +488,6 @@
     const wideViews = ['screen', 'users']
     document.querySelector('main').classList.toggle('wide', wideViews.includes(name))
 
-    if (name === 'screen') loadChars()
     if (name === 'users') loadUsers()
     if (name === 'booths') loadBooths()
     if (name === 'presentations') loadPresentations()
@@ -519,7 +497,7 @@
     try {
       const [charRes, userRes, boothRes, presRes] = await Promise.all([
         fetch('/admin/api/sync'),
-        fetch('/admin/api/users-merged'),
+        fetch('/admin/api/users'),
         fetch('/admin/api/booths'),
         fetch('/admin/api/presentations'),
       ])
@@ -543,84 +521,9 @@
   }
 
   // ── Screen section ────────────────────────────────────────
-
-  async function loadChars() {
-    try {
-      const res = await fetch('/admin/api/sync')
-      if (res.status === 401) { location.reload(); return }
-      characters = await res.json()
-      renderCharTable()
-    } catch (e) {
-      document.getElementById('char-tbody').innerHTML =
-        '<tr><td colspan="6" class="empty">Failed to load</td></tr>'
-    }
-  }
-
-  function renderCharTable() {
-    const q = document.getElementById('char-search').value.toLowerCase()
-    const tbody = document.getElementById('char-tbody')
-    const rows = characters.filter(c => !q || (c.name || '').toLowerCase().includes(q))
-
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">No characters found</td></tr>'
-      return
-    }
-    tbody.innerHTML = rows.map(c => `
-      <tr id="row-${c.id}">
-        <td><img class="thumb" src="data:image/png;base64,${c.image_b64}" alt="${esc(c.name)}" /></td>
-        <td>${esc(c.name) || '<span style="color:var(--muted)">—</span>'}</td>
-        <td style="color:var(--muted)">${esc(c.interest || '')}</td>
-        <td style="color:var(--muted)">${fmtDate(c.created_at)}</td>
-        <td><span class="badge ${c.printed ? 'badge-green' : 'badge-muted'}">${c.printed ? 'Printed' : 'Pending'}</span></td>
-        <td>
-          <div class="action-row">
-            <button class="btn btn-purple btn-sm" onclick="openEdit('${c.id}')">Edit</button>
-            <button class="btn btn-orange btn-sm" onclick="reprint('${c.id}')">↻ Print</button>
-            <button class="btn btn-red btn-sm" onclick="deleteChar('${c.id}')">Delete</button>
-          </div>
-        </td>
-      </tr>
-    `).join('')
-  }
-
-  async function clearAll() {
-    if (!confirm(`Delete ALL ${characters.length} characters?`)) return
-    if (!confirm('Are you really sure?')) return
-    const res = await fetch('/admin/api/characters', { method: 'DELETE' })
-    if (res.ok) { characters = []; renderCharTable() }
-    else alert('Clear all failed')
-  }
-
-  async function deleteChar(id) {
-    const char = characters.find(c => c.id === id)
-    if (!confirm(`Delete ${char?.name ? '"'+char.name+'"' : 'this character'}?`)) return
-    const res = await fetch(`/admin/api/characters/${id}`, { method: 'DELETE' })
-    if (res.ok) { characters = characters.filter(c => c.id !== id); renderCharTable() }
-    else alert('Delete failed')
-  }
-
-  async function reprint(id) {
-    if (!confirm('Queue for reprint?')) return
-    const res = await fetch(`/admin/api/characters/${id}/reprint`, { method: 'POST' })
-    if (res.ok) {
-      const c = characters.find(c => c.id === id)
-      if (c) c.printed = false
-      renderCharTable()
-    }
-  }
-
-  function openEdit(id) {
-    const char = characters.find(c => c.id === id)
-    if (!char) return
-    editingId = id
-    document.getElementById('modal-title').textContent = 'Edit character'
-    document.getElementById('edit-name').value = char.name || ''
-    document.getElementById('modal').classList.add('open')
-    document.getElementById('edit-name').focus()
-  }
+  // (Screen section is just the avatar size slider — no table)
 
   function closeModal() {
-    editingId = null
     editingPresId = null
     document.getElementById('modal').classList.remove('open')
   }
@@ -639,21 +542,6 @@
         if (updated) updated.name = name
         closeModal()
         renderPresentations()
-      } else alert('Save failed')
-      return
-    }
-
-    if (editingId) {
-      const res = await fetch(`/admin/api/characters/${editingId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      })
-      if (res.ok) {
-        const updated = characters.find(c => c.id === editingId)
-        if (updated) updated.name = name
-        closeModal()
-        renderCharTable()
       } else alert('Save failed')
     }
   }
@@ -691,13 +579,13 @@
 
   async function loadUsers() {
     try {
-      const res = await fetch('/admin/api/users-merged')
+      const res = await fetch('/admin/api/users')
       if (res.status === 401) { location.reload(); return }
       mergedUsers = await res.json()
       renderUserTable()
     } catch (e) {
       document.getElementById('user-tbody').innerHTML =
-        '<tr><td colspan="7" class="empty">Failed to load</td></tr>'
+        '<tr><td colspan="8" class="empty">Failed to load</td></tr>'
     }
   }
 
@@ -707,33 +595,41 @@
     const rows = mergedUsers.filter(u => !q || (u.name || '').toLowerCase().includes(q))
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty">No users found</td></tr>'
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">No users found</td></tr>'
       return
     }
     tbody.innerHTML = rows.map(u => `
       <tr>
+        <td>${u.image_b64
+          ? `<img class="thumb" src="data:image/png;base64,${u.image_b64}" alt="${esc(u.name)}" />`
+          : '<span style="color:var(--grey)">—</span>'}</td>
         <td>${esc(u.name)}</td>
         <td style="color:var(--muted)">${esc(u.email)}</td>
         <td style="color:var(--muted)">${esc(u.interest || '')}</td>
-        <td style="color:var(--muted)">${fmtDate(u.registered_at)}</td>
         <td><span class="badge ${u.has_face ? 'badge-green' : 'badge-muted'}">${u.has_face ? 'Yes' : 'No'}</span></td>
+        <td><span class="badge ${u.printed ? 'badge-green' : 'badge-muted'}">${u.char_id ? (u.printed ? 'Printed' : 'Pending') : '—'}</span></td>
         <td style="color:var(--muted)">${(u.demos || []).map(d => esc(d)).join(', ') || ''}</td>
         <td>
-          <button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}', ${u.has_face}, '${u.face_user_id || ''}')">Delete</button>
+          <div class="action-row">
+            ${u.char_id ? `<button class="btn btn-orange btn-sm" onclick="reprintUser('${u.id}')">↻ Print</button>` : ''}
+            <button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}')">Delete</button>
+          </div>
         </td>
       </tr>
     `).join('')
   }
 
-  async function deleteUser(id, hasFace, faceUserId) {
+  async function deleteUser(id) {
     if (!confirm('Delete this user?')) return
-    // Delete registered user
-    try { await fetch(`/admin/api/registered-users/${id}`, { method: 'DELETE' }) } catch (e) {}
-    // Also delete face user if enrolled
-    if (hasFace && faceUserId) {
-      try { await fetch(`/face/users/${faceUserId}`, { method: 'DELETE' }) } catch (e) {}
-    }
-    loadUsers()
+    const res = await fetch(`/admin/api/users/${id}`, { method: 'DELETE' })
+    if (res.ok) loadUsers()
+    else alert('Delete failed')
+  }
+
+  async function reprintUser(userId) {
+    if (!confirm('Queue for reprint?')) return
+    const res = await fetch(`/admin/api/users/${userId}/reprint`, { method: 'POST' })
+    if (res.ok) loadUsers()
   }
 
   async function addUser() {
@@ -741,7 +637,7 @@
     const email = document.getElementById('add-email').value.trim()
     if (!name || !email) { alert('Name and email required'); return }
     try {
-      const res = await fetch('/admin/api/registered-users', {
+      const res = await fetch('/admin/api/users', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email }),
       })

@@ -8,7 +8,7 @@ export default function NameInputScreen({ onSubmit, onBack }) {
 
   // Load all registered users on mount
   useEffect(() => {
-    fetch('/registered-users')
+    fetch('/users')
       .then(r => r.json())
       .then(data => setAllUsers(data))
       .catch(e => console.error('[users]', e))
@@ -33,7 +33,7 @@ export default function NameInputScreen({ onSubmit, onBack }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (selectedUser) {
-      onSubmit(selectedUser.name)
+      onSubmit({ id: selectedUser.id, name: selectedUser.name })
     }
   }
 

@@ -28,7 +28,7 @@ def _headers() -> dict:
 
 
 def publish_character(char_id: str, name: str, dino_type: str, image_b64: str,
-                      interest: str = "") -> None:
+                      interest: str = "", user_id: str = "") -> None:
     """Insert a new character record with printed=false."""
     payload = {
         "steps": [
@@ -42,6 +42,7 @@ def publish_character(char_id: str, name: str, dino_type: str, image_b64: str,
                     "interest": interest,
                     "image_b64": image_b64,
                     "printed": False,
+                    "user_id": user_id,
                     "created_at": int(time.time() * 1000),
                 },
             ]
@@ -115,74 +116,13 @@ def get_unprinted() -> list[dict]:
     return r.json().get("characters", [])
 
 
-# ── Face users ────────────────────────────────────────────────────────────────
+# ── Users (unified: registration + face + demos) ─────────────────────────────
 
-def create_face_user(user_id: str, name: str, interest: str, embedding: list[float]) -> None:
-    """Insert a new face user record."""
-    payload = {
-        "steps": [
-            [
-                "update",
-                "face_users",
-                user_id,
-                {
-                    "name": name,
-                    "interest": interest,
-                    "embedding": embedding,
-                    "created_at": int(time.time() * 1000),
-                },
-            ]
-        ]
-    }
-    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=15)
-    r.raise_for_status()
-
-
-def get_all_face_users() -> list[dict]:
-    """Return all face user records from InstantDB, sorted by created_at."""
-    payload = {"query": {"face_users": {}}}
-    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=15)
-    r.raise_for_status()
-    users = r.json().get("face_users", [])
-    users.sort(key=lambda u: u.get("created_at", 0))
-    return users
-
-
-def delete_face_user(user_id: str) -> None:
-    """Delete a face user record from InstantDB."""
-    payload = {"steps": [["delete", "face_users", user_id]]}
-    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
-    r.raise_for_status()
-
-
-def get_face_user(user_id: str) -> dict | None:
-    """Return a single face user by id, or None."""
-    payload = {"query": {"face_users": {"$": {"where": {"id": user_id}}}}}
-    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
-    r.raise_for_status()
-    users = r.json().get("face_users", [])
-    return users[0] if users else None
-
-
-def update_face_user_demos(user_id: str, demo_ids: list[str]) -> None:
-    """Store demo choices (list of presentation IDs) on a face user record."""
+def create_user(user_id: str, name: str, email: str) -> None:
+    """Insert a new user."""
     payload = {
         "steps": [[
-            "update", "face_users", user_id,
-            {"demo_ids": demo_ids, "demo_chosen_at": int(time.time() * 1000)},
-        ]]
-    }
-    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
-    r.raise_for_status()
-
-
-# ── Registered users (pre-event sign-ups) ─────────────────────────────────────
-
-def create_registered_user(user_id: str, name: str, email: str) -> None:
-    """Insert a pre-registered user."""
-    payload = {
-        "steps": [[
-            "update", "registered_users", user_id,
+            "update", "users", user_id,
             {"name": name, "email": email, "created_at": int(time.time() * 1000)},
         ]]
     }
@@ -190,30 +130,28 @@ def create_registered_user(user_id: str, name: str, email: str) -> None:
     r.raise_for_status()
 
 
-def get_all_registered_users() -> list[dict]:
-    """Return all registered users, sorted by name."""
-    payload = {"query": {"registered_users": {}}}
+def get_all_users() -> list[dict]:
+    """Return all users, sorted by name."""
+    payload = {"query": {"users": {}}}
     r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=15)
     r.raise_for_status()
-    users = r.json().get("registered_users", [])
+    users = r.json().get("users", [])
     users.sort(key=lambda u: u.get("name", "").lower())
     return users
 
 
-def get_registered_user_by_email(email: str) -> dict | None:
-    """Return a registered user by email, or None."""
-    payload = {"query": {"registered_users": {}}}
-    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
+def update_user(user_id: str, **fields) -> None:
+    """Update arbitrary fields on a user record."""
+    if not fields:
+        return
+    payload = {"steps": [["update", "users", user_id, fields]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
-    for u in r.json().get("registered_users", []):
-        if u.get("email", "").lower() == email.lower():
-            return u
-    return None
 
 
-def delete_registered_user(user_id: str) -> None:
-    """Delete a registered user from InstantDB."""
-    payload = {"steps": [["delete", "registered_users", user_id]]}
+def delete_user(user_id: str) -> None:
+    """Delete a user from InstantDB."""
+    payload = {"steps": [["delete", "users", user_id]]}
     r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
 
