@@ -6,10 +6,15 @@ import PreviewScreen from './components/PreviewScreen'
 import ValidatingScreen from './components/ValidatingScreen'
 import ReviewScreen from './components/ReviewScreen'
 import NameInputScreen from './components/NameInputScreen'
+import InterestSelectScreen from './components/InterestSelectScreen'
 import QuestionnaireScreen from './components/QuestionnaireScreen'
 import WaitingScreen from './components/WaitingScreen'
 import ResultScreen from './components/ResultScreen'
 import InfoScreen from './components/InfoScreen'
+import DemoCameraScreen from './components/DemoCameraScreen'
+import DemoMatchedScreen from './components/DemoMatchedScreen'
+import DemoNoMatchScreen from './components/DemoNoMatchScreen'
+import DemoDoneScreen from './components/DemoDoneScreen'
 
 const QUESTIONS = [
   {
@@ -30,13 +35,29 @@ const QUESTIONS = [
 ]
 
 export default function App() {
+  // Route to face debug screen if path matches
+  if (window.location.pathname.includes('face-debug')) {
+    return (
+      <div className="app">
+        <FaceDebugScreen />
+      </div>
+    )
+  }
+
   const [state, setState] = useState('START')
+  const [flow, setFlow] = useState(null) // 'register' | 'demo'
   const [photoBlob, setPhotoBlob] = useState(null)
   const [photoUrl, setPhotoUrl] = useState(null)
   const [name, setName] = useState('')
+  const [interest, setInterest] = useState('')
   const [resultData, setResultData] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [validating, setValidating] = useState(false)
+
+  // Demo flow state
+  const [matchedUser, setMatchedUser] = useState(null)
+  const [demoChoice, setDemoChoice] = useState('')
+  const [recognizing, setRecognizing] = useState(false)
 
   // Gen state in refs — avoids re-renders while WaitingScreen polls
   const genReadyRef = useRef(false)
@@ -50,6 +71,8 @@ export default function App() {
     genErrorRef.current = false
     genCharIdRef.current = null
   }
+
+  // --- Register flow ---
 
   const startGeneration = useCallback(async (blob) => {
     resetGen()
@@ -87,7 +110,7 @@ export default function App() {
         startGeneration(blob) // fire and forget
         setValidating(false)
       } else {
-        setErrorMsg(data.message || 'Bildet er ikke gyldig. Prøv igjen.')
+        setErrorMsg(data.message || 'Photo not valid. Try again.')
         setValidating(false)
         setState('PREVIEW')
       }
@@ -102,6 +125,11 @@ export default function App() {
 
   const handleNameSubmit = useCallback((n) => {
     setName(n)
+    setState('INTEREST_SELECT')
+  }, [])
+
+  const handleInterestSelect = useCallback((i) => {
+    setInterest(i)
     setState('QUESTIONNAIRE')
   }, [])
 
@@ -115,48 +143,101 @@ export default function App() {
   }, [])
 
   const handleGenError = useCallback(() => {
-    setErrorMsg('Generering feilet. Prøv igjen.')
+    setErrorMsg('Generation failed. Try again.')
     setState('START')
   }, [])
 
-  const handlePublish = useCallback(async (currentName) => {
+  const handlePublish = useCallback(async (currentName, currentInterest) => {
     const charId = genCharIdRef.current
     if (!charId) return
+    // Publish character (for wall + printing)
     const fd = new FormData()
     fd.append('name', currentName)
+    fd.append('interest', currentInterest || '')
     try {
       await fetch(`/publish/${charId}`, { method: 'POST', body: fd })
     } catch (e) {
       console.error('[publish]', e)
     }
+
+    // Also enroll face (fire and forget)
+    if (photoBlob) {
+      const enrollFd = new FormData()
+      enrollFd.append('image', photoBlob, 'photo.jpg')
+      enrollFd.append('name', currentName)
+      enrollFd.append('interest', currentInterest || '')
+      fetch('/face/enroll', { method: 'POST', body: enrollFd }).catch(e => console.error('[face enroll]', e))
+    }
+  }, [photoBlob])
+
+  // --- Demo flow ---
+
+  const handleDemoCapture = useCallback(async (blob) => {
+    setRecognizing(true)
+    setState('DEMO_RECOGNIZING')
+
+    const fd = new FormData()
+    fd.append('image', blob, 'photo.jpg')
+    fd.append('threshold', '0.6')
+    try {
+      const res = await fetch('/face/recognize', { method: 'POST', body: fd })
+      const data = await res.json()
+      setRecognizing(false)
+
+      if (data.ok && data.matched) {
+        setMatchedUser({ id: data.user_id, name: data.name, interest: data.interest })
+        setState('DEMO_MATCHED')
+      } else {
+        setState('DEMO_NO_MATCH')
+      }
+    } catch (e) {
+      console.error('[recognize]', e)
+      setRecognizing(false)
+      setState('DEMO_NO_MATCH')
+    }
   }, [])
+
+  const handleDemoSelect = useCallback(async (demo) => {
+    setDemoChoice(demo)
+    if (matchedUser) {
+      const fd = new FormData()
+      fd.append('user_id', matchedUser.id)
+      fd.append('demo', demo)
+      fetch('/demo-choice', { method: 'POST', body: fd }).catch(e => console.error('[demo-choice]', e))
+    }
+    setState('DEMO_DONE')
+  }, [matchedUser])
+
+  // --- Reset ---
 
   const handleDone = useCallback(() => {
     if (photoUrl) URL.revokeObjectURL(photoUrl)
     setPhotoBlob(null)
     setPhotoUrl(null)
     setName('')
+    setInterest('')
     setResultData(null)
     setErrorMsg('')
     setValidating(false)
+    setFlow(null)
+    setMatchedUser(null)
+    setDemoChoice('')
+    setRecognizing(false)
     resetGen()
     setState('START')
   }, [photoUrl])
 
-  // Route to face debug screen if path matches
-  if (window.location.pathname.includes('face-debug')) {
-    return (
-      <div className="app">
-        <FaceDebugScreen />
-      </div>
-    )
-  }
-
   return (
     <div className="app">
       {state === 'START' && (
-        <StartScreen onStart={() => { setErrorMsg(''); setState('INFO') }} errorMsg={errorMsg} />
+        <StartScreen
+          onRegister={() => { setErrorMsg(''); setFlow('register'); setState('INFO') }}
+          onDemo={() => { setErrorMsg(''); setFlow('demo'); setState('DEMO_CAMERA') }}
+          errorMsg={errorMsg}
+        />
       )}
+
+      {/* Register flow */}
       {state === 'INFO' && (
         <InfoScreen onContinue={() => setState('PREVIEW')} onBack={() => setState('START')} />
       )}
@@ -171,6 +252,9 @@ export default function App() {
       )}
       {state === 'NAME_INPUT' && (
         <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('REVIEW')} />
+      )}
+      {state === 'INTEREST_SELECT' && (
+        <InterestSelectScreen onSelect={handleInterestSelect} onBack={() => setState('NAME_INPUT')} />
       )}
       {state === 'QUESTIONNAIRE' && (
         <QuestionnaireScreen questions={QUESTIONS} onDone={handleQuizDone} />
@@ -188,9 +272,34 @@ export default function App() {
         <ResultScreen
           resultData={resultData}
           name={name}
+          interest={interest}
           onPublish={handlePublish}
           onDone={handleDone}
         />
+      )}
+
+      {/* Demo flow */}
+      {state === 'DEMO_CAMERA' && (
+        <DemoCameraScreen onCapture={handleDemoCapture} onCancel={handleDone} />
+      )}
+      {state === 'DEMO_RECOGNIZING' && (
+        <div className="screen center">
+          <div className="spinner" />
+          <p className="status-text">Recognizing...</p>
+        </div>
+      )}
+      {state === 'DEMO_MATCHED' && (
+        <DemoMatchedScreen matchedUser={matchedUser} onSelectDemo={handleDemoSelect} onBack={handleDone} />
+      )}
+      {state === 'DEMO_NO_MATCH' && (
+        <DemoNoMatchScreen
+          onRetry={() => setState('DEMO_CAMERA')}
+          onRegister={() => { setFlow('register'); setState('INFO') }}
+          onBack={handleDone}
+        />
+      )}
+      {state === 'DEMO_DONE' && (
+        <DemoDoneScreen name={matchedUser?.name} demo={demoChoice} onDone={handleDone} />
       )}
     </div>
   )

@@ -88,7 +88,8 @@ def _find_font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
-def composite_label(character: Image.Image, user_name: str, dino_type: str = "") -> Image.Image:
+def composite_label(character: Image.Image, user_name: str, dino_type: str = "",
+                    interest: str = "") -> Image.Image:
     DPI = 300
     target_w  = round(LABEL_W_MM   * DPI / 25.4)
     content_h = round(CONTENT_H_MM * DPI / 25.4)
@@ -123,19 +124,42 @@ def composite_label(character: Image.Image, user_name: str, dino_type: str = "")
     except Exception:
         pass
 
-    # Name — fills remaining vertical space below the logo
+    # Name + interest — fills remaining vertical space below the logo
     name_area_top = logo_bottom + PAD
     name_area_h   = content_h - name_area_top - PAD
-    font_size = min(int(name_area_h * 0.65), 150)
+
+    # If interest present, allocate 60% for name, 40% for interest
+    if interest:
+        name_h = int(name_area_h * 0.6)
+        interest_h = name_area_h - name_h
+    else:
+        name_h = name_area_h
+        interest_h = 0
+
+    # Draw name
+    font_size = min(int(name_h * 0.65), 150)
     while font_size > 12:
         font = _find_font(font_size)
         bbox = font.getbbox(user_name)
         if (bbox[2] - bbox[0]) <= right_w:
             break
         font_size -= 4
-    font  = _find_font(font_size)
-    name_y = name_area_top + (name_area_h - font_size) // 2
+    font = _find_font(font_size)
+    name_y = name_area_top + (name_h - font_size) // 2
     draw.text((right_x, name_y), user_name, fill="#3c1c71", font=font)
+
+    # Draw interest below name
+    if interest and interest_h > 0:
+        int_font_size = min(int(font_size * 0.6), int(interest_h * 0.6))
+        while int_font_size > 12:
+            int_font = _find_font(int_font_size)
+            bbox = int_font.getbbox(interest)
+            if (bbox[2] - bbox[0]) <= right_w:
+                break
+            int_font_size -= 4
+        int_font = _find_font(int_font_size)
+        interest_y = name_area_top + name_h + (interest_h - int_font_size) // 2
+        draw.text((right_x, interest_y), interest, fill="#7a7f96", font=int_font)
 
     return canvas
 
@@ -183,17 +207,18 @@ def process_character(char: dict) -> None:
     dino_type = char.get("dino_type", "")  # already the full name from DB
     image_b64 = char.get("image_b64", "")
 
-    print(f"[char]  id={char_id} name={name!r} dino_type={dino_type!r} "
+    interest  = char.get("interest", "")
+    print(f"[char]  id={char_id} name={name!r} dino_type={dino_type!r} interest={interest!r} "
           f"image_b64={'<present>' if image_b64 else '<MISSING>'}")
 
     if not name or not image_b64:
         print(f"[skip]  {char_id} — missing name or image, skipping")
         return
 
-    print(f"[print] compositing label for {name} ({dino_type or 'unknown dino'})")
+    print(f"[print] compositing label for {name} ({dino_type or 'unknown dino'}) interest={interest!r}")
     try:
         img   = Image.open(BytesIO(base64.b64decode(image_b64)))
-        label = composite_label(img, name, dino_type)
+        label = composite_label(img, name, dino_type, interest)
     except Exception as e:
         print(f"[error] compositing failed: {e}")
         return

@@ -12,6 +12,7 @@ Endpoints:
 
 import asyncio
 import base64
+import csv as csv_mod
 import io
 import json
 import math
@@ -50,6 +51,7 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(_security)):
 characters: List[dict] = []
 connections: List[WebSocket] = []
 face_users: List[dict] = []
+registered_users: List[dict] = []
 
 # ── TV wall world coordinates ─────────────────────────────────────────────────
 # The wall is 4 screens side-by-side. Each Pi opens /wall?screen=N and offsets
@@ -140,6 +142,13 @@ async def lifespan(app: FastAPI):
         print(f"[startup] Restored {len(fu)} face users from InstantDB (face_recognition={'available' if FACE_AVAILABLE else 'NOT available'})")
     except Exception as e:
         print(f"[startup] Could not restore face users from InstantDB: {e}")
+    # Restore registered users
+    try:
+        ru = await loop.run_in_executor(None, instant_db.get_all_registered_users)
+        registered_users.extend(ru)
+        print(f"[startup] Restored {len(ru)} registered users from InstantDB")
+    except Exception as e:
+        print(f"[startup] Could not restore registered users from InstantDB: {e}")
     # Start the wall movement loop
     move_task = asyncio.create_task(_character_movement_loop())
     yield
@@ -235,12 +244,14 @@ async def publish_character(
     char_id: str,
     name: str = Form(""),
     dino_type: str = Form(""),
+    interest: str = Form(""),
 ):
     char = next((c for c in characters if c["id"] == char_id), None)
     if not char:
         return {"error": "not found"}
     char["name"] = name
     char["dino_type"] = dino_type
+    char["interest"] = interest
     _assign_world_pos(char, right_side=True)
     await broadcast({"type": "new_character", **char})
 
@@ -249,7 +260,7 @@ async def publish_character(
         await asyncio.get_event_loop().run_in_executor(
             None,
             instant_db.publish_character,
-            char_id, name, dino_type, char["image_b64"],
+            char_id, name, dino_type, char["image_b64"], interest,
         )
     except Exception as e:
         print(f"[db] InstantDB write failed: {e}")
@@ -435,6 +446,92 @@ async def admin_sync(_=Depends(require_admin)):
     except Exception as e:
         print(f"[db] sync failed: {e}")
     return characters
+
+
+# --- Registered users + CSV import ---
+
+@app.get("/registered-users")
+def search_registered(q: str = ""):
+    """Search pre-registered users by name prefix. No auth — booth needs this."""
+    q_lower = q.strip().lower()
+    if not q_lower:
+        return [{"id": u["id"], "name": u["name"], "email": u.get("email", "")}
+                for u in registered_users]
+    return [
+        {"id": u["id"], "name": u["name"], "email": u.get("email", "")}
+        for u in registered_users
+        if u.get("name", "").lower().startswith(q_lower)
+    ]
+
+
+@app.post("/admin/api/import-users")
+async def admin_import_users(file: UploadFile = File(...), _=Depends(require_admin)):
+    """Import pre-registered users from CSV. Skips duplicates by email."""
+    content = (await file.read()).decode("utf-8-sig")
+    reader = csv_mod.DictReader(io.StringIO(content))
+
+    # Find name and email columns (case-insensitive)
+    if not reader.fieldnames:
+        raise HTTPException(status_code=400, detail="Empty CSV or no header row")
+    col_map = {f.strip().lower(): f for f in reader.fieldnames}
+    name_col = col_map.get("name")
+    email_col = col_map.get("email")
+    if not name_col or not email_col:
+        raise HTTPException(status_code=400, detail=f"CSV must have 'Name' and 'Email' columns. Found: {reader.fieldnames}")
+
+    existing_emails = {u.get("email", "").lower() for u in registered_users}
+    imported, skipped = 0, 0
+
+    for row in reader:
+        name = (row.get(name_col) or "").strip()
+        email = (row.get(email_col) or "").strip()
+        if not name or not email:
+            skipped += 1
+            continue
+        if email.lower() in existing_emails:
+            skipped += 1
+            continue
+
+        user_id = str(uuid.uuid4())
+        user = {"id": user_id, "name": name, "email": email, "created_at": int(time.time() * 1000)}
+        registered_users.append(user)
+        existing_emails.add(email.lower())
+
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, instant_db.create_registered_user, user_id, name, email
+            )
+        except Exception as e:
+            print(f"[import] DB write failed for {email}: {e}")
+        imported += 1
+
+    print(f"[import] Imported {imported}, skipped {skipped}")
+    return {"ok": True, "imported": imported, "skipped": skipped, "total": len(registered_users)}
+
+
+@app.get("/admin/api/registered-users")
+def admin_list_registered(_=Depends(require_admin)):
+    return [{"id": u["id"], "name": u["name"], "email": u.get("email", ""),
+             "created_at": u.get("created_at", 0)} for u in registered_users]
+
+
+# --- Demo choices ---
+
+@app.post("/demo-choice")
+async def demo_choice(user_id: str = Form(...), demo: str = Form(...)):
+    """Store a demo choice for an enrolled face user."""
+    user = next((u for u in face_users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+    user["demo_choice"] = demo
+    user["demo_chosen_at"] = int(time.time() * 1000)
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, instant_db.update_face_user_demo, user_id, demo
+        )
+    except Exception as e:
+        print(f"[demo] DB write failed: {e}")
+    return {"ok": True}
 
 
 # --- Face recognition ---

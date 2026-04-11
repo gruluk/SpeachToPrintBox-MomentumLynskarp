@@ -233,6 +233,11 @@
     <input type="search" id="search" placeholder="Search name…" oninput="renderTable()" />
     <button class="btn btn-ghost" onclick="load()">↺ Sync &amp; Refresh</button>
     <div class="toolbar-spacer"></div>
+    <label class="btn btn-ghost" style="cursor:pointer">
+      📁 Import CSV
+      <input type="file" id="csv-file" accept=".csv" onchange="importCSV()" style="display:none" />
+    </label>
+    <span id="reg-count" style="color:var(--muted);font-size:0.8rem"></span>
     <button class="btn btn-red" onclick="clearAll()">Clear All</button>
   </div>
 
@@ -279,6 +284,34 @@
   let characters = []
   let editingId = null
   let currentCharSize = 144
+
+  async function importCSV() {
+    const input = document.getElementById('csv-file')
+    const file = input.files[0]
+    if (!file) return
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch('/admin/api/import-users', { method: 'POST', body: fd })
+      if (res.status === 401) { location.reload(); return }
+      const data = await res.json()
+      alert(`Imported ${data.imported} users, skipped ${data.skipped}. Total: ${data.total}`)
+      loadRegisteredCount()
+    } catch (e) {
+      alert('Import failed: ' + e.message)
+    }
+    input.value = ''
+  }
+
+  async function loadRegisteredCount() {
+    try {
+      const res = await fetch('/admin/api/registered-users')
+      if (res.ok) {
+        const users = await res.json()
+        document.getElementById('reg-count').textContent = `${users.length} registered`
+      }
+    } catch (e) {}
+  }
 
   async function load() {
     try {
@@ -487,6 +520,7 @@
 
   load()
   loadCharSize()
+  loadRegisteredCount()
 </script>
 </body>
 </html>

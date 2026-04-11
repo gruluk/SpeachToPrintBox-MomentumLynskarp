@@ -27,7 +27,8 @@ def _headers() -> dict:
     }
 
 
-def publish_character(char_id: str, name: str, dino_type: str, image_b64: str) -> None:
+def publish_character(char_id: str, name: str, dino_type: str, image_b64: str,
+                      interest: str = "") -> None:
     """Insert a new character record with printed=false."""
     payload = {
         "steps": [
@@ -38,6 +39,7 @@ def publish_character(char_id: str, name: str, dino_type: str, image_b64: str) -
                 {
                     "name": name,
                     "dino_type": dino_type,
+                    "interest": interest,
                     "image_b64": image_b64,
                     "printed": False,
                     "created_at": int(time.time() * 1000),
@@ -160,3 +162,50 @@ def get_face_user(user_id: str) -> dict | None:
     r.raise_for_status()
     users = r.json().get("face_users", [])
     return users[0] if users else None
+
+
+def update_face_user_demo(user_id: str, demo: str) -> None:
+    """Store a demo choice on a face user record."""
+    payload = {
+        "steps": [[
+            "update", "face_users", user_id,
+            {"demo_choice": demo, "demo_chosen_at": int(time.time() * 1000)},
+        ]]
+    }
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
+# ── Registered users (pre-event sign-ups) ─────────────────────────────────────
+
+def create_registered_user(user_id: str, name: str, email: str) -> None:
+    """Insert a pre-registered user."""
+    payload = {
+        "steps": [[
+            "update", "registered_users", user_id,
+            {"name": name, "email": email, "created_at": int(time.time() * 1000)},
+        ]]
+    }
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=15)
+    r.raise_for_status()
+
+
+def get_all_registered_users() -> list[dict]:
+    """Return all registered users, sorted by name."""
+    payload = {"query": {"registered_users": {}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=15)
+    r.raise_for_status()
+    users = r.json().get("registered_users", [])
+    users.sort(key=lambda u: u.get("name", "").lower())
+    return users
+
+
+def get_registered_user_by_email(email: str) -> dict | None:
+    """Return a registered user by email, or None."""
+    payload = {"query": {"registered_users": {}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+    for u in r.json().get("registered_users", []):
+        if u.get("email", "").lower() == email.lower():
+            return u
+    return None

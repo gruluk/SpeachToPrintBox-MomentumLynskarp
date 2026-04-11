@@ -595,6 +595,67 @@ h2 {
   margin-top: 0.5rem;
 }
 
+/* --- Start buttons --- */
+
+.start-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* --- Autocomplete --- */
+
+.autocomplete-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.autocomplete-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-family: var(--pixel-font);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.autocomplete-item:hover {
+  background: var(--purple-bg);
+}
+
+/* --- Interest / Result interest --- */
+
+.result-interest {
+  font-family: var(--pixel-font);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+/* --- Demo flow --- */
+
+.demo-greeting {
+  font-family: var(--pixel-font);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--purple);
+  line-height: 1.4;
+}
+
 /* --- Face Debug --- */
 
 .face-debug {
