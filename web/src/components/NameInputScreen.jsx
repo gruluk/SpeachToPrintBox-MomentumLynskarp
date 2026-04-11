@@ -4,6 +4,7 @@ export default function NameInputScreen({ onSubmit, onBack }) {
   const [filter, setFilter] = useState('')
   const [allUsers, setAllUsers] = useState([])
   const [selectedId, setSelectedId] = useState(null)
+  const [showReregister, setShowReregister] = useState(false)
   const inputRef = useRef(null)
 
   // Load all registered users on mount
@@ -28,17 +29,22 @@ export default function NameInputScreen({ onSubmit, onBack }) {
   function handleSelect(user) {
     setSelectedId(user.id)
     setFilter(user.name)
+    setShowReregister(false)
   }
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (selectedUser) {
-      onSubmit({ id: selectedUser.id, name: selectedUser.name })
+    if (!selectedUser) return
+    if (selectedUser.has_char && !showReregister) {
+      setShowReregister(true)
+      return
     }
+    onSubmit({ id: selectedUser.id, name: selectedUser.name })
   }
 
   function handleInputChange(val) {
     setFilter(val)
+    setShowReregister(false)
     // Clear selection if user edits the text away from the selected name
     if (selectedUser && val !== selectedUser.name) {
       setSelectedId(null)
@@ -78,9 +84,17 @@ export default function NameInputScreen({ onSubmit, onBack }) {
             </ul>
           )}
         </div>
+        {showReregister && (
+          <div className="reregister-notice">
+            <p>You are already registered! Would you like to create a new avatar?</p>
+            <p className="reregister-sub">Your existing demo selections will be kept.</p>
+          </div>
+        )}
         <div className="btn-row">
           <button className="btn-secondary" type="button" onClick={onBack}>Back</button>
-          <button className="btn-primary" type="submit" disabled={!selectedUser}>Next</button>
+          <button className="btn-primary" type="submit" disabled={!selectedUser}>
+            {showReregister ? 'Re-register' : 'Next'}
+          </button>
         </div>
       </form>
     </div>

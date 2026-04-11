@@ -49,7 +49,7 @@ export default function DemoAutoRecognize({ onMatched, onNoMatch, onCancel }) {
           if (cancelledRef.current) return
 
           if (data.ok && data.matched) {
-            onMatched({ id: data.user_id, name: data.name, interest: data.interest })
+            onMatched({ id: data.user_id, name: data.name, interest: data.interest, image_b64: data.image_b64 })
             return
           }
         } catch (e) {

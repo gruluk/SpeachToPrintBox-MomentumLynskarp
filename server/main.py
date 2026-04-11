@@ -484,11 +484,19 @@ async def admin_sync(_=Depends(require_admin)):
 def search_users(q: str = ""):
     """Search users by name. No auth — booth needs this."""
     q_lower = q.strip().lower()
+
+    def _user_dict(u):
+        return {
+            "id": u["id"],
+            "name": u["name"],
+            "email": u.get("email", ""),
+            "has_char": bool(u.get("char_id")),
+        }
+
     if not q_lower:
-        return [{"id": u["id"], "name": u["name"], "email": u.get("email", "")}
-                for u in users]
+        return [_user_dict(u) for u in users]
     return [
-        {"id": u["id"], "name": u["name"], "email": u.get("email", "")}
+        _user_dict(u)
         for u in users
         if u.get("name", "").lower().startswith(q_lower)
     ]
@@ -858,9 +866,18 @@ async def face_recognize(
     # Filter to users with face embeddings
     enrolled = [u for u in users if u.get("embedding")]
     match = find_match(result["embedding"], enrolled, threshold)
+
+    # Include avatar if matched
+    image_b64 = ""
+    if match.get("matched") and match.get("user_id"):
+        char = next((c for c in characters if c.get("user_id") == match["user_id"]), None)
+        if char:
+            image_b64 = char.get("image_b64", "")
+
     return {
         "ok": True,
         "time_ms": result["time_ms"],
+        "image_b64": image_b64,
         **match,
     }
 

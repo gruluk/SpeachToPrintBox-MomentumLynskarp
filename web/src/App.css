@@ -436,6 +436,31 @@ h2 {
   line-height: 1.8;
 }
 
+/* --- Re-register notice --- */
+
+.reregister-notice {
+  background: #fff;
+  box-shadow: var(--pixel-shadow);
+  margin: var(--px);
+  padding: 1rem 1.25rem;
+  text-align: center;
+  font-family: var(--pixel-font);
+}
+
+.reregister-notice p {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.reregister-sub {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  color: var(--muted) !important;
+  margin-top: 0.25rem;
+}
+
 /* --- Name input --- */
 
 .name-form {
@@ -666,6 +691,14 @@ h2 {
   font-weight: 700;
   color: var(--purple);
   line-height: 1.4;
+}
+
+.matched-avatar {
+  width: min(160px, 30vw);
+  height: min(160px, 30vw);
+  object-fit: contain;
+  image-rendering: pixelated;
+  margin-bottom: 0.5rem;
 }
 
 .demo-options {
