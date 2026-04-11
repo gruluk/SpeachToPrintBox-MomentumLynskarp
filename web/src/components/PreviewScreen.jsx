@@ -75,7 +75,6 @@ export default function PreviewScreen({ onCapture, onCancel, errorMsg }) {
 
   return (
     <div className="screen preview-screen">
-      {capturing && <div className="ring-light-overlay" />}
       <p className="camera-hint">Plasser ansiktet ditt i sirkelen</p>
       <div className="camera-circle">
         <video
