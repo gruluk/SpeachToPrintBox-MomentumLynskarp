@@ -212,13 +212,6 @@
     .btn-orange { background: var(--orange); color: #fff; }
     .btn-sm { padding: 0.4rem 0.65rem; font-size: 0.75rem; min-height: 36px; }
 
-    .size-row {
-      display: flex; align-items: center; gap: 0.75rem;
-      margin-bottom: 1rem; color: var(--grey); font-size: 0.8rem;
-    }
-    .size-row strong { color: var(--text); }
-    .size-row input[type="range"] { flex: 1; max-width: 280px; accent-color: var(--purple); cursor: pointer; }
-
     .table-wrap { overflow-x: auto; border: none; border-radius: 0; box-shadow: var(--pixel-shadow); margin: var(--px); }
     table { width: 100%; border-collapse: collapse; background: var(--surface); }
     th {
@@ -333,17 +326,6 @@
   <!-- Dashboard -->
   <div id="view-dashboard">
     <div class="dashboard">
-      <div class="dash-card" onclick="showSection('screen')">
-        <div class="dash-card-body">
-          <h3>Screen</h3>
-          <p>Wall display & avatar management</p>
-          <div class="card-stat" id="stat-chars">—</div>
-          <span class="card-stat-label">characters</span>
-        </div>
-        <div class="card-chevron">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
       <div class="dash-card" onclick="showSection('users')">
         <div class="dash-card-body">
           <h3>Users</h3>
@@ -380,15 +362,6 @@
     </div>
   </div>
 
-  <!-- Screen section -->
-  <div id="view-screen" class="section">
-    <div class="size-row">
-      <span>Avatar size:</span>
-      <input type="range" id="size-slider" min="48" max="400" step="8" value="144" oninput="onSizeSlider(this.value)" />
-      <strong id="size-val">144</strong><span>px</span>
-    </div>
-  </div>
-
   <!-- Users section -->
   <div id="view-users" class="section">
     <div class="toolbar">
@@ -409,17 +382,15 @@
       <table>
         <thead>
           <tr>
-            <th style="width:60px">Avatar</th>
             <th>Name</th>
             <th>Email</th>
             <th>Interest</th>
             <th>Face</th>
-            <th>Printed</th>
             <th>Demos</th>
             <th style="width:120px">Actions</th>
           </tr>
         </thead>
-        <tbody id="user-tbody"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+        <tbody id="user-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -459,12 +430,10 @@
 </div>
 
 <script>
-  let characters = []
   let mergedUsers = []
   let boothList = []
   let presList = []
   let editingPresId = null
-  let currentCharSize = 144
   let currentSection = null
 
   // ── Navigation ────────────────────────────────────────────
@@ -485,7 +454,7 @@
     document.getElementById(`view-${name}`).classList.add('active')
     document.getElementById('back-btn').style.display = 'flex'
     // Sections with tables get more room on wider screens
-    const wideViews = ['screen', 'users']
+    const wideViews = ['users']
     document.querySelector('main').classList.toggle('wide', wideViews.includes(name))
 
     if (name === 'users') loadUsers()
@@ -495,16 +464,11 @@
 
   async function refreshDashboardStats() {
     try {
-      const [charRes, userRes, boothRes, presRes] = await Promise.all([
-        fetch('/admin/api/sync'),
+      const [userRes, boothRes, presRes] = await Promise.all([
         fetch('/admin/api/users'),
         fetch('/admin/api/booths'),
         fetch('/admin/api/presentations'),
       ])
-      if (charRes.ok) {
-        characters = await charRes.json()
-        document.getElementById('stat-chars').textContent = characters.length
-      }
       if (userRes.ok) {
         mergedUsers = await userRes.json()
         document.getElementById('stat-users').textContent = mergedUsers.length
@@ -519,9 +483,6 @@
       }
     } catch (e) {}
   }
-
-  // ── Screen section ────────────────────────────────────────
-  // (Screen section is just the avatar size slider — no table)
 
   function closeModal() {
     editingPresId = null
@@ -546,35 +507,6 @@
     }
   }
 
-  // Avatar size
-  let _sizeTimer = null
-  async function loadCharSize() {
-    try {
-      const res = await fetch('/admin/api/char-size')
-      if (res.ok) {
-        const data = await res.json()
-        currentCharSize = data.char_size
-        document.getElementById('size-val').textContent = currentCharSize
-        document.getElementById('size-slider').value = currentCharSize
-      }
-    } catch (e) {}
-  }
-  function onSizeSlider(val) {
-    document.getElementById('size-val').textContent = parseInt(val, 10)
-    clearTimeout(_sizeTimer)
-    _sizeTimer = setTimeout(() => commitSize(parseInt(val, 10)), 150)
-  }
-  async function commitSize(size) {
-    if (size === currentCharSize) return
-    try {
-      const res = await fetch('/admin/api/char-size', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ char_size: size }),
-      })
-      if (res.ok) currentCharSize = size
-    } catch (e) {}
-  }
-
   // ── Users section ─────────────────────────────────────────
 
   async function loadUsers() {
@@ -585,7 +517,7 @@
       renderUserTable()
     } catch (e) {
       document.getElementById('user-tbody').innerHTML =
-        '<tr><td colspan="8" class="empty">Failed to load</td></tr>'
+        '<tr><td colspan="6" class="empty">Failed to load</td></tr>'
     }
   }
 
@@ -595,23 +527,18 @@
     const rows = mergedUsers.filter(u => !q || (u.name || '').toLowerCase().includes(q))
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty">No users found</td></tr>'
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No users found</td></tr>'
       return
     }
     tbody.innerHTML = rows.map(u => `
       <tr>
-        <td>${u.image_b64
-          ? `<img class="thumb" src="data:image/png;base64,${u.image_b64}" alt="${esc(u.name)}" />`
-          : '<span style="color:var(--grey)">—</span>'}</td>
         <td>${esc(u.name)}</td>
         <td style="color:var(--muted)">${esc(u.email)}</td>
         <td style="color:var(--muted)">${esc(u.interest || '')}</td>
         <td><span class="badge ${u.has_face ? 'badge-green' : 'badge-muted'}">${u.has_face ? 'Yes' : 'No'}</span></td>
-        <td><span class="badge ${u.printed ? 'badge-green' : 'badge-muted'}">${u.char_id ? (u.printed ? 'Printed' : 'Pending') : '—'}</span></td>
         <td style="color:var(--muted)">${(u.demos || []).map(d => esc(d)).join(', ') || ''}</td>
         <td>
           <div class="action-row">
-            ${u.char_id ? `<button class="btn btn-orange btn-sm" onclick="reprintUser('${u.id}')">↻ Print</button>` : ''}
             <button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}')">Delete</button>
           </div>
         </td>
@@ -624,12 +551,6 @@
     const res = await fetch(`/admin/api/users/${id}`, { method: 'DELETE' })
     if (res.ok) loadUsers()
     else alert('Delete failed')
-  }
-
-  async function reprintUser(userId) {
-    if (!confirm('Queue for reprint?')) return
-    const res = await fetch(`/admin/api/users/${userId}/reprint`, { method: 'POST' })
-    if (res.ok) loadUsers()
   }
 
   async function addUser() {
@@ -804,7 +725,6 @@
   // ── Init ──────────────────────────────────────────────────
 
   refreshDashboardStats()
-  loadCharSize()
 </script>
 </body>
 </html>

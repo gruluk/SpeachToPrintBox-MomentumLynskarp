@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import './App.css'
 import FaceDebugScreen from './components/FaceDebugScreen'
 import StartScreen from './components/StartScreen'
@@ -7,8 +7,7 @@ import ValidatingScreen from './components/ValidatingScreen'
 import ReviewScreen from './components/ReviewScreen'
 import NameInputScreen from './components/NameInputScreen'
 import InterestSelectScreen from './components/InterestSelectScreen'
-import WaitingScreen from './components/WaitingScreen'
-import ResultScreen from './components/ResultScreen'
+import DoneScreen from './components/DoneScreen'
 import InfoScreen from './components/InfoScreen'
 import DemoAutoRecognize from './components/DemoAutoRecognize'
 import DemoMatchedScreen from './components/DemoMatchedScreen'
@@ -47,7 +46,6 @@ export default function App() {
   const [userId, setUserId] = useState('')
   const [name, setName] = useState('')
   const [interest, setInterest] = useState('')
-  const [resultData, setResultData] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [validating, setValidating] = useState(false)
 
@@ -55,47 +53,13 @@ export default function App() {
   const [matchedUser, setMatchedUser] = useState(null)
   const [demoChoice, setDemoChoice] = useState('')
 
-  // Gen state in refs — avoids re-renders while WaitingScreen polls
-  const genReadyRef = useRef(false)
-  const genResultRef = useRef(null)
-  const genErrorRef = useRef(false)
-  const genCharIdRef = useRef(null)
-
-  function resetGen() {
-    genReadyRef.current = false
-    genResultRef.current = null
-    genErrorRef.current = false
-    genCharIdRef.current = null
-  }
-
   // --- Register flow ---
-
-  const startGeneration = useCallback(async (blob) => {
-    resetGen()
-    const fd = new FormData()
-    fd.append('image', blob, 'photo.jpg')
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 120_000)
-    try {
-      const res = await fetch('/generate', { method: 'POST', body: fd, signal: controller.signal })
-      clearTimeout(timeout)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      genResultRef.current = data
-      genCharIdRef.current = data.id
-      genReadyRef.current = true
-    } catch (e) {
-      clearTimeout(timeout)
-      console.error('[generate]', e)
-      genErrorRef.current = true
-    }
-  }, [])
 
   const handleCapture = useCallback(async (blob) => {
     setPhotoBlob(blob)
     setPhotoUrl(URL.createObjectURL(blob))
     setValidating(true)
-    setState('REVIEW')
+    setState('VALIDATING')
 
     const fd = new FormData()
     fd.append('image', blob, 'photo.jpg')
@@ -103,8 +67,8 @@ export default function App() {
       const res = await fetch('/validate', { method: 'POST', body: fd })
       const data = await res.json()
       if (data.ok) {
-        startGeneration(blob) // fire and forget
         setValidating(false)
+        setState('REVIEW')
       } else {
         setErrorMsg(data.message || 'Bildet er ikke gyldig. Prøv igjen.')
         setValidating(false)
@@ -112,10 +76,10 @@ export default function App() {
       }
     } catch (e) {
       console.error('[validate]', e)
-      startGeneration(blob) // proceed anyway on network error
       setValidating(false)
+      setState('REVIEW') // proceed anyway on network error
     }
-  }, [startGeneration])
+  }, [])
 
   const handleReviewOk = useCallback(() => setState('NAME_INPUT'), [])
 
@@ -125,43 +89,25 @@ export default function App() {
     setState('INTEREST_SELECT')
   }, [])
 
-  const handleInterestSelect = useCallback((i) => {
+  const handleInterestSelect = useCallback(async (i) => {
     setInterest(i)
-    setState('WAITING')
-  }, [])
+    setState('DONE')
 
-  const handleGenReady = useCallback((result) => {
-    setResultData(result)
-    setState('RESULT')
-  }, [])
-
-  const handleGenError = useCallback(() => {
-    setErrorMsg('Generering feilet. Prøv igjen.')
-    setState('START')
-  }, [])
-
-  const handlePublish = useCallback(async (currentName, currentInterest) => {
-    const charId = genCharIdRef.current
-    if (!charId) return
-    // Publish character (for wall + printing), linked to user
-    const fd = new FormData()
-    fd.append('name', currentName)
-    fd.append('interest', currentInterest || '')
-    fd.append('user_id', userId)
-    try {
-      await fetch(`/publish/${charId}`, { method: 'POST', body: fd })
-    } catch (e) {
-      console.error('[publish]', e)
-    }
-
-    // Also enroll face on user record (fire and forget)
+    // Enroll face (fire and forget)
     if (photoBlob && userId) {
       const enrollFd = new FormData()
       enrollFd.append('image', photoBlob, 'photo.jpg')
       enrollFd.append('user_id', userId)
       fetch('/face/enroll', { method: 'POST', body: enrollFd }).catch(e => console.error('[face enroll]', e))
     }
-  }, [photoBlob, userId])
+
+    // Print label (fire and forget)
+    const printFd = new FormData()
+    printFd.append('name', name)
+    printFd.append('interest', i)
+    printFd.append('user_id', userId)
+    fetch('/print-label', { method: 'POST', body: printFd }).catch(e => console.error('[print-label]', e))
+  }, [photoBlob, userId, name])
 
   // --- Demo flow ---
 
@@ -186,13 +132,11 @@ export default function App() {
     setUserId('')
     setName('')
     setInterest('')
-    setResultData(null)
     setErrorMsg('')
     setValidating(false)
     setFlow(null)
     setMatchedUser(null)
     setDemoChoice('')
-    resetGen()
     setState('START')
   }, [photoUrl])
 
@@ -221,28 +165,13 @@ export default function App() {
         <ReviewScreen photoUrl={photoUrl} validating={validating} onOk={handleReviewOk} onRetake={() => { setValidating(false); setState('PREVIEW') }} />
       )}
       {state === 'NAME_INPUT' && (
-        <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('REVIEW')} />
+        <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('PREVIEW')} />
       )}
       {state === 'INTEREST_SELECT' && (
         <InterestSelectScreen onSelect={handleInterestSelect} onBack={() => setState('NAME_INPUT')} />
       )}
-      {state === 'WAITING' && (
-        <WaitingScreen
-          genReadyRef={genReadyRef}
-          genResultRef={genResultRef}
-          genErrorRef={genErrorRef}
-          onReady={handleGenReady}
-          onError={handleGenError}
-        />
-      )}
-      {state === 'RESULT' && (
-        <ResultScreen
-          resultData={resultData}
-          name={name}
-          interest={interest}
-          onPublish={handlePublish}
-          onDone={handleDone}
-        />
+      {state === 'DONE' && (
+        <DoneScreen name={name} interest={interest} onDone={handleDone} />
       )}
 
       {/* Demo flow */}

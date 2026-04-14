@@ -14,7 +14,7 @@ from config import (
 )
 
 
-def composite_label(character: Image.Image, user_name: str) -> Image.Image:
+def composite_label(user_name: str, interest: str) -> Image.Image:
     label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
     target_w, _ = label_info.dots_printable
     content_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
@@ -23,55 +23,73 @@ def composite_label(character: Image.Image, user_name: str) -> Image.Image:
     draw = ImageDraw.Draw(canvas)
     PAD = 14
 
-    # Left column: character image (square, full height)
-    split_x = int(target_w * 0.40)
-    char_size = min(split_x - PAD * 2, content_h - PAD * 2)
-    char = character.convert("RGBA")
-    char = char.resize((char_size, char_size), Image.NEAREST)
-    char_x = (split_x - char_size) // 2
-    char_y = (content_h - char_size) // 2
-    canvas.paste(char, (char_x, char_y), char)
-
-    # Right column bounds
-    right_x = split_x + PAD
-    right_w = target_w - right_x - PAD
-
     font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
-    # Logo (top right, small)
-    logo_bottom = PAD
+    # Top row: logo (left) and name (right)
+    top_h = int(content_h * 0.30)
+
+    # Logo (top left, small)
+    logo_right_edge = PAD
     try:
         logo = Image.open(
             os.path.join(ASSETS_DIR, "SopraSteria", "sopra_steria_logo.png")
         ).convert("RGBA")
-        logo_h = content_h // 3
+        logo_h = top_h - PAD * 2
         logo_w = int(logo.width * logo_h / logo.height)
-        if logo_w > right_w:
-            logo_w = right_w
+        max_logo_w = int(target_w * 0.35)
+        if logo_w > max_logo_w:
+            logo_w = max_logo_w
             logo_h = int(logo.height * logo_w / logo.width)
         logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
-        canvas.paste(logo, (right_x, PAD), logo)
-        logo_bottom = PAD + logo_h
+        logo_y = (top_h - logo_h) // 2
+        canvas.paste(logo, (PAD, logo_y), logo)
+        logo_right_edge = PAD + logo_w + PAD
     except Exception:
         pass
 
-    # Name (right, fills space below logo)
-    name_area_top = logo_bottom + PAD
-    name_area_h = content_h - name_area_top - PAD
-    font_size = min(int(name_area_h * 0.80), 200)
+    # Name (top right)
+    name_area_w = target_w - logo_right_edge - PAD
+    name_font_size = min(top_h - PAD * 2, 80)
     try:
-        font = ImageFont.truetype(font_path, font_size)
-        while font_size > 12:
-            font = ImageFont.truetype(font_path, font_size)
-            bbox = font.getbbox(user_name)
-            if (bbox[2] - bbox[0]) <= right_w:
+        name_font = ImageFont.truetype(font_path, name_font_size)
+        while name_font_size > 12:
+            name_font = ImageFont.truetype(font_path, name_font_size)
+            bbox = name_font.getbbox(user_name)
+            if (bbox[2] - bbox[0]) <= name_area_w:
                 break
-            font_size -= 4
+            name_font_size -= 4
     except Exception:
-        font = ImageFont.load_default()
+        name_font = ImageFont.load_default()
 
-    name_y = name_area_top + (name_area_h - font_size) // 2
-    draw.text((right_x, name_y), user_name, fill="#3c1c71", font=font)
+    name_bbox = name_font.getbbox(user_name)
+    name_text_h = name_bbox[3] - name_bbox[1]
+    name_y = (top_h - name_text_h) // 2 - name_bbox[1]
+    name_x = target_w - PAD - (name_bbox[2] - name_bbox[0])
+    draw.text((name_x, name_y), user_name, fill="#3c1c71", font=name_font)
+
+    # Interest (centered, large, fills remaining space)
+    interest_area_top = top_h
+    interest_area_h = content_h - interest_area_top
+    interest_text = interest or ""
+    if interest_text:
+        interest_font_size = min(int(interest_area_h * 0.70), 200)
+        try:
+            interest_font = ImageFont.truetype(font_path, interest_font_size)
+            while interest_font_size > 12:
+                interest_font = ImageFont.truetype(font_path, interest_font_size)
+                bbox = interest_font.getbbox(interest_text)
+                if (bbox[2] - bbox[0]) <= target_w - PAD * 2:
+                    break
+                interest_font_size -= 4
+        except Exception:
+            interest_font = ImageFont.load_default()
+
+        interest_bbox = interest_font.getbbox(interest_text)
+        interest_text_w = interest_bbox[2] - interest_bbox[0]
+        interest_text_h = interest_bbox[3] - interest_bbox[1]
+        interest_x = (target_w - interest_text_w) // 2 - interest_bbox[0]
+        interest_y = interest_area_top + (interest_area_h - interest_text_h) // 2 - interest_bbox[1]
+        draw.text((interest_x, interest_y), interest_text, fill="#3c1c71", font=interest_font)
 
     return canvas
 

@@ -25,15 +25,8 @@ export default function DemoMatchedScreen({ matchedUser, onSelectDemos, onBack }
     onSelectDemos(Array.from(selected))
   }
 
-  const avatarSrc = matchedUser?.image_b64
-    ? `data:image/png;base64,${matchedUser.image_b64}`
-    : null
-
   return (
     <div className="screen center">
-      {avatarSrc && (
-        <img src={avatarSrc} alt={matchedUser?.name} className="matched-avatar" />
-      )}
       <p className="demo-greeting">Hei {matchedUser?.name}!</p>
       <h2>Hvilke demoer vil du ha?</h2>
       {loading ? (
