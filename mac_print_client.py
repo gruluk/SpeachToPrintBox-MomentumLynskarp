@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Sopra Steria @ UiO — Mac print client
+Momentum Lynskarp — Mac print client
 
-Polls InstantDB for unprinted characters and prints them on the Brother
-QL-1110NWB label printer.
+Polls InstantDB for users with label_printed=false and prints name+interest
+labels on the Brother QL-1110NWB label printer.
 
 Setup (one-time):
   pip install requests Pillow python-dotenv
@@ -20,8 +20,6 @@ import os
 import subprocess
 import tempfile
 import time
-from io import BytesIO
-import base64
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
@@ -38,7 +36,6 @@ PRINTER_NAME = "Brother_QL_1110NWB"
 POLL_INTERVAL = 5  # seconds between InstantDB polls
 
 ASSETS_DIR      = os.path.join(os.path.dirname(__file__), "assets")
-WEB_PUBLIC_DIR  = os.path.join(os.path.dirname(__file__), "web", "public")
 LABEL_W_MM      = 103
 CONTENT_H_MM    = 45
 
@@ -58,15 +55,17 @@ def _headers() -> dict:
     }
 
 
-def get_unprinted() -> list[dict]:
-    payload = {"query": {"characters": {"$": {"where": {"printed": False}}}}}
+def get_users_to_print() -> list[dict]:
+    """Return users where label_printed == false."""
+    payload = {"query": {"users": {"$": {"where": {"label_printed": False}}}}}
     r = requests.post(f"{_INSTANT_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
-    return r.json().get("characters", [])
+    return r.json().get("users", [])
 
 
-def mark_printed(char_id: str) -> None:
-    payload = {"steps": [["update", "characters", char_id, {"printed": True}]]}
+def mark_label_printed(user_id: str) -> None:
+    """Set label_printed=true on a user."""
+    payload = {"steps": [["update", "users", user_id, {"label_printed": True}]]}
     r = requests.post(f"{_INSTANT_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
 
@@ -88,86 +87,89 @@ def _find_font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
-def composite_label(character: Image.Image, user_name: str, dino_type: str = "",
-                    interest: str = "") -> Image.Image:
+def composite_label(user_name: str, interest: str) -> Image.Image:
+    """Create a label with logo (top-left), name (top-right), interest (centered below)."""
     DPI = 300
-    target_w  = round(LABEL_W_MM   * DPI / 25.4)
+    target_w  = round(LABEL_W_MM  * DPI / 25.4)
     content_h = round(CONTENT_H_MM * DPI / 25.4)
 
     canvas = Image.new("RGB", (target_w, content_h), "white")
     draw   = ImageDraw.Draw(canvas)
-    PAD    = 30
+    PAD    = 14
 
-    # Left column: character image (square, 70% of height to avoid clipping)
-    split_x   = int(target_w * 0.40)
-    char_size = int(min(split_x - PAD * 2, content_h - PAD * 2) * 0.70)
-    char = character.convert("RGBA").resize((char_size, char_size), Image.NEAREST)
-    canvas.paste(char, ((split_x - char_size) // 2, (content_h - char_size) // 2), char)
+    # Top row: logo (left) and name (right) — 30% of height
+    top_h = int(content_h * 0.30)
 
-    right_x = split_x + PAD
-    right_w = target_w - right_x - PAD
-
-    # Logo (smaller — 20% of label height)
-    logo_bottom = PAD
+    # Logo (top left)
+    logo_right_edge = PAD
     try:
         logo = Image.open(
             os.path.join(ASSETS_DIR, "SopraSteria", "sopra_steria_logo.png")
         ).convert("RGBA")
-        logo_h = content_h // 5
+        logo_h = top_h - PAD * 2
         logo_w = int(logo.width * logo_h / logo.height)
-        if logo_w > right_w:
-            logo_w = right_w
+        max_logo_w = int(target_w * 0.35)
+        if logo_w > max_logo_w:
+            logo_w = max_logo_w
             logo_h = int(logo.height * logo_w / logo.width)
         logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
-        canvas.paste(logo, (right_x, PAD), logo)
-        logo_bottom = PAD + logo_h
+        logo_y = (top_h - logo_h) // 2
+        canvas.paste(logo, (PAD, logo_y), logo)
+        logo_right_edge = PAD + logo_w + PAD
     except Exception:
         pass
 
-    # Name + interest — fills remaining vertical space below the logo
-    name_area_top = logo_bottom + PAD
-    name_area_h   = content_h - name_area_top - PAD
-
-    # If interest present, allocate 60% for name, 40% for interest
-    if interest:
-        name_h = int(name_area_h * 0.6)
-        interest_h = name_area_h - name_h
-    else:
-        name_h = name_area_h
-        interest_h = 0
-
-    # Draw name
-    font_size = min(int(name_h * 0.65), 150)
-    while font_size > 12:
-        font = _find_font(font_size)
-        bbox = font.getbbox(user_name)
-        if (bbox[2] - bbox[0]) <= right_w:
-            break
-        font_size -= 4
-    font = _find_font(font_size)
-    name_y = name_area_top + (name_h - font_size) // 2
-    draw.text((right_x, name_y), user_name, fill="#3c1c71", font=font)
-
-    # Draw interest below name
-    if interest and interest_h > 0:
-        int_font_size = min(int(font_size * 0.6), int(interest_h * 0.6))
-        while int_font_size > 12:
-            int_font = _find_font(int_font_size)
-            bbox = int_font.getbbox(interest)
-            if (bbox[2] - bbox[0]) <= right_w:
+    # Name (top right)
+    name_area_w = target_w - logo_right_edge - PAD
+    name_font_size = min(top_h - PAD * 2, 80)
+    try:
+        name_font = _find_font(name_font_size)
+        while name_font_size > 12:
+            name_font = _find_font(name_font_size)
+            bbox = name_font.getbbox(user_name)
+            if (bbox[2] - bbox[0]) <= name_area_w:
                 break
-            int_font_size -= 4
-        int_font = _find_font(int_font_size)
-        interest_y = name_area_top + name_h + (interest_h - int_font_size) // 2
-        draw.text((right_x, interest_y), interest, fill="#7a7f96", font=int_font)
+            name_font_size -= 4
+    except Exception:
+        name_font = ImageFont.load_default()
+
+    name_bbox = name_font.getbbox(user_name)
+    name_text_h = name_bbox[3] - name_bbox[1]
+    name_y = (top_h - name_text_h) // 2 - name_bbox[1]
+    name_x = target_w - PAD - (name_bbox[2] - name_bbox[0])
+    draw.text((name_x, name_y), user_name, fill="#3c1c71", font=name_font)
+
+    # Interest (centered, large, fills remaining space)
+    interest_area_top = top_h
+    interest_area_h = content_h - interest_area_top
+    interest_text = interest or ""
+    if interest_text:
+        interest_font_size = min(int(interest_area_h * 0.70), 200)
+        try:
+            interest_font = _find_font(interest_font_size)
+            while interest_font_size > 12:
+                interest_font = _find_font(interest_font_size)
+                bbox = interest_font.getbbox(interest_text)
+                if (bbox[2] - bbox[0]) <= target_w - PAD * 2:
+                    break
+                interest_font_size -= 4
+        except Exception:
+            interest_font = ImageFont.load_default()
+
+        interest_bbox = interest_font.getbbox(interest_text)
+        interest_text_w = interest_bbox[2] - interest_bbox[0]
+        interest_text_h = interest_bbox[3] - interest_bbox[1]
+        interest_x = (target_w - interest_text_w) // 2 - interest_bbox[0]
+        interest_y = interest_area_top + (interest_area_h - interest_text_h) // 2 - interest_bbox[1]
+        draw.text((interest_x, interest_y), interest_text, fill="#3c1c71", font=interest_font)
 
     return canvas
 
 
 # ── Printing ──────────────────────────────────────────────────────────────────
 
-def print_label(image: Image.Image) -> bool:
-    """Send image to the printer. Returns True on success."""
+def send_to_printer(image: Image.Image) -> bool:
+    """Send image to the printer via CUPS. Returns True on success."""
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         image.save(f, format="PNG")
         tmp_path = f.name
@@ -199,37 +201,33 @@ def print_label(image: Image.Image) -> bool:
         os.unlink(tmp_path)
 
 
-# ── Poll loop ─────────────────────────────────────────────────────────────────
+# ── Process a user ────────────────────────────────────────────────────────────
 
-def process_character(char: dict) -> None:
-    char_id   = char["id"]
-    name      = char.get("name", "").strip()
-    dino_type = char.get("dino_type", "")  # already the full name from DB
-    image_b64 = char.get("image_b64", "")
+def process_user(user: dict) -> None:
+    user_id  = user["id"]
+    name     = user.get("name", "").strip()
+    interest = user.get("interest", "")
 
-    interest  = char.get("interest", "")
-    print(f"[char]  id={char_id} name={name!r} dino_type={dino_type!r} interest={interest!r} "
-          f"image_b64={'<present>' if image_b64 else '<MISSING>'}")
-
-    if not name or not image_b64:
-        print(f"[skip]  {char_id} — missing name or image, skipping")
+    if not name:
+        print(f"[skip]  {user_id} — no name, skipping")
         return
 
-    print(f"[print] compositing label for {name} ({dino_type or 'unknown dino'}) interest={interest!r}")
+    print(f"[label] compositing for {name!r} interest={interest!r}")
     try:
-        img   = Image.open(BytesIO(base64.b64decode(image_b64)))
-        label = composite_label(img, name, dino_type, interest)
+        label = composite_label(name, interest)
     except Exception as e:
         print(f"[error] compositing failed: {e}")
         return
 
-    success = print_label(label)
+    success = send_to_printer(label)
     if success:
-        mark_printed(char_id)
-        print(f"[db]    marked {char_id} as printed")
+        mark_label_printed(user_id)
+        print(f"[db]    marked {user_id} as label_printed")
     else:
-        print(f"[warn]  print failed — NOT marking as printed so it retries next poll")
+        print(f"[warn]  print failed — will retry next poll")
 
+
+# ── Startup checks ────────────────────────────────────────────────────────────
 
 def check_printer() -> None:
     """Log CUPS printer status on startup."""
@@ -241,7 +239,6 @@ def check_printer() -> None:
     except FileNotFoundError:
         print("[cups]  lpstat not available — CUPS may not be installed")
 
-    # Also list all printers so user can verify the name
     try:
         result = subprocess.run(["lpstat", "-p"], capture_output=True, text=True)
         lines = [l for l in result.stdout.splitlines() if l.strip()]
@@ -255,22 +252,24 @@ def check_printer() -> None:
         pass
 
 
+# ── Poll loop ─────────────────────────────────────────────────────────────────
+
 def poll_loop() -> None:
     if not _APP_ID or not _ADMIN_TOKEN:
         print("[error] INSTANT_APP_ID and INSTANT_ADMIN_TOKEN must be set in .env")
         return
 
-    print(f"Sopra Steria print client — printer: {PRINTER_NAME}")
+    print(f"Momentum Lynskarp print client — printer: {PRINTER_NAME}")
     check_printer()
-    print(f"Polling InstantDB every {POLL_INTERVAL}s for unprinted characters...")
+    print(f"Polling InstantDB every {POLL_INTERVAL}s for users needing labels...")
 
     while True:
         try:
-            unprinted = get_unprinted()
-            if unprinted:
-                print(f"[poll] {len(unprinted)} unprinted character(s)")
-                for char in unprinted:
-                    process_character(char)
+            to_print = get_users_to_print()
+            if to_print:
+                print(f"[poll] {len(to_print)} user(s) need labels")
+                for user in to_print:
+                    process_user(user)
         except Exception as e:
             print(f"[poll] error: {e}")
         time.sleep(POLL_INTERVAL)

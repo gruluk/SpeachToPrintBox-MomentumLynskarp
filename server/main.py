@@ -115,39 +115,27 @@ async def print_label(
     interest: str = Form(""),
     user_id: str = Form(""),
 ):
-    """Generate and print a label with name and interest."""
-    from printing import composite_label, print_image
-    from config import ENABLE_LOCAL_PRINT
+    """Store interest and flag user for label printing via mac_print_client."""
+    if not user_id:
+        return {"ok": False, "error": "user_id required"}
 
-    # Store interest on user record
-    if user_id and interest:
-        user = next((u for u in users if u["id"] == user_id), None)
-        if user:
-            user["interest"] = interest
-            try:
-                await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: instant_db.update_user(user_id, interest=interest),
-                )
-            except Exception as e:
-                print(f"[print-label] DB write failed: {e}")
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        return {"ok": False, "error": "user not found"}
+
+    user["interest"] = interest
+    user["label_printed"] = False
 
     try:
-        label = await asyncio.get_event_loop().run_in_executor(
-            None, composite_label, name, interest
+        await asyncio.get_event_loop().run_in_executor(
+            None, lambda: instant_db.update_user(user_id, interest=interest, label_printed=False),
         )
     except Exception as e:
-        print(f"[print] composite failed: {e}")
+        print(f"[print-label] DB write failed: {e}")
         return {"ok": False, "error": str(e)}
 
-    if ENABLE_LOCAL_PRINT:
-        try:
-            await asyncio.get_event_loop().run_in_executor(None, print_image, label)
-            return {"ok": True, "printed": True}
-        except Exception as e:
-            print(f"[print] print failed: {e}")
-            return {"ok": False, "error": str(e)}
-
-    return {"ok": True, "printed": False, "message": "Local printing disabled"}
+    print(f"[print-label] queued label for {name!r} interest={interest!r}")
+    return {"ok": True}
 
 
 # --- Admin panel ---
@@ -262,6 +250,7 @@ def admin_list_users(_=Depends(require_admin)):
             "email": u.get("email", ""),
             "interest": u.get("interest", ""),
             "has_face": bool(u.get("embedding")),
+            "label_printed": u.get("label_printed"),
             "demos": [pres_names.get(did, did) for did in demo_ids],
             "created_at": u.get("created_at", 0),
         })
@@ -304,7 +293,9 @@ async def admin_patch_user(user_id: str, body: dict, _=Depends(require_admin)):
 
     if body.get("clear_interest"):
         user.pop("interest", None)
+        user.pop("label_printed", None)
         db_updates["interest"] = None
+        db_updates["label_printed"] = None
 
     if db_updates:
         try:
