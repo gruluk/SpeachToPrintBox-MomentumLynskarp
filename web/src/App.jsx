@@ -4,7 +4,6 @@ import FaceDebugScreen from './components/FaceDebugScreen'
 import StartScreen from './components/StartScreen'
 import PreviewScreen from './components/PreviewScreen'
 import ValidatingScreen from './components/ValidatingScreen'
-import ReviewScreen from './components/ReviewScreen'
 import NameInputScreen from './components/NameInputScreen'
 import InterestSelectScreen from './components/InterestSelectScreen'
 import DoneScreen from './components/DoneScreen'
@@ -68,7 +67,7 @@ export default function App() {
       const data = await res.json()
       if (data.ok) {
         setValidating(false)
-        setState('REVIEW')
+        setState('NAME_INPUT')
       } else {
         setErrorMsg(data.message || 'Bildet er ikke gyldig. Prøv igjen.')
         setValidating(false)
@@ -77,11 +76,9 @@ export default function App() {
     } catch (e) {
       console.error('[validate]', e)
       setValidating(false)
-      setState('REVIEW') // proceed anyway on network error
+      setState('NAME_INPUT') // proceed anyway on network error
     }
   }, [])
-
-  const handleReviewOk = useCallback(() => setState('NAME_INPUT'), [])
 
   const handleNameSubmit = useCallback((user) => {
     setUserId(user.id)
@@ -160,9 +157,6 @@ export default function App() {
       )}
       {state === 'VALIDATING' && (
         <ValidatingScreen />
-      )}
-      {state === 'REVIEW' && (
-        <ReviewScreen photoUrl={photoUrl} validating={validating} onOk={handleReviewOk} onRetake={() => { setValidating(false); setState('PREVIEW') }} />
       )}
       {state === 'NAME_INPUT' && (
         <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('PREVIEW')} />

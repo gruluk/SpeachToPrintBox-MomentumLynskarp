@@ -90,6 +90,7 @@ export default function NameInputScreen({ onSubmit, onBack }) {
             <p className="reregister-sub">Dine eksisterende demovalg beholdes.</p>
           </div>
         )}
+        <p className="name-help-text">Finner du ikke navnet ditt? Ta kontakt med en av våre ansatte.</p>
         <div className="btn-row">
           <button className="btn-secondary" type="button" onClick={onBack}>Tilbake</button>
           <button className="btn-primary" type="submit" disabled={!selectedUser}>

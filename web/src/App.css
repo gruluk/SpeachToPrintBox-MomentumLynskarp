@@ -673,6 +673,14 @@ h2 {
   color: var(--muted);
 }
 
+.name-help-text {
+  margin: 0.75rem 0 0;
+  font-family: var(--pixel-font);
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 /* --- Interest / Result interest --- */
 
 .result-interest {
