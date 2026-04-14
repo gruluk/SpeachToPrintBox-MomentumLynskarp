@@ -539,11 +539,33 @@
         <td style="color:var(--muted)">${(u.demos || []).map(d => esc(d)).join(', ') || ''}</td>
         <td>
           <div class="action-row">
+            ${u.has_face ? `<button class="btn btn-orange btn-sm" onclick="clearFace('${u.id}')">Clear face</button>` : ''}
+            ${u.interest ? `<button class="btn btn-orange btn-sm" onclick="clearInterest('${u.id}')">Clear interest</button>` : ''}
             <button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}')">Delete</button>
           </div>
         </td>
       </tr>
     `).join('')
+  }
+
+  async function clearFace(id) {
+    if (!confirm('Clear face embedding for this user? They will need to re-register.')) return
+    const res = await fetch(`/admin/api/users/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clear_embedding: true }),
+    })
+    if (res.ok) loadUsers()
+    else alert('Failed to clear face')
+  }
+
+  async function clearInterest(id) {
+    if (!confirm('Clear interest for this user? They will need to re-register.')) return
+    const res = await fetch(`/admin/api/users/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clear_interest: true }),
+    })
+    if (res.ok) loadUsers()
+    else alert('Failed to clear interest')
   }
 
   async function deleteUser(id) {

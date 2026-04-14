@@ -119,6 +119,18 @@ async def print_label(
     from printing import composite_label, print_image
     from config import ENABLE_LOCAL_PRINT
 
+    # Store interest on user record
+    if user_id and interest:
+        user = next((u for u in users if u["id"] == user_id), None)
+        if user:
+            user["interest"] = interest
+            try:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: instant_db.update_user(user_id, interest=interest),
+                )
+            except Exception as e:
+                print(f"[print-label] DB write failed: {e}")
+
     try:
         label = await asyncio.get_event_loop().run_in_executor(
             None, composite_label, name, interest
@@ -275,6 +287,34 @@ async def admin_add_user(body: dict, _=Depends(require_admin)):
     except Exception as e:
         print(f"[admin] create user failed: {e}")
     return {"ok": True, **user}
+
+
+@app.patch("/admin/api/users/{user_id}")
+async def admin_patch_user(user_id: str, body: dict, _=Depends(require_admin)):
+    """Clear specific fields on a user (e.g. embedding, interest)."""
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="not found")
+
+    db_updates = {}
+
+    if body.get("clear_embedding"):
+        user.pop("embedding", None)
+        db_updates["embedding"] = None
+
+    if body.get("clear_interest"):
+        user.pop("interest", None)
+        db_updates["interest"] = None
+
+    if db_updates:
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, lambda: instant_db.update_user(user_id, **db_updates),
+            )
+        except Exception as e:
+            print(f"[admin] patch user failed: {e}")
+
+    return {"ok": True}
 
 
 @app.delete("/admin/api/users/{user_id}")
