@@ -667,7 +667,7 @@ h2 {
   margin: 1rem auto;
   background: #fff;
   border: 2px solid var(--purple);
-  border-radius: var(--radius);
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -679,15 +679,15 @@ h2 {
 .label-preview-top {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .label-preview-name {
   font-family: 'DM Sans', sans-serif;
-  font-weight: 700;
-  font-size: 1.4rem;
+  font-weight: 600;
+  font-size: 1rem;
   color: var(--purple);
-  text-align: center;
+  text-align: right;
 }
 
 .label-preview-bottom {

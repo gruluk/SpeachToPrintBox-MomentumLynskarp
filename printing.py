@@ -40,12 +40,12 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
 
     font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
-    # Top row: name centered — 25% of height
-    top_h = int(content_h * 0.25)
+    # Top row: name top-right, smaller — 20% of height
+    top_h = int(content_h * 0.20)
 
-    # Name (centered)
+    # Name (top right, smaller)
     name_area_w = target_w - PAD * 2
-    name_font_size = min(top_h - PAD * 2, 80)
+    name_font_size = min(top_h - PAD * 2, 40)
     name_font = _find_font(font_path, name_font_size)
     while name_font_size > 12:
         name_font = _find_font(font_path, name_font_size)
@@ -56,9 +56,8 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
 
     name_bbox = name_font.getbbox(user_name)
     name_text_h = name_bbox[3] - name_bbox[1]
-    name_text_w = name_bbox[2] - name_bbox[0]
     name_y = (top_h - name_text_h) // 2 - name_bbox[1]
-    name_x = (target_w - name_text_w) // 2 - name_bbox[0]
+    name_x = target_w - PAD - (name_bbox[2] - name_bbox[0])
     draw.text((name_x, name_y), user_name, fill="#3c1c71", font=name_font)
 
     # Interests — stacked vertically, centered
