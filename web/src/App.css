@@ -679,15 +679,7 @@ h2 {
 .label-preview-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.label-preview-logo {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
-  flex-shrink: 0;
+  justify-content: center;
 }
 
 .label-preview-name {
@@ -695,7 +687,7 @@ h2 {
   font-weight: 700;
   font-size: 1.4rem;
   color: var(--purple);
-  text-align: right;
+  text-align: center;
 }
 
 .label-preview-bottom {

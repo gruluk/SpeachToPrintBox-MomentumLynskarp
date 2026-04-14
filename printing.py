@@ -40,30 +40,11 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
 
     font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
-    # Top row: logo (left) and name (right) — 25% of height
+    # Top row: name centered — 25% of height
     top_h = int(content_h * 0.25)
 
-    # Logo (top left)
-    logo_right_edge = PAD
-    try:
-        logo = Image.open(
-            os.path.join(ASSETS_DIR, "SopraSteria", "sopra_steria_logo.png")
-        ).convert("RGBA")
-        logo_h = top_h - PAD * 2
-        logo_w = int(logo.width * logo_h / logo.height)
-        max_logo_w = int(target_w * 0.35)
-        if logo_w > max_logo_w:
-            logo_w = max_logo_w
-            logo_h = int(logo.height * logo_w / logo.width)
-        logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
-        logo_y = (top_h - logo_h) // 2
-        canvas.paste(logo, (PAD, logo_y), logo)
-        logo_right_edge = PAD + logo_w + PAD
-    except Exception:
-        pass
-
-    # Name (top right)
-    name_area_w = target_w - logo_right_edge - PAD
+    # Name (centered)
+    name_area_w = target_w - PAD * 2
     name_font_size = min(top_h - PAD * 2, 80)
     name_font = _find_font(font_path, name_font_size)
     while name_font_size > 12:
@@ -75,8 +56,9 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
 
     name_bbox = name_font.getbbox(user_name)
     name_text_h = name_bbox[3] - name_bbox[1]
+    name_text_w = name_bbox[2] - name_bbox[0]
     name_y = (top_h - name_text_h) // 2 - name_bbox[1]
-    name_x = target_w - PAD - (name_bbox[2] - name_bbox[0])
+    name_x = (target_w - name_text_w) // 2 - name_bbox[0]
     draw.text((name_x, name_y), user_name, fill="#3c1c71", font=name_font)
 
     # Interests — stacked vertically, centered

@@ -1,5 +1,4 @@
 export default function DoneScreen({ name, interest, onDone }) {
-  const base = import.meta.env.BASE_URL || '/'
   const interests = interest ? interest.split(', ') : []
 
   return (
@@ -9,7 +8,6 @@ export default function DoneScreen({ name, interest, onDone }) {
 
       <div className="label-preview">
         <div className="label-preview-top">
-          <img src={`${base}sopra_steria_logo.png`} className="label-preview-logo" alt="Sopra Steria" />
           <span className="label-preview-name">{name}</span>
         </div>
         <div className="label-preview-bottom">
