@@ -634,6 +634,22 @@ h2 {
   line-height: 1.6;
 }
 
+/* --- Interest grid --- */
+
+.interest-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  width: 100%;
+  max-width: 500px;
+}
+
+.interest-selected {
+  background: var(--purple) !important;
+  color: white !important;
+  border-color: var(--purple) !important;
+}
+
 /* --- Label preview --- */
 
 .label-preview {
