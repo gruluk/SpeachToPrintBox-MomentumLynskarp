@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
-export default function NameInputScreen({ onSubmit, onBack }) {
+export default function NameInputScreen({ onSubmit, onCancel }) {
   const [filter, setFilter] = useState('')
   const [allUsers, setAllUsers] = useState([])
   const [selectedId, setSelectedId] = useState(null)
@@ -92,7 +92,7 @@ export default function NameInputScreen({ onSubmit, onBack }) {
         )}
         <p className="name-help-text">Finner du ikke navnet ditt? Ta kontakt med en av våre ansatte.</p>
         <div className="btn-row">
-          <button className="btn-secondary" type="button" onClick={onBack}>Tilbake</button>
+          <button className="btn-cancel" type="button" onClick={onCancel}>Avbryt</button>
           <button className="btn-primary" type="submit" disabled={!selectedUser}>
             {showReregister ? 'Registrer på nytt' : 'Neste'}
           </button>

@@ -1,4 +1,4 @@
-export default function InfoScreen({ onContinue, onBack }) {
+export default function InfoScreen({ onContinue, onCancel }) {
   return (
     <div className="screen center">
       <h2 className="info-title">Personverninformasjon</h2>
@@ -11,7 +11,7 @@ export default function InfoScreen({ onContinue, onBack }) {
         ansiktsprofil lagres midlertidig under arrangementet.
       </p>
       <div className="btn-row">
-        <button className="btn-secondary" onClick={onBack}>Tilbake</button>
+        <button className="btn-cancel" onClick={onCancel}>Avbryt</button>
         <button className="btn-start" onClick={onContinue}>Forstått, la oss starte!</button>
       </div>
     </div>

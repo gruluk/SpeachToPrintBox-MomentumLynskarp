@@ -150,7 +150,7 @@ export default function App() {
 
       {/* Register flow */}
       {state === 'INFO' && (
-        <InfoScreen onContinue={() => setState('PREVIEW')} onBack={() => setState('START')} />
+        <InfoScreen onContinue={() => setState('PREVIEW')} onCancel={handleDone} />
       )}
       {state === 'PREVIEW' && (
         <PreviewScreen onCapture={handleCapture} onCancel={() => { setErrorMsg(''); setState('START') }} errorMsg={errorMsg} />
@@ -159,10 +159,10 @@ export default function App() {
         <ValidatingScreen />
       )}
       {state === 'NAME_INPUT' && (
-        <NameInputScreen onSubmit={handleNameSubmit} onBack={() => setState('PREVIEW')} />
+        <NameInputScreen onSubmit={handleNameSubmit} onCancel={handleDone} />
       )}
       {state === 'INTEREST_SELECT' && (
-        <InterestSelectScreen onSelect={handleInterestSelect} onBack={() => setState('NAME_INPUT')} />
+        <InterestSelectScreen name={name} onSelect={handleInterestSelect} onCancel={handleDone} />
       )}
       {state === 'DONE' && (
         <DoneScreen name={name} interest={interest} onDone={handleDone} />

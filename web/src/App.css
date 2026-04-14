@@ -634,6 +634,15 @@ h2 {
   line-height: 1.6;
 }
 
+/* --- Interest screen --- */
+
+.interest-greeting {
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 /* --- Interest grid --- */
 
 .interest-grid {

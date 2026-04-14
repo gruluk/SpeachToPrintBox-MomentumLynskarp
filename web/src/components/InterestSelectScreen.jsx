@@ -15,7 +15,7 @@ const INTERESTS = [
 
 const REQUIRED_COUNT = 3
 
-export default function InterestSelectScreen({ onSelect, onBack }) {
+export default function InterestSelectScreen({ name, onSelect, onCancel }) {
   const [selected, setSelected] = useState([])
 
   function toggleInterest(interest) {
@@ -36,6 +36,7 @@ export default function InterestSelectScreen({ onSelect, onBack }) {
 
   return (
     <div className="screen center">
+      <p className="interest-greeting">Hyggelig å se deg, {name}!</p>
       <h2>Velg {REQUIRED_COUNT} interesser</h2>
       <p className="status-sub">Velg {REQUIRED_COUNT - selected.length > 0 ? `${REQUIRED_COUNT - selected.length} til` : 'ferdig!'}</p>
       <div className="interest-grid">
@@ -50,7 +51,7 @@ export default function InterestSelectScreen({ onSelect, onBack }) {
         ))}
       </div>
       <div className="btn-row">
-        <button className="btn-secondary" onClick={onBack}>Tilbake</button>
+        <button className="btn-cancel" onClick={onCancel}>Avbryt</button>
         <button className="btn-primary" onClick={handleContinue} disabled={selected.length !== REQUIRED_COUNT}>
           Neste
         </button>
