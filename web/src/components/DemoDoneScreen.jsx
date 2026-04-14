@@ -1,13 +1,11 @@
-export default function DemoDoneScreen({ name, demoCount, onDone }) {
+export default function DemoDoneScreen({ name, onDone }) {
   return (
     <div className="screen center">
       <h2>Takk {name}!</h2>
       <p className="status-text">
-        {demoCount === 1
-          ? 'Demoforespørselen din er registrert.'
-          : `Dine ${demoCount} demoforespørsler er registrert.`}
+        Demoforespørselen din er registrert.
       </p>
-      <button className="btn-start" onClick={onDone}>Ferdig</button>
+      <button className="btn-primary" onClick={onDone}>Ferdig</button>
     </div>
   )
 }

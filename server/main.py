@@ -239,11 +239,8 @@ async def admin_import_users(file: UploadFile = File(...), _=Depends(require_adm
 @app.get("/admin/api/users")
 def admin_list_users(_=Depends(require_admin)):
     """Full user list for admin panel."""
-    pres_names = {p["id"]: p["name"] for p in presentations}
-
     result = []
     for u in users:
-        demo_ids = u.get("demo_ids", [])
         result.append({
             "id": u["id"],
             "name": u.get("name", ""),
@@ -251,7 +248,7 @@ def admin_list_users(_=Depends(require_admin)):
             "interest": u.get("interest", ""),
             "has_face": bool(u.get("embedding")),
             "label_printed": u.get("label_printed"),
-            "demos": [pres_names.get(did, did) for did in demo_ids],
+            "wants_demo": bool(u.get("wants_demo")),
             "created_at": u.get("created_at", 0),
         })
     result.sort(key=lambda u: u.get("name", "").lower())
@@ -297,6 +294,10 @@ async def admin_patch_user(user_id: str, body: dict, _=Depends(require_admin)):
         db_updates["interest"] = None
         db_updates["label_printed"] = None
 
+    if "wants_demo" in body:
+        user["wants_demo"] = bool(body["wants_demo"])
+        db_updates["wants_demo"] = bool(body["wants_demo"])
+
     if db_updates:
         try:
             await asyncio.get_event_loop().run_in_executor(
@@ -327,19 +328,18 @@ async def admin_delete_user(user_id: str, _=Depends(require_admin)):
 
 @app.post("/demo-choice")
 async def demo_choice(body: dict):
-    """Store demo choices (list of presentation IDs) for a user."""
+    """Mark a user as wanting a demo."""
     user_id = body.get("user_id")
-    demo_ids = body.get("demo_ids", [])
+    wants_demo = body.get("wants_demo", True)
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id required")
     user = next((u for u in users if u["id"] == user_id), None)
     if not user:
         raise HTTPException(status_code=404, detail="user not found")
-    user["demo_ids"] = demo_ids
-    user["demo_chosen_at"] = int(time.time() * 1000)
+    user["wants_demo"] = bool(wants_demo)
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None, lambda: instant_db.update_user(user_id, demo_ids=demo_ids, demo_chosen_at=int(time.time() * 1000)),
+            None, lambda: instant_db.update_user(user_id, wants_demo=bool(wants_demo)),
         )
     except Exception as e:
         print(f"[demo] DB write failed: {e}")

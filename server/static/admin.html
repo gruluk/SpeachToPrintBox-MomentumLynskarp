@@ -348,17 +348,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </div>
       </div>
-      <div class="dash-card" onclick="showSection('presentations')">
-        <div class="dash-card-body">
-          <h3>Presentations</h3>
-          <p>Manage demo options for attendees</p>
-          <div class="card-stat" id="stat-presentations">—</div>
-          <span class="card-stat-label">presentations</span>
-        </div>
-        <div class="card-chevron">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -386,7 +375,7 @@
             <th>Email</th>
             <th>Interest</th>
             <th>Face</th>
-            <th>Demos</th>
+            <th>Demo</th>
             <th style="width:120px">Actions</th>
           </tr>
         </thead>
@@ -536,7 +525,11 @@
         <td style="color:var(--muted)">${esc(u.email)}</td>
         <td style="color:var(--muted)">${esc(u.interest || '')}</td>
         <td><span class="badge ${u.has_face ? 'badge-green' : 'badge-muted'}">${u.has_face ? 'Yes' : 'No'}</span></td>
-        <td style="color:var(--muted)">${(u.demos || []).map(d => esc(d)).join(', ') || ''}</td>
+        <td>
+          <button class="btn ${u.wants_demo ? 'btn-purple' : 'btn-ghost'} btn-sm" onclick="toggleDemo('${u.id}', ${!u.wants_demo})">
+            ${u.wants_demo ? 'Yes' : 'No'}
+          </button>
+        </td>
         <td>
           <div class="action-row">
             ${u.has_face ? `<button class="btn btn-orange btn-sm" onclick="clearFace('${u.id}')">Clear face</button>` : ''}
@@ -566,6 +559,15 @@
     })
     if (res.ok) loadUsers()
     else alert('Failed to clear interest')
+  }
+
+  async function toggleDemo(id, value) {
+    const res = await fetch(`/admin/api/users/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wants_demo: value }),
+    })
+    if (res.ok) loadUsers()
+    else alert('Failed to update demo status')
   }
 
   async function deleteUser(id) {

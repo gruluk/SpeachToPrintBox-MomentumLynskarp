@@ -1,5 +1,6 @@
 export default function DoneScreen({ name, interest, onDone }) {
   const base = import.meta.env.BASE_URL || '/'
+  const interests = interest ? interest.split(', ') : []
 
   return (
     <div className="screen center">
@@ -12,7 +13,9 @@ export default function DoneScreen({ name, interest, onDone }) {
           <span className="label-preview-name">{name}</span>
         </div>
         <div className="label-preview-bottom">
-          <span className="label-preview-interest">{interest || ''}</span>
+          {interests.map((item, i) => (
+            <span key={i} className="label-preview-interest">{item}</span>
+          ))}
         </div>
       </div>
 

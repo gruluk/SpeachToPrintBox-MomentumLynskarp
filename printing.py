@@ -14,6 +14,21 @@ from config import (
 )
 
 
+def _find_font(font_path: str, size: int) -> ImageFont.FreeTypeFont:
+    candidates = [
+        font_path,
+        os.path.join(ASSETS_DIR, "DejaVuSans-Bold.ttf"),
+        "/Library/Fonts/Arial Bold.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    ]
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            pass
+    return ImageFont.load_default()
+
+
 def composite_label(user_name: str, interest: str) -> Image.Image:
     label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
     target_w, _ = label_info.dots_printable
@@ -25,10 +40,10 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
 
     font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
-    # Top row: logo (left) and name (right)
-    top_h = int(content_h * 0.30)
+    # Top row: logo (left) and name (right) — 25% of height
+    top_h = int(content_h * 0.25)
 
-    # Logo (top left, small)
+    # Logo (top left)
     logo_right_edge = PAD
     try:
         logo = Image.open(
@@ -50,16 +65,13 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
     # Name (top right)
     name_area_w = target_w - logo_right_edge - PAD
     name_font_size = min(top_h - PAD * 2, 80)
-    try:
-        name_font = ImageFont.truetype(font_path, name_font_size)
-        while name_font_size > 12:
-            name_font = ImageFont.truetype(font_path, name_font_size)
-            bbox = name_font.getbbox(user_name)
-            if (bbox[2] - bbox[0]) <= name_area_w:
-                break
-            name_font_size -= 4
-    except Exception:
-        name_font = ImageFont.load_default()
+    name_font = _find_font(font_path, name_font_size)
+    while name_font_size > 12:
+        name_font = _find_font(font_path, name_font_size)
+        bbox = name_font.getbbox(user_name)
+        if (bbox[2] - bbox[0]) <= name_area_w:
+            break
+        name_font_size -= 4
 
     name_bbox = name_font.getbbox(user_name)
     name_text_h = name_bbox[3] - name_bbox[1]
@@ -67,29 +79,38 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
     name_x = target_w - PAD - (name_bbox[2] - name_bbox[0])
     draw.text((name_x, name_y), user_name, fill="#3c1c71", font=name_font)
 
-    # Interest (centered, large, fills remaining space)
+    # Interests — stacked vertically, centered
     interest_area_top = top_h
-    interest_area_h = content_h - interest_area_top
-    interest_text = interest or ""
-    if interest_text:
-        interest_font_size = min(int(interest_area_h * 0.70), 200)
-        try:
-            interest_font = ImageFont.truetype(font_path, interest_font_size)
-            while interest_font_size > 12:
-                interest_font = ImageFont.truetype(font_path, interest_font_size)
-                bbox = interest_font.getbbox(interest_text)
-                if (bbox[2] - bbox[0]) <= target_w - PAD * 2:
-                    break
-                interest_font_size -= 4
-        except Exception:
-            interest_font = ImageFont.load_default()
+    interest_area_h = content_h - interest_area_top - PAD
+    items = [s.strip() for s in (interest or "").split(",") if s.strip()]
 
-        interest_bbox = interest_font.getbbox(interest_text)
-        interest_text_w = interest_bbox[2] - interest_bbox[0]
-        interest_text_h = interest_bbox[3] - interest_bbox[1]
-        interest_x = (target_w - interest_text_w) // 2 - interest_bbox[0]
-        interest_y = interest_area_top + (interest_area_h - interest_text_h) // 2 - interest_bbox[1]
-        draw.text((interest_x, interest_y), interest_text, fill="#3c1c71", font=interest_font)
+    if items:
+        line_count = len(items)
+        line_spacing = 8
+        available_h = interest_area_h - (line_count - 1) * line_spacing
+        interest_font_size = min(int(available_h / line_count * 0.85), 120)
+
+        while interest_font_size > 12:
+            interest_font = _find_font(font_path, interest_font_size)
+            max_w = max(interest_font.getbbox(item)[2] - interest_font.getbbox(item)[0] for item in items)
+            if max_w <= target_w - PAD * 2:
+                break
+            interest_font_size -= 4
+        interest_font = _find_font(font_path, interest_font_size)
+
+        line_heights = []
+        for item in items:
+            bbox = interest_font.getbbox(item)
+            line_heights.append(bbox[3] - bbox[1])
+        total_text_h = sum(line_heights) + (line_count - 1) * line_spacing
+
+        y_cursor = interest_area_top + (interest_area_h - total_text_h) // 2
+        for idx, item in enumerate(items):
+            bbox = interest_font.getbbox(item)
+            text_w = bbox[2] - bbox[0]
+            x = (target_w - text_w) // 2 - bbox[0]
+            draw.text((x, y_cursor - bbox[1]), item, fill="#3c1c71", font=interest_font)
+            y_cursor += line_heights[idx] + line_spacing
 
     return canvas
 
