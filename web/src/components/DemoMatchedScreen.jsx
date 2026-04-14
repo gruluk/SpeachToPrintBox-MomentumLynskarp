@@ -7,6 +7,7 @@ export default function DemoMatchedScreen({ matchedUser, onWantsDemo, onCancel }
         <button className="btn-cancel" onClick={onCancel}>Nei takk</button>
         <button className="btn-start" onClick={onWantsDemo}>Ja, jeg vil ha demo!</button>
       </div>
+      <p className="name-help-text">Er ikke dette deg? Ta kontakt med en av våre ansatte for hjelp.</p>
     </div>
   )
 }
