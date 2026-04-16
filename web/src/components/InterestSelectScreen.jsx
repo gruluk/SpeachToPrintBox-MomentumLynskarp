@@ -1,19 +1,19 @@
 import { useState } from 'react'
 
 const INTERESTS = [
-  'Regnskap',
-  'Finans',
-  'HR',
-  'Teknologi',
-  'Markedsføring',
-  'Bærekraft',
-  'Strategi',
-  'Innovasjon',
-  'Ledelse',
-  'Data & AI',
+  'Periodeavslutning',
+  'Avsetninger og periodiseringer',
+  'Interntransaksjoner',
+  'Kostnader og varelager',
+  'Budsjett og prognose',
+  'Konsolidering',
+  'Effektivisering av økonomifunksjonen',
+  'Rapportering',
+  'Lønnsomhet ved bruk av KI',
+  'Praktisk bruk av KI',
 ]
 
-const REQUIRED_COUNT = 3
+const MAX_COUNT = 3
 
 export default function InterestSelectScreen({ name, onSelect, onCancel }) {
   const [selected, setSelected] = useState([])
@@ -23,13 +23,13 @@ export default function InterestSelectScreen({ name, onSelect, onCancel }) {
       if (prev.includes(interest)) {
         return prev.filter(i => i !== interest)
       }
-      if (prev.length >= REQUIRED_COUNT) return prev
+      if (prev.length >= MAX_COUNT) return prev
       return [...prev, interest]
     })
   }
 
   function handleContinue() {
-    if (selected.length === REQUIRED_COUNT) {
+    if (selected.length >= 1) {
       onSelect(selected.join(', '))
     }
   }
@@ -37,8 +37,8 @@ export default function InterestSelectScreen({ name, onSelect, onCancel }) {
   return (
     <div className="screen center">
       <p className="interest-greeting">Hyggelig å se deg, {name}!</p>
-      <h2>Velg {REQUIRED_COUNT} interesser</h2>
-      <p className="status-sub">Velg {REQUIRED_COUNT - selected.length > 0 ? `${REQUIRED_COUNT - selected.length} til` : 'ferdig!'}</p>
+      <h2>Velg dine interesseområder</h2>
+      <p className="status-sub">Velg 1–{MAX_COUNT} temaer. Valgt: {selected.length} av {MAX_COUNT}</p>
       <div className="interest-grid">
         {INTERESTS.map((interest) => (
           <button
@@ -52,7 +52,7 @@ export default function InterestSelectScreen({ name, onSelect, onCancel }) {
       </div>
       <div className="btn-row">
         <button className="btn-cancel" onClick={onCancel}>Avbryt</button>
-        <button className="btn-primary" onClick={handleContinue} disabled={selected.length !== REQUIRED_COUNT}>
+        <button className="btn-primary" onClick={handleContinue} disabled={selected.length < 1}>
           Neste
         </button>
       </div>
