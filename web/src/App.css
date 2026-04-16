@@ -432,6 +432,11 @@ h2 {
 
 /* --- Name input --- */
 
+.name-screen {
+  justify-content: flex-start;
+  padding-top: 4rem;
+}
+
 .name-form {
   display: flex;
   flex-direction: column;

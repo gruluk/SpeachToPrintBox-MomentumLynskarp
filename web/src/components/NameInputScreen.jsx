@@ -52,7 +52,7 @@ export default function NameInputScreen({ onSubmit, onCancel }) {
   }
 
   return (
-    <div className="screen center">
+    <div className="screen center name-screen">
       <h2>Hva heter du?</h2>
       <form onSubmit={handleSubmit} className="name-form">
         <input
