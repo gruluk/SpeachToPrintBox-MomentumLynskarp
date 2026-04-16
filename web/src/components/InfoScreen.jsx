@@ -1,6 +1,6 @@
 export default function InfoScreen({ onContinue, onCancel }) {
   return (
-    <div className="screen consent-screen">
+    <div className="screen center consent-screen">
       <h2 className="consent-title">Velkommen til Lynskarp</h2>
       <p className="consent-subtitle">Les hva du samtykker til og godkjenn.</p>
 
@@ -30,7 +30,7 @@ export default function InfoScreen({ onContinue, onCancel }) {
       </div>
 
       <div className="btn-row">
-        <button className="btn-cancel" onClick={onCancel}>Manuell innsjekking</button>
+        <button className="btn-cancel" onClick={onCancel}>Avbryt</button>
         <button className="btn-start" onClick={onContinue}>Bekreft og skann</button>
       </div>
     </div>

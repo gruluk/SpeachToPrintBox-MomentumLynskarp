@@ -467,11 +467,9 @@ h2 {
 /* --- Consent / Info screen --- */
 
 .consent-screen {
-  align-items: flex-start;
   text-align: left;
-  padding: 2rem 1.5rem;
-  overflow-y: auto;
-  gap: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .consent-title {
