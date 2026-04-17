@@ -125,13 +125,14 @@ _LABEL_H = round(45 * 300 / 25.4)    # 45mm at 300 DPI
 _ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
 
-_FONT_CACHE: dict[str, str | None] = {"resolved": None}
+_FONT_PATH = None
 
 
-def _find_font(size: int) -> ImageFont.FreeTypeFont:
+def _find_font(size):
+    global _FONT_PATH
     # Cache the first font path that works
-    if _FONT_CACHE["resolved"]:
-        return ImageFont.truetype(_FONT_CACHE["resolved"], size)
+    if _FONT_PATH:
+        return ImageFont.truetype(_FONT_PATH, size)
 
     candidates = [
         str(_ASSETS_DIR / "DejaVuSans-Bold.ttf"),
@@ -144,7 +145,7 @@ def _find_font(size: int) -> ImageFont.FreeTypeFont:
         try:
             f = ImageFont.truetype(path, size)
             f.getbbox("A")
-            _FONT_CACHE["resolved"] = path
+            _FONT_PATH = path
             print(f"[label] Using font: {path}")
             return f
         except Exception:
