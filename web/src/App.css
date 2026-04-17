@@ -737,6 +737,11 @@ h2 {
   border-color: var(--purple-light) !important;
 }
 
+.done-screen {
+  justify-content: flex-start;
+  padding-top: 3rem;
+}
+
 /* --- Printer animation --- */
 
 .printer-anim {

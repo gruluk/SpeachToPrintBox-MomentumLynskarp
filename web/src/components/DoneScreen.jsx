@@ -1,16 +1,20 @@
 export default function DoneScreen({ name, interest, userId, onDone }) {
+  const previewUrl = userId
+    ? `/label-preview/${userId}?name=${encodeURIComponent(name)}&interest=${encodeURIComponent(interest)}`
+    : null
+
   return (
-    <div className="screen center">
+    <div className="screen center done-screen">
       <h2>Registrering fullført!</h2>
       <p className="status-sub">Du er registrert. Etiketten din skrives ut.</p>
 
-      {userId && (
+      {previewUrl && (
         <div className="printer-anim">
           <div className="printer-slot" />
           <div className="printer-paper">
             <div className="label-preview">
               <img
-                src={`/label-preview/${userId}`}
+                src={previewUrl}
                 alt="Etikett-forhåndsvisning"
                 className="label-preview-img"
               />

@@ -229,16 +229,16 @@ def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
 
 
 @app.get("/label-preview/{user_id}")
-def label_preview(user_id: str):
-    """Generate and return the label image as PNG."""
-    user = next((u for u in users if u["id"] == user_id), None)
-    if not user:
-        raise HTTPException(status_code=404, detail="user not found")
-    png = _generate_label(
-        user.get("name", ""),
-        user.get("interest", ""),
-        user_id,
-    )
+def label_preview(user_id: str, name: str = "", interest: str = ""):
+    """Generate and return the label image as PNG.
+    Accepts name/interest as query params to avoid race conditions."""
+    if not name:
+        user = next((u for u in users if u["id"] == user_id), None)
+        if not user:
+            raise HTTPException(status_code=404, detail="user not found")
+        name = user.get("name", "")
+        interest = interest or user.get("interest", "")
+    png = _generate_label(name, interest, user_id)
     return Response(content=png, media_type="image/png")
 
 
