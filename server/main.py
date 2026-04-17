@@ -157,8 +157,8 @@ def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
     sep_x = PAD + qr_size + PAD
     draw.line([(sep_x, PAD + 10), (sep_x, _LABEL_H - PAD - 10)], fill="#cccccc", width=2)
 
-    # Name (top-right)
-    name_font_size = 56
+    # Name (top-right, smaller)
+    name_font_size = 36
     name_font = _find_font(name_font_size)
     while name_font_size > 12:
         name_font = _find_font(name_font_size)
@@ -181,7 +181,7 @@ def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
         line_count = len(items)
         line_spacing = 8
         available_h = interest_area_h - (line_count - 1) * line_spacing
-        interest_font_size = min(int(available_h / line_count * 0.85), 100)
+        interest_font_size = min(int(available_h / line_count * 0.85), 130)
         while interest_font_size > 10:
             interest_font = _find_font(interest_font_size)
             max_w = max(interest_font.getbbox(item)[2] - interest_font.getbbox(item)[0] for item in items)

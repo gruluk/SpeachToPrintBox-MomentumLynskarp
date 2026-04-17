@@ -750,6 +750,8 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: 230px;
+  flex-shrink: 0;
 }
 
 .printer-slot {
@@ -765,7 +767,7 @@ h2 {
 .printer-paper {
   width: 96%;
   overflow: hidden;
-  max-height: 0;
+  clip-path: inset(0 0 100% 0);
 }
 
 .printer-paper.printing {
@@ -774,14 +776,14 @@ h2 {
 
 @keyframes print-reveal {
   0% {
-    max-height: 0;
+    clip-path: inset(0 0 100% 0);
     opacity: 0.6;
   }
   10% {
     opacity: 1;
   }
   100% {
-    max-height: 400px;
+    clip-path: inset(0 0 0% 0);
   }
 }
 

@@ -116,7 +116,7 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     draw.line([(sep_x, PAD + 10), (sep_x, content_h - PAD - 10)], fill="#cccccc", width=2)
 
     # Name (top-right aligned)
-    name_font_size = 40
+    name_font_size = 36
     try:
         name_font = _find_font(name_font_size)
         while name_font_size > 12:
@@ -144,7 +144,7 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
         line_count = len(items)
         line_spacing = 8
         available_h = interest_area_h - (line_count - 1) * line_spacing
-        interest_font_size = min(int(available_h / line_count * 0.85), 60)
+        interest_font_size = min(int(available_h / line_count * 0.85), 130)
 
         while interest_font_size > 10:
             interest_font = _find_font(interest_font_size)
