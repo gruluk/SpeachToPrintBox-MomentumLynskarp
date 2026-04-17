@@ -125,33 +125,11 @@ _LABEL_H = round(45 * 300 / 25.4)    # 45mm at 300 DPI
 _ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
 
-_FONT_PATH = None
+_BUNDLED_FONT = str(_ASSETS_DIR / "ArialBold.ttf")
 
 
 def _find_font(size):
-    global _FONT_PATH
-    # Cache the first font path that works
-    if _FONT_PATH:
-        return ImageFont.truetype(_FONT_PATH, size)
-
-    candidates = [
-        str(_ASSETS_DIR / "DejaVuSans-Bold.ttf"),
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-        "/Library/Fonts/Arial Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/System/Library/Fonts/Helvetica.ttc",
-    ]
-    for path in candidates:
-        try:
-            f = ImageFont.truetype(path, size)
-            f.getbbox("A")
-            _FONT_PATH = path
-            print(f"[label] Using font: {path}")
-            return f
-        except Exception:
-            continue
-    print("[label] WARNING: No TrueType font found, using default bitmap font")
-    return ImageFont.load_default()
+    return ImageFont.truetype(_BUNDLED_FONT, size)
 
 
 def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:

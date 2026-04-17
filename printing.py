@@ -15,19 +15,11 @@ from config import (
 )
 
 
+_BUNDLED_FONT = os.path.join(ASSETS_DIR, "ArialBold.ttf")
+
+
 def _find_font(font_path: str, size: int) -> ImageFont.FreeTypeFont:
-    candidates = [
-        font_path,
-        os.path.join(ASSETS_DIR, "DejaVuSans-Bold.ttf"),
-        "/Library/Fonts/Arial Bold.ttf",
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-    ]
-    for path in candidates:
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            pass
-    return ImageFont.load_default()
+    return ImageFont.truetype(_BUNDLED_FONT, size)
 
 
 def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.Image:

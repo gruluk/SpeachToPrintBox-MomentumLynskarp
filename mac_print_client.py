@@ -74,19 +74,11 @@ def mark_label_printed(user_id: str) -> None:
 
 # ── Label compositing ─────────────────────────────────────────────────────────
 
+_BUNDLED_FONT = os.path.join(ASSETS_DIR, "ArialBold.ttf")
+
+
 def _find_font(size: int) -> ImageFont.FreeTypeFont:
-    candidates = [
-        os.path.join(ASSETS_DIR, "DejaVuSans-Bold.ttf"),
-        "/Library/Fonts/Arial Bold.ttf",
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-        "/System/Library/Fonts/Helvetica.ttc",
-    ]
-    for path in candidates:
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            pass
-    return ImageFont.load_default()
+    return ImageFont.truetype(_BUNDLED_FONT, size)
 
 
 def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.Image:
