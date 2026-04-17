@@ -18,9 +18,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List
 
+import qrcode
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from PIL import Image, ImageDraw, ImageFont
 
 import db as instant_db
 
@@ -113,6 +115,118 @@ async def print_label(
 
     print(f"[print-label] queued label for {name!r} interest={interest!r}")
     return {"ok": True}
+
+
+# --- Label preview ---
+
+_QR_BASE_URL = os.getenv("QR_BASE_URL", "https://lynskarp.soprasteria.no")
+_LABEL_W = round(103 * 300 / 25.4)   # 103mm at 300 DPI
+_LABEL_H = round(45 * 300 / 25.4)    # 45mm at 300 DPI
+_ASSETS_DIR = Path(__file__).parent.parent / "assets"
+
+
+def _find_font(size: int) -> ImageFont.FreeTypeFont:
+    candidates = [
+        str(_ASSETS_DIR / "DejaVuSans-Bold.ttf"),
+        "/Library/Fonts/Arial Bold.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ]
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            pass
+    return ImageFont.load_default()
+
+
+def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
+    PAD = 14
+    canvas = Image.new("RGB", (_LABEL_W, _LABEL_H), "white")
+    draw = ImageDraw.Draw(canvas)
+
+    # Square QR code on the left
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(f"{_QR_BASE_URL}/u/{user_id}")
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    qr_size = _LABEL_H - PAD * 2
+    qr_img = qr_img.resize((qr_size, qr_size), Image.NEAREST)
+    canvas.paste(qr_img, (PAD, PAD))
+
+    # Text area on the right
+    text_left = PAD + qr_size + PAD * 2
+    text_area_w = _LABEL_W - text_left - PAD
+    sep_x = PAD + qr_size + PAD
+    draw.line([(sep_x, PAD + 10), (sep_x, _LABEL_H - PAD - 10)], fill="#cccccc", width=2)
+
+    # Name (top-right)
+    name_font_size = 40
+    name_font = _find_font(name_font_size)
+    while name_font_size > 12:
+        name_font = _find_font(name_font_size)
+        bbox = name_font.getbbox(user_name)
+        if (bbox[2] - bbox[0]) <= text_area_w:
+            break
+        name_font_size -= 4
+    name_bbox = name_font.getbbox(user_name)
+    name_text_w = name_bbox[2] - name_bbox[0]
+    name_text_h = name_bbox[3] - name_bbox[1]
+    name_x = _LABEL_W - PAD - name_text_w - name_bbox[0]
+    draw.text((name_x, PAD - name_bbox[1]), user_name, fill="black", font=name_font)
+
+    # Interests (below name, left-aligned)
+    items = [s.strip() for s in (interest or "").split(",") if s.strip()]
+    interest_top = PAD + name_text_h + 16
+    interest_area_h = _LABEL_H - interest_top - PAD
+
+    if items:
+        line_count = len(items)
+        line_spacing = 8
+        available_h = interest_area_h - (line_count - 1) * line_spacing
+        interest_font_size = min(int(available_h / line_count * 0.85), 60)
+        while interest_font_size > 10:
+            interest_font = _find_font(interest_font_size)
+            max_w = max(interest_font.getbbox(item)[2] - interest_font.getbbox(item)[0] for item in items)
+            if max_w <= text_area_w:
+                break
+            interest_font_size -= 4
+        interest_font = _find_font(interest_font_size)
+
+        line_heights = []
+        for item in items:
+            bbox = interest_font.getbbox(item)
+            line_heights.append(bbox[3] - bbox[1])
+        total_text_h = sum(line_heights) + (line_count - 1) * line_spacing
+
+        y_cursor = interest_top + (interest_area_h - total_text_h) // 2
+        for idx, item in enumerate(items):
+            bbox = interest_font.getbbox(item)
+            draw.text((text_left, y_cursor - bbox[1]), item, fill="#444444", font=interest_font)
+            y_cursor += line_heights[idx] + line_spacing
+
+    buf = io.BytesIO()
+    canvas.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+@app.get("/label-preview/{user_id}")
+def label_preview(user_id: str):
+    """Generate and return the label image as PNG."""
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+    png = _generate_label(
+        user.get("name", ""),
+        user.get("interest", ""),
+        user_id,
+    )
+    return Response(content=png, media_type="image/png")
 
 
 # --- Admin panel ---

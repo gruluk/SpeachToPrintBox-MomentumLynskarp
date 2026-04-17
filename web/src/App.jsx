@@ -95,7 +95,7 @@ export default function App() {
         <InterestSelectScreen name={name} onSelect={handleInterestSelect} onCancel={handleDone} />
       )}
       {state === 'DONE' && (
-        <DoneScreen name={name} interest={interest} onDone={handleDone} />
+        <DoneScreen name={name} interest={interest} userId={userId} onDone={handleDone} />
       )}
 
       {/* Demo flow */}

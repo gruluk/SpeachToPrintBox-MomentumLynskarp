@@ -21,7 +21,7 @@ export default function QrScanScreen({ onScanned, onCancel }) {
 
     scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
+      { fps: 10, qrbox: { width: 350, height: 150 } },
       async (decodedText) => {
         if (busyRef.current) return
         const userId = extractUserId(decodedText)

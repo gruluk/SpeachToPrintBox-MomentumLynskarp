@@ -1,21 +1,18 @@
-export default function DoneScreen({ name, interest, onDone }) {
-  const interests = interest ? interest.split(', ') : []
-
+export default function DoneScreen({ name, interest, userId, onDone }) {
   return (
     <div className="screen center">
       <h2>Registrering fullført!</h2>
       <p className="status-sub">Du er registrert. Etiketten din skrives ut.</p>
 
-      <div className="label-preview">
-        <div className="label-preview-top">
-          <span className="label-preview-name">{name}</span>
+      {userId && (
+        <div className="label-preview">
+          <img
+            src={`/label-preview/${userId}`}
+            alt="Etikett-forhåndsvisning"
+            className="label-preview-img"
+          />
         </div>
-        <div className="label-preview-bottom">
-          {interests.map((item, i) => (
-            <span key={i} className="label-preview-interest">{item}</span>
-          ))}
-        </div>
-      </div>
+      )}
 
       <button className="btn-primary" onClick={onDone}>Ferdig</button>
     </div>
