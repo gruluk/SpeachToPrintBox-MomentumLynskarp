@@ -75,36 +75,52 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     name_y = text_area_top - name_bbox[1]
     draw.text((name_x, name_y), user_name, fill="black", font=name_font)
 
-    # Interests (below name, stacked, left-aligned)
+    # Interests (below name, left-aligned with word wrap)
     items = [s.strip() for s in (interest or "").split(",") if s.strip()]
     interest_top = text_area_top + name_text_h + 16
     interest_area_h = content_h - interest_top - PAD
+    item_spacing = 20
 
     if items:
-        line_count = len(items)
-        line_spacing = 8
-        available_h = interest_area_h - (line_count - 1) * line_spacing
-        interest_font_size = min(int(available_h / line_count * 0.85), 130)
-
+        interest_font_size = 60
+        wrapped_lines = []
         while interest_font_size > 10:
             interest_font = _find_font(font_path, interest_font_size)
-            max_w = max(interest_font.getbbox(item)[2] - interest_font.getbbox(item)[0] for item in items)
-            if max_w <= text_area_w:
+            line_h = interest_font.getbbox("Ag")[3] - interest_font.getbbox("Ag")[1]
+            wrapped_lines = []
+            for item in items:
+                words = item.split()
+                lines = []
+                current = words[0]
+                for word in words[1:]:
+                    test = current + " " + word
+                    tw = interest_font.getbbox(test)[2] - interest_font.getbbox(test)[0]
+                    if tw <= text_area_w:
+                        current = test
+                    else:
+                        lines.append(current)
+                        current = word
+                lines.append(current)
+                wrapped_lines.append(lines)
+            total_lines = sum(len(lines) for lines in wrapped_lines)
+            total_h = total_lines * line_h + (len(items) - 1) * item_spacing
+            if total_h <= interest_area_h:
                 break
             interest_font_size -= 4
         interest_font = _find_font(font_path, interest_font_size)
+        line_h = interest_font.getbbox("Ag")[3] - interest_font.getbbox("Ag")[1]
 
-        line_heights = []
-        for item in items:
-            bbox = interest_font.getbbox(item)
-            line_heights.append(bbox[3] - bbox[1])
-        total_text_h = sum(line_heights) + (line_count - 1) * line_spacing
+        total_lines = sum(len(lines) for lines in wrapped_lines)
+        total_h = total_lines * line_h + (len(items) - 1) * item_spacing
+        y_cursor = interest_top + (interest_area_h - total_h) // 2
 
-        y_cursor = interest_top + (interest_area_h - total_text_h) // 2
-        for idx, item in enumerate(items):
-            bbox = interest_font.getbbox(item)
-            draw.text((text_left, y_cursor - bbox[1]), item, fill="#444444", font=interest_font)
-            y_cursor += line_heights[idx] + line_spacing
+        for idx, lines in enumerate(wrapped_lines):
+            for line in lines:
+                bbox = interest_font.getbbox(line)
+                draw.text((text_left, y_cursor - bbox[1]), line, fill="#444444", font=interest_font)
+                y_cursor += line_h
+            if idx < len(wrapped_lines) - 1:
+                y_cursor += item_spacing
 
     return canvas
 
