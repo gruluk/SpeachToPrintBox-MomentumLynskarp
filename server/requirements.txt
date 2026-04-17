@@ -1,10 +1,8 @@
 fastapi
 uvicorn[standard]
 python-multipart
-openai
 Pillow
 python-dotenv
 httpx
-face_recognition
-numpy
+qrcode[pil]
 openpyxl

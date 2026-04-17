@@ -2,33 +2,27 @@
 Sopra Steria @ Momentum Lynskarp — Central server
 
 Endpoints:
-  GET  /health    — health check
-  POST /validate  — photo quality gate (gpt-4o-mini)
-  POST /face/enroll   — enroll a face for recognition
-  POST /face/recognize — recognize a face
+  GET  /health        — health check
   POST /print-label   — print a name+interest label
+  GET  /users/{id}    — look up user by ID (for QR scan)
 """
 
 import asyncio
 import csv as csv_mod
 import io
-import json
 import os
 import secrets
 import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from PIL import Image
 
 import db as instant_db
-from face import compute_embedding, find_match, FACE_AVAILABLE
-from validate import validate_photo
 
 _ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "soprasteria")
 _security = HTTPBasic()
@@ -54,8 +48,7 @@ async def lifespan(app: FastAPI):
     try:
         us = await loop.run_in_executor(None, instant_db.get_all_users)
         users.extend(us)
-        enrolled = sum(1 for u in us if u.get("embedding"))
-        print(f"[startup] Restored {len(us)} users ({enrolled} with face) from InstantDB (face_recognition={'available' if FACE_AVAILABLE else 'NOT available'})")
+        print(f"[startup] Restored {len(us)} users from InstantDB")
     except Exception as e:
         print(f"[startup] Could not restore users from InstantDB: {e}")
     # Restore booths (create default if none exist)
@@ -89,22 +82,6 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/health")
 def health():
     return {"ok": True, "users": len(users)}
-
-
-# --- Photo validation ---
-
-@app.post("/validate")
-async def validate(image: UploadFile = File(...)):
-    data = await image.read()
-    photo = Image.open(io.BytesIO(data)).convert("RGB")
-    try:
-        result = await asyncio.get_event_loop().run_in_executor(
-            None, validate_photo, photo
-        )
-        return {"ok": result.ok, "message": result.message}
-    except Exception:
-        # If validation fails, let the booth proceed rather than blocking
-        return {"ok": True, "message": ""}
 
 
 # --- Print label ---
@@ -246,7 +223,6 @@ def admin_list_users(_=Depends(require_admin)):
             "name": u.get("name", ""),
             "email": u.get("email", ""),
             "interest": u.get("interest", ""),
-            "has_face": bool(u.get("embedding")),
             "label_printed": u.get("label_printed"),
             "wants_demo": bool(u.get("wants_demo")),
             "created_at": u.get("created_at", 0),
@@ -283,10 +259,6 @@ async def admin_patch_user(user_id: str, body: dict, _=Depends(require_admin)):
         raise HTTPException(status_code=404, detail="not found")
 
     db_updates = {}
-
-    if body.get("clear_embedding"):
-        user.pop("embedding", None)
-        db_updates["embedding"] = None
 
     if body.get("clear_interest"):
         user.pop("interest", None)
@@ -472,71 +444,19 @@ def booth_config(number: int):
     return {"mode": booth.get("mode", "both")}
 
 
-# --- Face recognition ---
+# --- User lookup (for QR scan) ---
 
-@app.post("/face/enroll")
-async def face_enroll(
-    image: UploadFile = File(...),
-    user_id: str = Form(...),
-):
-    """Enroll a face for an existing user. Stores embedding on user record."""
-    if not FACE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="face_recognition library not available")
-
+@app.get("/users/{user_id}")
+def get_user(user_id: str):
+    """Look up a user by ID. No auth — booth QR scanner needs this."""
     user = next((u for u in users if u["id"] == user_id), None)
     if not user:
         raise HTTPException(status_code=404, detail="user not found")
-
-    data = await image.read()
-    result = await asyncio.get_event_loop().run_in_executor(
-        None, compute_embedding, data
-    )
-
-    if not result["found"]:
-        return {"ok": False, "error": "no_face", "time_ms": result["time_ms"]}
-
-    user["embedding"] = result["embedding"]
-
-    try:
-        await asyncio.get_event_loop().run_in_executor(
-            None, lambda: instant_db.update_user(user_id, embedding=result["embedding"]),
-        )
-    except Exception as e:
-        print(f"[face] InstantDB write failed: {e}")
-
     return {
-        "ok": True,
-        "user_id": user_id,
+        "id": user["id"],
         "name": user.get("name", ""),
-        "embedding_dims": len(result["embedding"]),
-        "time_ms": result["time_ms"],
-    }
-
-
-@app.post("/face/recognize")
-async def face_recognize(
-    image: UploadFile = File(...),
-    threshold: float = Form(0.6),
-):
-    if not FACE_AVAILABLE:
-        raise HTTPException(status_code=503, detail="face_recognition library not available")
-
-    data = await image.read()
-    result = await asyncio.get_event_loop().run_in_executor(
-        None, compute_embedding, data
-    )
-
-    if not result["found"]:
-        return {"ok": False, "error": "no_face", "time_ms": result["time_ms"]}
-
-    # Filter to users with face embeddings
-    enrolled = [u for u in users if u.get("embedding")]
-    match = find_match(result["embedding"], enrolled, threshold)
-
-    return {
-        "ok": True,
-        "time_ms": result["time_ms"],
-        **match,
+        "interest": user.get("interest", ""),
+        "wants_demo": bool(user.get("wants_demo")),
     }
 
 

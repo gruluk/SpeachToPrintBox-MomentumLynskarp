@@ -684,6 +684,25 @@ h2 {
   text-align: center;
 }
 
+/* --- QR Scanner --- */
+
+.qr-scanner-wrap {
+  width: 100%;
+  max-width: 400px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.qr-scanner-wrap #qr-reader {
+  border: none !important;
+}
+
+.qr-scan-error {
+  color: var(--red);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
 /* --- Interest / Result interest --- */
 
 .result-interest {

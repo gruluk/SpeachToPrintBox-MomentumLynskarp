@@ -46,6 +46,9 @@ WAITING       = "waiting"
 PROCESSING    = "processing"
 RESULT        = "result"
 
+# --- QR code ---
+QR_BASE_URL = os.getenv("QR_BASE_URL", "https://lynskarp.soprasteria.no")
+
 # --- Assets / server ---
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
 SERVER_URL  = os.getenv("SERVER_URL", "http://localhost:8000")

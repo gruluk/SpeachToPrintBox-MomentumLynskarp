@@ -1,6 +1,7 @@
 import gc
 import os
 
+import qrcode
 import usb.core
 import usb.util
 from PIL import Image, ImageDraw, ImageFont
@@ -10,7 +11,7 @@ from brother_ql.labels import ALL_LABELS
 
 from config import (
     PRINTER_MODEL, PRINTER_VENDOR, PRINTER_PRODUCT,
-    LABEL, PRINT_HEIGHT_MM, ASSETS_DIR,
+    LABEL, PRINT_HEIGHT_MM, ASSETS_DIR, QR_BASE_URL,
 )
 
 
@@ -29,23 +30,42 @@ def _find_font(font_path: str, size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
-def composite_label(user_name: str, interest: str) -> Image.Image:
+def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.Image:
     label_info = next(l for l in ALL_LABELS if l.identifier == LABEL)
     target_w, _ = label_info.dots_printable
     content_h = round(PRINT_HEIGHT_MM * 300 / 25.4)
 
-    canvas = Image.new("RGB", (target_w, content_h), "white")
-    draw = ImageDraw.Draw(canvas)
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
     PAD = 14
 
-    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    # --- Generate QR code as background ---
+    qr_url = f"{QR_BASE_URL}/u/{user_id}" if user_id else "https://lynskarp.soprasteria.no"
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(qr_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    canvas = qr_img.resize((target_w, content_h), Image.NEAREST)
+    draw = ImageDraw.Draw(canvas)
 
-    # Top row: name top-right, smaller — 20% of height
-    top_h = int(content_h * 0.20)
+    # --- White center box for text (stay under 30% of total area) ---
+    box_w = int(target_w * 0.55)
+    box_h = int(content_h * 0.45)
+    box_x = (target_w - box_w) // 2
+    box_y = (content_h - box_h) // 2
+    box_pad = 10
+    draw.rounded_rectangle(
+        [box_x, box_y, box_x + box_w, box_y + box_h],
+        radius=8, fill="white", outline="black", width=2,
+    )
 
-    # Name (top right, smaller)
-    name_area_w = target_w - PAD * 2
-    name_font_size = min(top_h - PAD * 2, 40)
+    # --- Name (top of white box, centered) ---
+    name_area_w = box_w - box_pad * 2
+    name_font_size = min(36, box_h // 4)
     name_font = _find_font(font_path, name_font_size)
     while name_font_size > 12:
         name_font = _find_font(font_path, name_font_size)
@@ -55,26 +75,27 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
         name_font_size -= 4
 
     name_bbox = name_font.getbbox(user_name)
+    name_text_w = name_bbox[2] - name_bbox[0]
     name_text_h = name_bbox[3] - name_bbox[1]
-    name_y = (top_h - name_text_h) // 2 - name_bbox[1]
-    name_x = target_w - PAD - (name_bbox[2] - name_bbox[0])
-    draw.text((name_x, name_y), user_name, fill="#3c1c71", font=name_font)
+    name_x = box_x + (box_w - name_text_w) // 2 - name_bbox[0]
+    name_y = box_y + box_pad - name_bbox[1]
+    draw.text((name_x, name_y), user_name, fill="black", font=name_font)
 
-    # Interests — stacked vertically, centered
-    interest_area_top = top_h
-    interest_area_h = content_h - interest_area_top - PAD
+    # --- Interests (below name, stacked and centered) ---
     items = [s.strip() for s in (interest or "").split(",") if s.strip()]
+    interest_top = box_y + box_pad + name_text_h + 8
+    interest_area_h = (box_y + box_h - box_pad) - interest_top
 
     if items:
         line_count = len(items)
-        line_spacing = 8
+        line_spacing = 6
         available_h = interest_area_h - (line_count - 1) * line_spacing
-        interest_font_size = min(int(available_h / line_count * 0.85), 120)
+        interest_font_size = min(int(available_h / line_count * 0.85), 80)
 
-        while interest_font_size > 12:
+        while interest_font_size > 10:
             interest_font = _find_font(font_path, interest_font_size)
             max_w = max(interest_font.getbbox(item)[2] - interest_font.getbbox(item)[0] for item in items)
-            if max_w <= target_w - PAD * 2:
+            if max_w <= name_area_w:
                 break
             interest_font_size -= 4
         interest_font = _find_font(font_path, interest_font_size)
@@ -85,12 +106,12 @@ def composite_label(user_name: str, interest: str) -> Image.Image:
             line_heights.append(bbox[3] - bbox[1])
         total_text_h = sum(line_heights) + (line_count - 1) * line_spacing
 
-        y_cursor = interest_area_top + (interest_area_h - total_text_h) // 2
+        y_cursor = interest_top + (interest_area_h - total_text_h) // 2
         for idx, item in enumerate(items):
             bbox = interest_font.getbbox(item)
             text_w = bbox[2] - bbox[0]
-            x = (target_w - text_w) // 2 - bbox[0]
-            draw.text((x, y_cursor - bbox[1]), item, fill="#3c1c71", font=interest_font)
+            x = box_x + (box_w - text_w) // 2 - bbox[0]
+            draw.text((x, y_cursor - bbox[1]), item, fill="black", font=interest_font)
             y_cursor += line_heights[idx] + line_spacing
 
     return canvas
