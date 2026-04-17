@@ -15,7 +15,7 @@ from config import (
 )
 
 
-_BUNDLED_FONT = os.path.join(ASSETS_DIR, "ArialBold.ttf")
+_BUNDLED_FONT = os.path.join(ASSETS_DIR, "DejaVuSans-Bold.ttf")
 
 
 def _find_font(font_path: str, size: int) -> ImageFont.FreeTypeFont:

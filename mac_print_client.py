@@ -74,7 +74,7 @@ def mark_label_printed(user_id: str) -> None:
 
 # ── Label compositing ─────────────────────────────────────────────────────────
 
-_BUNDLED_FONT = os.path.join(ASSETS_DIR, "ArialBold.ttf")
+_BUNDLED_FONT = os.path.join(ASSETS_DIR, "DejaVuSans-Bold.ttf")
 
 
 def _find_font(size: int) -> ImageFont.FreeTypeFont:

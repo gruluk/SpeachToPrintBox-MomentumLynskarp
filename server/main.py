@@ -125,7 +125,7 @@ _LABEL_H = round(45 * 300 / 25.4)    # 45mm at 300 DPI
 _ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
 
-_BUNDLED_FONT = str(_ASSETS_DIR / "ArialBold.ttf")
+_BUNDLED_FONT = str(_ASSETS_DIR / "DejaVuSans-Bold.ttf")
 
 
 def _find_font(size):
