@@ -1,4 +1,8 @@
+import { useState } from 'react'
+
 export default function DoneScreen({ name, interest, userId, onDone }) {
+  const [imageLoaded, setImageLoaded] = useState(false)
+
   const previewUrl = userId
     ? `/label-preview/${userId}?name=${encodeURIComponent(name)}&interest=${encodeURIComponent(interest)}`
     : null
@@ -11,12 +15,13 @@ export default function DoneScreen({ name, interest, userId, onDone }) {
       {previewUrl && (
         <div className="printer-anim">
           <div className="printer-slot" />
-          <div className="printer-paper">
+          <div className={`printer-paper ${imageLoaded ? 'printing' : ''}`}>
             <div className="label-preview">
               <img
                 src={previewUrl}
                 alt="Etikett-forhåndsvisning"
                 className="label-preview-img"
+                onLoad={() => setImageLoaded(true)}
               />
             </div>
           </div>

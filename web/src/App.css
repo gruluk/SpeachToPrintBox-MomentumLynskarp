@@ -765,6 +765,10 @@ h2 {
 .printer-paper {
   width: 96%;
   overflow: hidden;
+  max-height: 0;
+}
+
+.printer-paper.printing {
   animation: print-reveal 3s cubic-bezier(0.15, 0.5, 0.35, 1) forwards;
 }
 

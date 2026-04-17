@@ -122,7 +122,7 @@ async def print_label(
 _QR_BASE_URL = os.getenv("QR_BASE_URL", "https://lynskarp.soprasteria.no")
 _LABEL_W = round(103 * 300 / 25.4)   # 103mm at 300 DPI
 _LABEL_H = round(45 * 300 / 25.4)    # 45mm at 300 DPI
-_ASSETS_DIR = Path(__file__).parent.parent / "assets"
+_ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
 
 _BUNDLED_FONT = str(_ASSETS_DIR / "ArialBold.ttf")
