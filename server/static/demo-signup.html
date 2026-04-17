@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Lynskarp — Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --purple: #4D1D82;
+  --purple-light: #8C1D82;
+  --purple-dark: #1a0830;
+  --red: #CF022B;
+  --surface: rgba(255,255,255,0.08);
+  --surface-solid: rgba(255,255,255,0.12);
+  --text-secondary: rgba(255,255,255,0.7);
+  --radius: 12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  font-family:"DM Sans",system-ui,sans-serif;
+  background: var(--purple-dark);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 55% 50%, rgba(140,29,130,0.45) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 80% 30%, rgba(200,80,180,0.3) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 20% 70%, rgba(77,29,130,0.5) 0%, transparent 60%);
+  color:#fff;
+}
+#app{
+  display:flex;flex-direction:column;
+  height:100%;max-width:500px;margin:0 auto;padding:2rem 1.5rem;
+}
+h1{font-size:1.8rem;font-weight:700;text-align:center}
+.subtitle{font-size:1.1rem;color:var(--text-secondary);text-align:center;margin-top:0.25rem}
+.search-wrap{margin-top:1.5rem;position:relative}
+.search-wrap input{
+  width:100%;padding:1rem 1.2rem;
+  background:var(--surface);border:1px solid rgba(255,255,255,0.2);
+  border-radius:var(--radius);color:#fff;font-size:1.1rem;
+  font-family:inherit;outline:none;
+}
+.search-wrap input::placeholder{color:rgba(255,255,255,0.4)}
+.search-wrap input:focus{border-color:var(--purple-light)}
+.user-list{
+  flex:1;overflow-y:auto;margin-top:1rem;
+  -webkit-overflow-scrolling:touch;
+}
+.user-item{
+  padding:1rem 1.2rem;
+  background:var(--surface);border:1px solid rgba(255,255,255,0.1);
+  border-radius:var(--radius);margin-bottom:0.5rem;
+  font-size:1.1rem;font-weight:500;cursor:pointer;
+  transition:background 0.15s;
+}
+.user-item:hover,.user-item:active{background:var(--surface-solid)}
+.no-results{
+  text-align:center;color:var(--text-secondary);
+  margin-top:2rem;font-size:1.1rem;
+}
+
+/* Confirm overlay */
+.overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:10;padding:1.5rem;
+}
+.confirm-card{
+  background:var(--purple-dark);
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:16px;padding:2rem;
+  max-width:420px;width:100%;text-align:center;
+}
+.confirm-card h2{font-size:1.5rem;margin-bottom:0.5rem}
+.confirm-card p{color:var(--text-secondary);font-size:1.1rem;line-height:1.5;margin-bottom:1.5rem}
+.confirm-card .name{color:#fff;font-weight:700}
+.btn-row{display:flex;gap:1rem;justify-content:center}
+.btn{
+  border:none;border-radius:var(--radius);
+  font-family:inherit;font-weight:700;font-size:1.1rem;
+  padding:1rem 2rem;cursor:pointer;transition:transform 0.1s;
+}
+.btn:active{transform:translateY(2px)}
+.btn-cancel{background:var(--surface);color:#fff;border:1px solid rgba(255,255,255,0.2)}
+.btn-confirm{background:var(--red);color:#fff}
+.btn-confirm:disabled{opacity:0.45;cursor:default}
+
+/* Done screen */
+.done{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1.5rem;text-align:center;
+}
+.done h2{font-size:1.8rem}
+.done p{color:var(--text-secondary);font-size:1.1rem}
+.checkmark{font-size:3rem}
+
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Search view -->
+  <div id="search-view">
+    <h1>Lynskarp Demo</h1>
+    <p class="subtitle">Finn deg selv og meld interesse for demo</p>
+    <div class="search-wrap">
+      <input id="search" type="text" placeholder="Søk etter navn..." autocomplete="off" />
+    </div>
+    <div id="user-list" class="user-list"></div>
+  </div>
+
+  <!-- Done view -->
+  <div id="done-view" class="done hidden">
+    <div class="checkmark">&#10003;</div>
+    <h2>Takk, <span id="done-name"></span>!</h2>
+    <p>Demoforespørselen din er registrert.</p>
+    <button class="btn btn-cancel" onclick="backToSearch()">Tilbake</button>
+  </div>
+</div>
+
+<!-- Confirm overlay -->
+<div id="confirm-overlay" class="overlay hidden">
+  <div class="confirm-card">
+    <h2>Bekreft demo</h2>
+    <p>Vil du og din virksomhet ha demo?<br><span class="name" id="confirm-name"></span></p>
+    <div class="btn-row">
+      <button class="btn btn-cancel" onclick="closeConfirm()">Avbryt</button>
+      <button class="btn btn-confirm" id="confirm-btn" onclick="confirmDemo()">Ja, jeg vil ha demo!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allUsers = [];
+let selectedUser = null;
+
+async function loadUsers() {
+  try {
+    const res = await fetch('/users');
+    allUsers = await res.json();
+    allUsers.sort((a, b) => a.name.localeCompare(b.name, 'no'));
+    renderUsers('');
+  } catch (e) {
+    console.error('Failed to load users', e);
+  }
+}
+
+function renderUsers(filter) {
+  const list = document.getElementById('user-list');
+  const q = filter.toLowerCase();
+  const filtered = q
+    ? allUsers.filter(u => u.name.toLowerCase().includes(q))
+    : allUsers;
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="no-results">Ingen treff</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(u =>
+    `<div class="user-item" onclick="selectUser('${u.id}')">${u.name}</div>`
+  ).join('');
+}
+
+function selectUser(id) {
+  selectedUser = allUsers.find(u => u.id === id);
+  if (!selectedUser) return;
+  document.getElementById('confirm-name').textContent = selectedUser.name;
+  document.getElementById('confirm-overlay').classList.remove('hidden');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.add('hidden');
+  selectedUser = null;
+}
+
+async function confirmDemo() {
+  if (!selectedUser) return;
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sender...';
+  try {
+    await fetch('/demo-choice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: selectedUser.id, wants_demo: true }),
+    });
+    document.getElementById('done-name').textContent = selectedUser.name;
+    document.getElementById('confirm-overlay').classList.add('hidden');
+    document.getElementById('search-view').classList.add('hidden');
+    document.getElementById('done-view').classList.remove('hidden');
+  } catch (e) {
+    console.error('Failed to submit demo choice', e);
+    alert('Noe gikk galt. Prøv igjen.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Ja, jeg vil ha demo!';
+  }
+}
+
+function backToSearch() {
+  selectedUser = null;
+  document.getElementById('search').value = '';
+  document.getElementById('done-view').classList.add('hidden');
+  document.getElementById('search-view').classList.remove('hidden');
+  renderUsers('');
+}
+
+document.getElementById('search').addEventListener('input', e => renderUsers(e.target.value));
+loadUsers();
+</script>
+</body>
+</html>

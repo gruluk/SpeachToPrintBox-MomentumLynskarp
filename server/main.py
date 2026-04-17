@@ -79,6 +79,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+# --- Demo signup page (root) ---
+
+@app.get("/", response_class=HTMLResponse)
+def demo_signup_page():
+    return (Path(__file__).parent / "static" / "demo-signup.html").read_text()
+
+
 # --- Health ---
 
 @app.get("/health")
