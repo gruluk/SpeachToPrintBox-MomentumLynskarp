@@ -125,7 +125,14 @@ _LABEL_H = round(45 * 300 / 25.4)    # 45mm at 300 DPI
 _ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
 
+_FONT_CACHE: dict[str, str | None] = {"resolved": None}
+
+
 def _find_font(size: int) -> ImageFont.FreeTypeFont:
+    # Cache the first font path that works
+    if _FONT_CACHE["resolved"]:
+        return ImageFont.truetype(_FONT_CACHE["resolved"], size)
+
     candidates = [
         str(_ASSETS_DIR / "DejaVuSans-Bold.ttf"),
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
@@ -136,11 +143,13 @@ def _find_font(size: int) -> ImageFont.FreeTypeFont:
     for path in candidates:
         try:
             f = ImageFont.truetype(path, size)
-            # Verify it actually works at the requested size
             f.getbbox("A")
+            _FONT_CACHE["resolved"] = path
+            print(f"[label] Using font: {path}")
             return f
         except Exception:
-            pass
+            continue
+    print("[label] WARNING: No TrueType font found, using default bitmap font")
     return ImageFont.load_default()
 
 
@@ -170,7 +179,7 @@ def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
     draw.line([(sep_x, PAD + 10), (sep_x, _LABEL_H - PAD - 10)], fill="#cccccc", width=2)
 
     # Name (top-right)
-    name_font_size = 40
+    name_font_size = 56
     name_font = _find_font(name_font_size)
     while name_font_size > 12:
         name_font = _find_font(name_font_size)
@@ -193,7 +202,7 @@ def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
         line_count = len(items)
         line_spacing = 8
         available_h = interest_area_h - (line_count - 1) * line_spacing
-        interest_font_size = min(int(available_h / line_count * 0.85), 60)
+        interest_font_size = min(int(available_h / line_count * 0.85), 100)
         while interest_font_size > 10:
             interest_font = _find_font(interest_font_size)
             max_w = max(interest_font.getbbox(item)[2] - interest_font.getbbox(item)[0] for item in items)

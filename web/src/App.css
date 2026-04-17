@@ -760,7 +760,7 @@ h2 {
 .printer-paper {
   width: 96%;
   overflow: hidden;
-  animation: print-reveal 1.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: print-reveal 3s cubic-bezier(0.15, 0.5, 0.35, 1) forwards;
 }
 
 @keyframes print-reveal {
@@ -768,7 +768,7 @@ h2 {
     max-height: 0;
     opacity: 0.6;
   }
-  15% {
+  10% {
     opacity: 1;
   }
   100% {
