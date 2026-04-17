@@ -128,13 +128,17 @@ _ASSETS_DIR = Path(__file__).parent.parent / "assets"
 def _find_font(size: int) -> ImageFont.FreeTypeFont:
     candidates = [
         str(_ASSETS_DIR / "DejaVuSans-Bold.ttf"),
-        "/Library/Fonts/Arial Bold.ttf",
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
     ]
     for path in candidates:
         try:
-            return ImageFont.truetype(path, size)
+            f = ImageFont.truetype(path, size)
+            # Verify it actually works at the requested size
+            f.getbbox("A")
+            return f
         except Exception:
             pass
     return ImageFont.load_default()

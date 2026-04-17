@@ -5,12 +5,17 @@ export default function DoneScreen({ name, interest, userId, onDone }) {
       <p className="status-sub">Du er registrert. Etiketten din skrives ut.</p>
 
       {userId && (
-        <div className="label-preview">
-          <img
-            src={`/label-preview/${userId}`}
-            alt="Etikett-forhåndsvisning"
-            className="label-preview-img"
-          />
+        <div className="printer-anim">
+          <div className="printer-slot" />
+          <div className="printer-paper">
+            <div className="label-preview">
+              <img
+                src={`/label-preview/${userId}`}
+                alt="Etikett-forhåndsvisning"
+                className="label-preview-img"
+              />
+            </div>
+          </div>
         </div>
       )}
 
