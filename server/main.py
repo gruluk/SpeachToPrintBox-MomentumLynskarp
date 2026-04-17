@@ -596,6 +596,9 @@ def get_user(user_id: str):
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+_STATIC_DIR = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static-files")
+
 _WEB_DIR = Path(__file__).parent / "static" / "web"
 
 if _WEB_DIR.exists():
