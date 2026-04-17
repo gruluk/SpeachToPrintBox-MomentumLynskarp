@@ -176,7 +176,7 @@ def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
     items = [s.strip() for s in (interest or "").split(",") if s.strip()]
     interest_top = PAD + name_text_h + 16
     interest_area_h = _LABEL_H - interest_top - PAD
-    item_spacing = 20  # space between interest items
+    item_spacing = 35  # space between interest items
 
     if items:
         # Find largest font where all wrapped text fits vertically

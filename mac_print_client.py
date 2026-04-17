@@ -139,7 +139,7 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     items = [s.strip() for s in (interest or "").split(",") if s.strip()]
     interest_top = text_area_top + name_text_h + 16
     interest_area_h = content_h - interest_top - PAD
-    item_spacing = 20
+    item_spacing = 35
 
     if items:
         interest_font_size = 60
