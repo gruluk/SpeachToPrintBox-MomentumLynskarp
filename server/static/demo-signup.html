@@ -76,7 +76,7 @@ h1{font-size:1.8rem;font-weight:700;text-align:center}
 .confirm-card h2{font-size:1.5rem;margin-bottom:0.5rem}
 .confirm-card p{color:var(--text-secondary);font-size:1.1rem;line-height:1.5;margin-bottom:1.5rem}
 .confirm-card .name{color:#fff;font-weight:700}
-.btn-row{display:flex;gap:1rem;justify-content:center}
+.btn-row{display:flex;flex-direction:column;gap:1rem}
 .btn{
   border:none;border-radius:var(--radius);
   font-family:inherit;font-weight:700;font-size:1.1rem;
@@ -126,8 +126,8 @@ h1{font-size:1.8rem;font-weight:700;text-align:center}
     <h2>Bekreft demo</h2>
     <p>Vil du og din virksomhet ha demo?<br><span class="name" id="confirm-name"></span></p>
     <div class="btn-row">
-      <button class="btn btn-cancel" onclick="closeConfirm()">Avbryt</button>
       <button class="btn btn-confirm" id="confirm-btn" onclick="confirmDemo()">Ja, jeg vil ha demo!</button>
+      <button class="btn btn-cancel" onclick="closeConfirm()">Avbryt</button>
     </div>
   </div>
 </div>
