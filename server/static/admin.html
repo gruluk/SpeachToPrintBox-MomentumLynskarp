@@ -366,6 +366,9 @@
       <input type="text" id="add-name" placeholder="Name" style="width:180px" />
       <input type="email" id="add-email" placeholder="Email" style="width:220px" />
       <button class="btn btn-purple btn-sm" onclick="addUser()">+ Add User</button>
+      <div class="toolbar-spacer"></div>
+      <button class="btn btn-orange btn-sm" onclick="clearAllRegistrations()">Clear all interests &amp; demos</button>
+      <button class="btn btn-red btn-sm" onclick="deleteAllUsers()">Delete all users</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -374,7 +377,6 @@
             <th>Name</th>
             <th>Email</th>
             <th>Interest</th>
-            <th>Face</th>
             <th>Demo</th>
             <th style="width:120px">Actions</th>
           </tr>
@@ -524,7 +526,6 @@
         <td>${esc(u.name)}</td>
         <td style="color:var(--muted)">${esc(u.email)}</td>
         <td style="color:var(--muted)">${esc(u.interest || '')}</td>
-        <td><span class="badge ${u.has_face ? 'badge-green' : 'badge-muted'}">${u.has_face ? 'Yes' : 'No'}</span></td>
         <td>
           <button class="btn ${u.wants_demo ? 'btn-purple' : 'btn-ghost'} btn-sm" onclick="toggleDemo('${u.id}', ${!u.wants_demo})">
             ${u.wants_demo ? 'Yes' : 'No'}
@@ -532,7 +533,6 @@
         </td>
         <td>
           <div class="action-row">
-            ${u.has_face ? `<button class="btn btn-orange btn-sm" onclick="clearFace('${u.id}')">Clear face</button>` : ''}
             ${u.interest ? `<button class="btn btn-orange btn-sm" onclick="clearInterest('${u.id}')">Clear interest</button>` : ''}
             <button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}')">Delete</button>
           </div>
@@ -541,14 +541,25 @@
     `).join('')
   }
 
-  async function clearFace(id) {
-    if (!confirm('Clear face embedding for this user? They will need to re-register.')) return
-    const res = await fetch(`/admin/api/users/${id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clear_embedding: true }),
-    })
-    if (res.ok) loadUsers()
-    else alert('Failed to clear face')
+  async function clearAllRegistrations() {
+    if (!confirm('Clear ALL interests and demo flags for every user? This cannot be undone.')) return
+    const res = await fetch('/admin/api/clear-registrations', { method: 'POST' })
+    if (res.ok) {
+      const data = await res.json()
+      alert(`Cleared registrations for ${data.cleared} users`)
+      loadUsers()
+    } else alert('Failed to clear registrations')
+  }
+
+  async function deleteAllUsers() {
+    if (!confirm('DELETE ALL USERS? This cannot be undone!')) return
+    if (!confirm('Are you really sure? All user data will be permanently deleted.')) return
+    const res = await fetch('/admin/api/delete-all-users', { method: 'POST' })
+    if (res.ok) {
+      const data = await res.json()
+      alert(`Deleted ${data.deleted} users`)
+      loadUsers()
+    } else alert('Failed to delete users')
   }
 
   async function clearInterest(id) {

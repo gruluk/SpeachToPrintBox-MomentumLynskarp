@@ -427,6 +427,44 @@ async def admin_delete_user(user_id: str, _=Depends(require_admin)):
     return {"ok": True}
 
 
+@app.post("/admin/api/clear-registrations")
+async def admin_clear_registrations(_=Depends(require_admin)):
+    """Clear all interests, label_printed, and wants_demo for all users."""
+    count = 0
+    for u in users:
+        if u.get("interest") or u.get("wants_demo") or u.get("label_printed"):
+            u.pop("interest", None)
+            u.pop("label_printed", None)
+            u["wants_demo"] = False
+            try:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, lambda uid=u["id"]: instant_db.update_user(
+                        uid, interest=None, label_printed=None, wants_demo=False
+                    ),
+                )
+            except Exception as e:
+                print(f"[admin] clear registration failed for {u['id']}: {e}")
+            count += 1
+    print(f"[admin] Cleared registrations for {count} users")
+    return {"ok": True, "cleared": count}
+
+
+@app.post("/admin/api/delete-all-users")
+async def admin_delete_all_users(_=Depends(require_admin)):
+    """Delete all users from the database."""
+    count = len(users)
+    for u in list(users):
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, instant_db.delete_user, u["id"]
+            )
+        except Exception as e:
+            print(f"[admin] delete user failed for {u['id']}: {e}")
+    users.clear()
+    print(f"[admin] Deleted all {count} users")
+    return {"ok": True, "deleted": count}
+
+
 # --- Demo choices ---
 
 @app.post("/demo-choice")
