@@ -124,9 +124,9 @@ h1{font-size:1.8rem;font-weight:700;text-align:center}
 <div id="confirm-overlay" class="overlay hidden">
   <div class="confirm-card">
     <h2>Bekreft demo</h2>
-    <p>Vil du og din virksomhet ha demo?<br><span class="name" id="confirm-name"></span></p>
+    <p>Vil du og din virksomhet få presentert en demo basert på dine interesseområder?<br><span class="name" id="confirm-name"></span></p>
     <div class="btn-row">
-      <button class="btn btn-confirm" id="confirm-btn" onclick="confirmDemo()">Ja, jeg vil ha demo!</button>
+      <button class="btn btn-confirm" id="confirm-btn" onclick="confirmDemo()">Ja, kontakt meg for en demo!</button>
       <button class="btn btn-cancel" onclick="closeConfirm()">Avbryt</button>
     </div>
   </div>
@@ -196,7 +196,7 @@ async function confirmDemo() {
     alert('Noe gikk galt. Prøv igjen.');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Ja, jeg vil ha demo!';
+    btn.textContent = 'Ja, kontakt meg for en demo!';
   }
 }
 
