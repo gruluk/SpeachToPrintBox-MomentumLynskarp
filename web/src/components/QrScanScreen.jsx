@@ -1,70 +1,134 @@
-import { useEffect, useRef, useState } from 'react'
-import { Html5Qrcode } from 'html5-qrcode'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import jsQR from 'jsqr'
 
-function extractUserId(text) {
-  // Match URLs like https://lynskarp.soprasteria.no/u/{uuid}
-  const match = text.match(/\/u\/([0-9a-f-]{36})/)
-  if (match) return match[1]
-  // Also accept raw UUIDs
-  const uuidMatch = text.match(/^[0-9a-f-]{36}$/)
-  return uuidMatch ? uuidMatch[0] : null
-}
+const ZOOM = 2.5
+const SCAN_INTERVAL = 150 // ms between scans
 
 export default function QrScanScreen({ onScanned, onCancel }) {
-  const scannerRef = useRef(null)
+  const videoRef = useRef(null)
+  const bgCanvasRef = useRef(null)
+  const zoomCanvasRef = useRef(null)
   const busyRef = useRef(false)
+  const rafRef = useRef(null)
+  const scanTimerRef = useRef(null)
+  const streamRef = useRef(null)
   const [error, setError] = useState('')
+  const [scanning, setScanning] = useState(true)
+
+  const handleCode = useCallback(async (code) => {
+    if (busyRef.current || !code) return
+    busyRef.current = true
+    setError('')
+
+    try {
+      const res = await fetch(`/users/by-code/${encodeURIComponent(code)}`)
+      if (!res.ok) {
+        setError('Bruker ikke funnet. Prøv igjen.')
+        busyRef.current = false
+        return
+      }
+      const user = await res.json()
+      setScanning(false)
+      onScanned(user)
+    } catch {
+      setError('Noe gikk galt. Prøv igjen.')
+      busyRef.current = false
+    }
+  }, [onScanned])
 
   useEffect(() => {
-    const scanner = new Html5Qrcode('qr-reader')
-    scannerRef.current = scanner
+    let stopped = false
 
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 350, height: 150 } },
-      async (decodedText) => {
-        if (busyRef.current) return
-        const userId = extractUserId(decodedText)
-        if (!userId) return
+    async function start() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        })
+        if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
+        streamRef.current = stream
 
-        busyRef.current = true
-        setError('')
-        try {
-          scanner.pause()
-        } catch {}
+        const video = videoRef.current
+        video.srcObject = stream
+        await video.play()
 
-        try {
-          const res = await fetch(`/users/${userId}`)
-          if (!res.ok) {
-            setError('Bruker ikke funnet. Prøv igjen.')
-            busyRef.current = false
-            try { scanner.resume() } catch {}
-            return
-          }
-          const user = await res.json()
-          onScanned(user)
-        } catch {
-          setError('Noe gikk galt. Prøv igjen.')
-          busyRef.current = false
-          try { scanner.resume() } catch {}
+        const drawFrame = () => {
+          if (stopped || !scanning) return
+          const vw = video.videoWidth
+          const vh = video.videoHeight
+          if (!vw || !vh) { rafRef.current = requestAnimationFrame(drawFrame); return }
+
+          // Draw full background view
+          const bgCanvas = bgCanvasRef.current
+          bgCanvas.width = vw
+          bgCanvas.height = vh
+          const bgCtx = bgCanvas.getContext('2d')
+          bgCtx.drawImage(video, 0, 0, vw, vh)
+
+          // Draw zoomed center crop
+          const zoomCanvas = zoomCanvasRef.current
+          const zoomSize = zoomCanvas.clientWidth * window.devicePixelRatio
+          zoomCanvas.width = zoomSize
+          zoomCanvas.height = zoomSize
+          const zoomCtx = zoomCanvas.getContext('2d')
+
+          const cropW = vw / ZOOM
+          const cropH = vh / ZOOM
+          const cropX = (vw - cropW) / 2
+          const cropY = (vh - cropH) / 2
+          zoomCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, zoomSize, zoomSize)
+
+          rafRef.current = requestAnimationFrame(drawFrame)
         }
-      },
-    ).catch(() => {
-      setError('Kunne ikke starte kameraet.')
-    })
+
+        drawFrame()
+
+        // QR scanning loop on the zoomed area
+        const scanLoop = () => {
+          if (stopped || !scanning) return
+          const zoomCanvas = zoomCanvasRef.current
+          const w = zoomCanvas.width
+          const h = zoomCanvas.height
+          if (w && h) {
+            const ctx = zoomCanvas.getContext('2d')
+            const imageData = ctx.getImageData(0, 0, w, h)
+            const result = jsQR(imageData.data, w, h, { inversionAttempts: 'dontInvert' })
+            if (result && result.data) {
+              handleCode(result.data.trim())
+            }
+          }
+          scanTimerRef.current = setTimeout(scanLoop, SCAN_INTERVAL)
+        }
+        scanTimerRef.current = setTimeout(scanLoop, 500)
+
+      } catch {
+        if (!stopped) setError('Kunne ikke starte kameraet.')
+      }
+    }
+
+    start()
 
     return () => {
-      scanner.stop().catch(() => {})
+      stopped = true
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      if (scanTimerRef.current) clearTimeout(scanTimerRef.current)
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
     }
-  }, [])
+  }, [scanning, handleCode])
 
   return (
     <div className="screen center">
       <h2>Skann QR-koden din</h2>
-      <p className="status-sub">Hold klistrelappen opp mot kameraet</p>
-      <div className="qr-scanner-wrap">
-        <div id="qr-reader" />
+      <p className="status-sub">Still deg i midten slik at QR-koden synes</p>
+
+      <div className="qr-dual-view">
+        <canvas ref={bgCanvasRef} className="qr-bg-canvas" />
+        <div className="qr-zoom-ring">
+          <canvas ref={zoomCanvasRef} className="qr-zoom-canvas" />
+        </div>
       </div>
+      <video ref={videoRef} playsInline muted style={{ display: 'none' }} />
+
       {error && <p className="qr-scan-error">{error}</p>}
       <button className="btn-cancel" onClick={onCancel}>Avbryt</button>
     </div>

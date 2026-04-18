@@ -42,6 +42,26 @@ users: List[dict] = []
 booths: List[dict] = []
 presentations: List[dict] = []
 
+import random
+import string
+
+def _generate_short_code():
+    """Generate a unique 5-char alphanumeric code (uppercase, no ambiguous chars)."""
+    chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I
+    existing = {u.get("short_code") for u in users}
+    for _ in range(100):
+        code = "".join(random.choices(chars, k=5))
+        if code not in existing:
+            return code
+    return "".join(random.choices(chars, k=7))  # fallback longer code
+
+
+def _ensure_short_codes():
+    """Assign short codes to any users missing one."""
+    for u in users:
+        if not u.get("short_code"):
+            u["short_code"] = _generate_short_code()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,6 +70,7 @@ async def lifespan(app: FastAPI):
     try:
         us = await loop.run_in_executor(None, instant_db.get_all_users)
         users.extend(us)
+        _ensure_short_codes()
         print(f"[startup] Restored {len(us)} users from InstantDB")
     except Exception as e:
         print(f"[startup] Could not restore users from InstantDB: {e}")
@@ -139,19 +160,19 @@ def _find_font(size):
     return ImageFont.truetype(_BUNDLED_FONT, size)
 
 
-def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
+def _generate_label(user_name: str, interest: str, short_code: str) -> bytes:
     PAD = 14
     canvas = Image.new("RGB", (_LABEL_W, _LABEL_H), "white")
     draw = ImageDraw.Draw(canvas)
 
-    # Square QR code on the left
+    # Square QR code on the left — encode just the short code for maximum scannability
     qr = qrcode.QRCode(
         version=None,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
         box_size=10,
         border=2,
     )
-    qr.add_data(f"{_QR_BASE_URL}/u/{user_id}")
+    qr.add_data(short_code or "NOCODE")
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
     qr_size = _LABEL_H - PAD * 2
@@ -177,7 +198,7 @@ def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
     name_text_w = name_bbox[2] - name_bbox[0]
     name_text_h = name_bbox[3] - name_bbox[1]
     name_x = _LABEL_W - PAD - name_text_w - name_bbox[0]
-    draw.text((name_x, PAD - name_bbox[1]), user_name, fill="black", font=name_font)
+    draw.text((name_x, PAD + 10 - name_bbox[1]), user_name, fill="black", font=name_font)
 
     # Interests (below name, left-aligned with word wrap)
     items = [s.strip() for s in (interest or "").split(",") if s.strip()]
@@ -236,13 +257,14 @@ def _generate_label(user_name: str, interest: str, user_id: str) -> bytes:
 def label_preview(user_id: str, name: str = "", interest: str = ""):
     """Generate and return the label image as PNG.
     Accepts name/interest as query params to avoid race conditions."""
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
     if not name:
-        user = next((u for u in users if u["id"] == user_id), None)
-        if not user:
-            raise HTTPException(status_code=404, detail="user not found")
         name = user.get("name", "")
         interest = interest or user.get("interest", "")
-    png = _generate_label(name, interest, user_id)
+    short_code = user.get("short_code", "")
+    png = _generate_label(name, interest, short_code)
     return Response(content=png, media_type="image/png")
 
 
@@ -328,7 +350,7 @@ async def admin_import_users(file: UploadFile = File(...), _=Depends(require_adm
             continue
 
         user_id = str(uuid.uuid4())
-        user = {"id": user_id, "name": name, "email": email, "created_at": int(time.time() * 1000)}
+        user = {"id": user_id, "name": name, "email": email, "created_at": int(time.time() * 1000), "short_code": _generate_short_code()}
         users.append(user)
         existing_emails.add(email.lower())
 
@@ -371,7 +393,7 @@ async def admin_add_user(body: dict, _=Depends(require_admin)):
     if any(u.get("email", "").lower() == email.lower() for u in users):
         raise HTTPException(status_code=409, detail="email already exists")
     user_id = str(uuid.uuid4())
-    user = {"id": user_id, "name": name, "email": email, "created_at": int(time.time() * 1000)}
+    user = {"id": user_id, "name": name, "email": email, "created_at": int(time.time() * 1000), "short_code": _generate_short_code()}
     users.append(user)
     try:
         await asyncio.get_event_loop().run_in_executor(
@@ -619,6 +641,22 @@ def booth_config(number: int):
 def get_user(user_id: str):
     """Look up a user by ID. No auth — booth QR scanner needs this."""
     user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="user not found")
+    return {
+        "id": user["id"],
+        "name": user.get("name", ""),
+        "interest": user.get("interest", ""),
+        "short_code": user.get("short_code", ""),
+        "wants_demo": bool(user.get("wants_demo")),
+    }
+
+
+@app.get("/users/by-code/{code}")
+def get_user_by_code(code: str):
+    """Look up a user by short QR code. No auth — booth scanner needs this."""
+    code_upper = code.strip().upper()
+    user = next((u for u in users if u.get("short_code") == code_upper), None)
     if not user:
         raise HTTPException(status_code=404, detail="user not found")
     return {

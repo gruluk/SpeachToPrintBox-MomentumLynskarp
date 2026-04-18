@@ -34,15 +34,14 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     canvas = Image.new("RGB", (target_w, content_h), "white")
     draw = ImageDraw.Draw(canvas)
 
-    # --- Square QR code on the left ---
-    qr_url = f"{QR_BASE_URL}/u/{user_id}" if user_id else "https://lynskarp.soprasteria.no"
+    # --- Square QR code on the left — short code for easy scanning ---
     qr = qrcode.QRCode(
         version=None,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
         box_size=10,
         border=2,
     )
-    qr.add_data(qr_url)
+    qr.add_data(user_id or "NOCODE")  # user_id is actually short_code from caller
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
     qr_size = content_h - PAD * 2
@@ -72,7 +71,7 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     name_text_w = name_bbox[2] - name_bbox[0]
     name_text_h = name_bbox[3] - name_bbox[1]
     name_x = target_w - PAD - name_text_w - name_bbox[0]
-    name_y = text_area_top - name_bbox[1]
+    name_y = text_area_top + 10 - name_bbox[1]
     draw.text((name_x, name_y), user_name, fill="black", font=name_font)
 
     # Interests (below name, left-aligned with word wrap)
