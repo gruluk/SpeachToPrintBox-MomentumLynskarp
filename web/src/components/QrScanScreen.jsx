@@ -65,18 +65,20 @@ export default function QrScanScreen({ onScanned, onCancel }) {
           const bgCtx = bgCanvas.getContext('2d')
           bgCtx.drawImage(video, 0, 0, vw, vh)
 
-          // Draw zoomed center crop
+          // Draw zoomed center crop (matches label aspect ratio 103:45)
           const zoomCanvas = zoomCanvasRef.current
-          const zoomSize = zoomCanvas.clientWidth * window.devicePixelRatio
-          zoomCanvas.width = zoomSize
-          zoomCanvas.height = zoomSize
+          const dpr = window.devicePixelRatio || 1
+          const zoomW = zoomCanvas.clientWidth * dpr
+          const zoomH = zoomCanvas.clientHeight * dpr
+          zoomCanvas.width = zoomW
+          zoomCanvas.height = zoomH
           const zoomCtx = zoomCanvas.getContext('2d')
 
           const cropW = vw / ZOOM
-          const cropH = vh / ZOOM
+          const cropH = (vw / ZOOM) * (45 / 103) // match label aspect ratio
           const cropX = (vw - cropW) / 2
           const cropY = (vh - cropH) / 2
-          zoomCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, zoomSize, zoomSize)
+          zoomCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, zoomW, zoomH)
 
           rafRef.current = requestAnimationFrame(drawFrame)
         }
@@ -129,7 +131,7 @@ export default function QrScanScreen({ onScanned, onCancel }) {
       </div>
       <video ref={videoRef} playsInline muted style={{ display: 'none' }} />
 
-      {error && <p className="qr-scan-error">{error}</p>}
+      <p className="qr-scan-error">{error || '\u00A0'}</p>
       <button className="btn-cancel" onClick={onCancel}>Avbryt</button>
     </div>
   )

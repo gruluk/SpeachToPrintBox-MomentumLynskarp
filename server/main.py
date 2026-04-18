@@ -56,11 +56,22 @@ def _generate_short_code():
     return "".join(random.choices(chars, k=7))  # fallback longer code
 
 
-def _ensure_short_codes():
-    """Assign short codes to any users missing one."""
+async def _ensure_short_codes():
+    """Assign short codes to any users missing one and persist to DB."""
+    loop = asyncio.get_event_loop()
+    count = 0
     for u in users:
         if not u.get("short_code"):
             u["short_code"] = _generate_short_code()
+            try:
+                await loop.run_in_executor(
+                    None, lambda uid=u["id"], sc=u["short_code"]: instant_db.update_user(uid, short_code=sc),
+                )
+            except Exception as e:
+                print(f"[startup] Failed to persist short_code for {u['id']}: {e}")
+            count += 1
+    if count:
+        print(f"[startup] Generated and persisted {count} short codes")
 
 
 @asynccontextmanager
@@ -70,7 +81,7 @@ async def lifespan(app: FastAPI):
     try:
         us = await loop.run_in_executor(None, instant_db.get_all_users)
         users.extend(us)
-        _ensure_short_codes()
+        await _ensure_short_codes()
         print(f"[startup] Restored {len(us)} users from InstantDB")
     except Exception as e:
         print(f"[startup] Could not restore users from InstantDB: {e}")
