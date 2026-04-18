@@ -222,17 +222,18 @@ def send_to_printer(image: Image.Image) -> bool:
 # ── Process a user ────────────────────────────────────────────────────────────
 
 def process_user(user: dict) -> None:
-    user_id  = user["id"]
-    name     = user.get("name", "").strip()
-    interest = user.get("interest", "")
+    user_id    = user["id"]
+    name       = user.get("name", "").strip()
+    interest   = user.get("interest", "")
+    short_code = user.get("short_code", "")
 
     if not name:
         print(f"[skip]  {user_id} — no name, skipping")
         return
 
-    print(f"[label] compositing for {name!r} interest={interest!r}")
+    print(f"[label] compositing for {name!r} interest={interest!r} code={short_code!r}")
     try:
-        label = composite_label(name, interest, user_id)
+        label = composite_label(name, interest, short_code)
     except Exception as e:
         print(f"[error] compositing failed: {e}")
         return

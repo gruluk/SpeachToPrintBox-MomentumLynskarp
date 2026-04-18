@@ -430,6 +430,14 @@ async def admin_patch_user(user_id: str, body: dict, _=Depends(require_admin)):
         db_updates["interest"] = None
         db_updates["label_printed"] = None
 
+    if "interest" in body and not body.get("clear_interest"):
+        user["interest"] = body["interest"]
+        db_updates["interest"] = body["interest"]
+
+    if body.get("reprint"):
+        user["label_printed"] = False
+        db_updates["label_printed"] = False
+
     if "wants_demo" in body:
         user["wants_demo"] = bool(body["wants_demo"])
         db_updates["wants_demo"] = bool(body["wants_demo"])

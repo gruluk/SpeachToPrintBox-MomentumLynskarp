@@ -525,7 +525,10 @@
       <tr>
         <td>${esc(u.name)}</td>
         <td style="color:var(--muted)">${esc(u.email)}</td>
-        <td style="color:var(--muted)">${esc(u.interest || '')}</td>
+        <td style="color:var(--muted)">
+          ${esc(u.interest || '—')}
+          <button class="btn btn-ghost btn-sm" style="margin-left:0.25rem" onclick="editInterest('${u.id}')">✎</button>
+        </td>
         <td>
           <button class="btn ${u.wants_demo ? 'btn-purple' : 'btn-ghost'} btn-sm" onclick="toggleDemo('${u.id}', ${!u.wants_demo})">
             ${u.wants_demo ? 'Yes' : 'No'}
@@ -533,7 +536,8 @@
         </td>
         <td>
           <div class="action-row">
-            ${u.interest ? `<button class="btn btn-orange btn-sm" onclick="clearInterest('${u.id}')">Clear interest</button>` : ''}
+            <button class="btn btn-purple btn-sm" onclick="reprintLabel('${u.id}')">Reprint</button>
+            ${u.interest ? `<button class="btn btn-orange btn-sm" onclick="clearInterest('${u.id}')">Clear</button>` : ''}
             <button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}')">Delete</button>
           </div>
         </td>
@@ -560,6 +564,31 @@
       alert(`Deleted ${data.deleted} users`)
       loadUsers()
     } else alert('Failed to delete users')
+  }
+
+  async function editInterest(id) {
+    const user = mergedUsers.find(u => u.id === id)
+    if (!user) return
+    const current = user.interest || ''
+    const newInterest = prompt('Edit interests (comma-separated):', current)
+    if (newInterest === null) return
+    const res = await fetch(`/admin/api/users/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interest: newInterest.trim() }),
+    })
+    if (res.ok) loadUsers()
+    else alert('Failed to update interest')
+  }
+
+  async function reprintLabel(id) {
+    const res = await fetch(`/admin/api/users/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reprint: true }),
+    })
+    if (res.ok) {
+      alert('Label queued for reprint')
+      loadUsers()
+    } else alert('Failed to queue reprint')
   }
 
   async function clearInterest(id) {
