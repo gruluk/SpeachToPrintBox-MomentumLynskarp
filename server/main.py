@@ -286,6 +286,69 @@ def admin_page(_=Depends(require_admin)):
     return (Path(__file__).parent / "static" / "admin.html").read_text()
 
 
+# --- Interest export ---
+
+@app.get("/admin/api/export-interests")
+def export_interests(_=Depends(require_admin)):
+    """Export interest distribution as an Excel file."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+
+    # Count interests
+    interest_counts = {}
+    users_with_interests = 0
+    total_votes = 0
+    for u in users:
+        items = [s.strip() for s in (u.get("interest") or "").split(",") if s.strip()]
+        if items:
+            users_with_interests += 1
+            for item in items:
+                interest_counts[item] = interest_counts.get(item, 0) + 1
+                total_votes += 1
+
+    # Sort by count descending
+    sorted_interests = sorted(interest_counts.items(), key=lambda x: x[1], reverse=True)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Interessefordeling"
+
+    # Header
+    header_font = Font(bold=True, size=12)
+    ws.append(["Interessefordeling — Momentum Lynskarp"])
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.append([f"{users_with_interests} deltakere — {total_votes} stemmer totalt"])
+    ws["A2"].font = Font(size=11, color="666666")
+    ws.append([])
+
+    # Column headers
+    ws.append(["Interesseområde", "Antall stemmer", "Andel (%)", f"Av {total_votes}"])
+    for cell in ws[4]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="E8E0F0", end_color="E8E0F0", fill_type="solid")
+
+    # Data rows
+    for interest, count in sorted_interests:
+        pct = round(count / total_votes * 100, 1) if total_votes else 0
+        ws.append([interest, count, pct, f"{count}/{total_votes}"])
+
+    # Column widths
+    ws.column_dimensions["A"].width = 40
+    ws.column_dimensions["B"].width = 18
+    ws.column_dimensions["C"].width = 14
+    ws.column_dimensions["D"].width = 12
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=interessefordeling.xlsx"},
+    )
+
+
 # --- Users ---
 
 @app.get("/users")
