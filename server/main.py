@@ -377,7 +377,7 @@ def _parse_spreadsheet(raw: bytes, filename: str) -> list[dict]:
     """Parse CSV or XLSX into a list of dicts with lowercased keys."""
     if filename.endswith(".xlsx"):
         from openpyxl import load_workbook
-        wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+        wb = load_workbook(io.BytesIO(raw), data_only=True)
         ws = wb.active
         rows = list(ws.iter_rows(values_only=True))
         wb.close()
