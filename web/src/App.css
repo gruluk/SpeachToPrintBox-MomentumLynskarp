@@ -167,30 +167,30 @@ h2 {
   background: var(--surface-solid);
 }
 
-/* Start — red, bigger */
+/* Start — gradient, bigger */
 .btn-start {
-  background: var(--red);
+  background: linear-gradient(135deg, var(--purple-light), var(--pink));
   color: white;
   padding: 1.25rem 3.5rem;
   font-size: 1.3rem;
-  box-shadow: var(--shadow);
+  box-shadow: 0 2px 12px rgba(234, 85, 153, 0.4);
 }
 .btn-start:hover:not(:disabled) {
-  background: #a00224;
-  box-shadow: var(--shadow-lg);
+  background: linear-gradient(135deg, #6e1568, #d44488);
+  box-shadow: 0 4px 20px rgba(234, 85, 153, 0.5);
 }
 
-/* Capture — red */
+/* Capture — gradient */
 .btn-capture {
-  background: var(--red);
+  background: linear-gradient(135deg, var(--purple-light), var(--pink));
   color: white;
   padding: 1.15rem 3rem;
   font-size: 1.2rem;
-  box-shadow: var(--shadow);
+  box-shadow: 0 2px 12px rgba(234, 85, 153, 0.4);
 }
 .btn-capture:hover:not(:disabled) {
-  background: #a00224;
-  box-shadow: var(--shadow-lg);
+  background: linear-gradient(135deg, #6e1568, #d44488);
+  box-shadow: 0 4px 20px rgba(234, 85, 153, 0.5);
 }
 
 /* Cancel — glass */
