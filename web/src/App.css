@@ -709,6 +709,7 @@ h2 {
   object-fit: cover;
   display: block;
   opacity: 0.5;
+  transform: scaleX(-1);
 }
 
 .qr-zoom-ring {
@@ -729,6 +730,7 @@ h2 {
   height: 100%;
   display: block;
   object-fit: cover;
+  transform: scaleX(-1);
 }
 
 .qr-scan-error {
@@ -811,7 +813,7 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 230px;
+  height: 310px;
   flex-shrink: 0;
 }
 

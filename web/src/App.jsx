@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import './App.css'
 import StartScreen from './components/StartScreen'
 import NameInputScreen from './components/NameInputScreen'
+import PrivacyScreen from './components/PrivacyScreen'
 import InterestSelectScreen from './components/InterestSelectScreen'
 import DoneScreen from './components/DoneScreen'
 import QrScanScreen from './components/QrScanScreen'
@@ -38,7 +39,7 @@ export default function App() {
   const handleNameSubmit = useCallback((user) => {
     setUserId(user.id)
     setName(user.name)
-    setState('INTEREST_SELECT')
+    setState('PRIVACY')
   }, [])
 
   const handleInterestSelect = useCallback(async (i) => {
@@ -90,6 +91,9 @@ export default function App() {
       {/* Register flow */}
       {state === 'NAME_INPUT' && (
         <NameInputScreen onSubmit={handleNameSubmit} onCancel={handleDone} />
+      )}
+      {state === 'PRIVACY' && (
+        <PrivacyScreen onAccept={() => setState('INTEREST_SELECT')} onCancel={handleDone} />
       )}
       {state === 'INTEREST_SELECT' && (
         <InterestSelectScreen name={name} onSelect={handleInterestSelect} onCancel={handleDone} />
