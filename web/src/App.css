@@ -434,15 +434,20 @@ h2 {
 
 .name-screen {
   justify-content: flex-start;
-  padding-top: 4rem;
+  padding-top: 2rem;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .name-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: center;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   max-width: 440px;
 }
 
@@ -635,13 +640,15 @@ h2 {
 
 .name-list-wrap {
   width: 100%;
-  max-height: 35vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   backdrop-filter: blur(8px);
+  -webkit-overflow-scrolling: touch;
 }
 
 .name-list {

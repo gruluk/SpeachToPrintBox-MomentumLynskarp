@@ -6,6 +6,7 @@ export default function NameInputScreen({ onSubmit, onCancel }) {
   const [selectedId, setSelectedId] = useState(null)
   const [showReregister, setShowReregister] = useState(false)
   const inputRef = useRef(null)
+  const screenRef = useRef(null)
 
   // Load all registered users on mount
   useEffect(() => {
@@ -18,6 +19,22 @@ export default function NameInputScreen({ onSubmit, onCancel }) {
   // Auto-focus input for keyboard
   useEffect(() => {
     inputRef.current?.focus()
+  }, [])
+
+  // Resize screen when virtual keyboard opens/closes (iPad)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+
+    function onResize() {
+      if (screenRef.current) {
+        screenRef.current.style.height = `${vv.height}px`
+      }
+    }
+
+    onResize()
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
   }, [])
 
   const filtered = allUsers.filter(u =>
@@ -52,7 +69,7 @@ export default function NameInputScreen({ onSubmit, onCancel }) {
   }
 
   return (
-    <div className="screen center name-screen">
+    <div ref={screenRef} className="screen center name-screen">
       <h2>Hva heter du?</h2>
       <form onSubmit={handleSubmit} className="name-form">
         <input
