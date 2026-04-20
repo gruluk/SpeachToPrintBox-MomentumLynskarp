@@ -323,7 +323,7 @@ class App:
         h = self.root.winfo_height() or 480
         # Leave some margin so the label preview isn't zoomed to fill the whole screen
         max_w = int(w * 0.85)
-        max_h = int(h * 0.6)
+        max_h = int(h * 0.45)
         scale = min(max_w / composited.width, max_h / composited.height)
         display = composited.resize(
             (int(composited.width * scale), int(composited.height * scale)), Image.LANCZOS
