@@ -92,7 +92,8 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     draw = ImageDraw.Draw(canvas)
 
     # --- Name across the full width at the top ---
-    name_font_size = 56
+    NAME_PAD_TOP = 20
+    name_font_size = 72
     try:
         name_font = _find_font(name_font_size)
         while name_font_size > 16:
@@ -109,11 +110,11 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     name_text_h = name_bbox[3] - name_bbox[1]
     # Center the name horizontally
     name_x = (target_w - name_text_w) // 2 - name_bbox[0]
-    name_y = PAD - name_bbox[1]
+    name_y = NAME_PAD_TOP - name_bbox[1]
     draw.text((name_x, name_y), user_name, fill="black", font=name_font)
 
     # Separator line below name
-    sep_y = PAD + name_text_h + 8
+    sep_y = NAME_PAD_TOP + name_text_h + 8
     draw.line([(PAD, sep_y), (target_w - PAD, sep_y)], fill="#cccccc", width=2)
 
     # --- Bottom area: QR left, interests right ---
@@ -136,7 +137,7 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
 
     # --- Interests on the right ---
     text_left = PAD + qr_size + PAD * 2
-    text_area_w = target_w - text_left - PAD
+    text_area_w = target_w - text_left - PAD * 2
 
     items = [s.strip() for s in (interest or "").split(",") if s.strip()]
     item_spacing = 35

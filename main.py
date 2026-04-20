@@ -321,9 +321,12 @@ class App:
         self._show_state(RESULT)
         w = self.root.winfo_width() or 640
         h = self.root.winfo_height() or 480
-        scale = min(w / composited.width, h / composited.height)
+        # Leave some margin so the label preview isn't zoomed to fill the whole screen
+        max_w = int(w * 0.85)
+        max_h = int(h * 0.6)
+        scale = min(max_w / composited.width, max_h / composited.height)
         display = composited.resize(
-            (int(composited.width * scale), int(composited.height * scale)), Image.NEAREST
+            (int(composited.width * scale), int(composited.height * scale)), Image.LANCZOS
         )
         photo = ImageTk.PhotoImage(display)
         self.display_label.config(image=photo)
