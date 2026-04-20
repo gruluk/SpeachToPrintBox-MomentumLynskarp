@@ -162,7 +162,25 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
                         lines.append(current)
                         current = word
                 lines.append(current)
-                wrapped_lines.append(lines)
+                # Break any lines that are still too wide (long single words)
+                final_lines = []
+                for line in lines:
+                    lw = interest_font.getbbox(line)[2] - interest_font.getbbox(line)[0]
+                    if lw <= text_area_w:
+                        final_lines.append(line)
+                    else:
+                        part = ""
+                        for ch in line:
+                            test_part = part + ch
+                            pw = interest_font.getbbox(test_part)[2] - interest_font.getbbox(test_part)[0]
+                            if pw > text_area_w and part:
+                                final_lines.append(part)
+                                part = ch
+                            else:
+                                part = test_part
+                        if part:
+                            final_lines.append(part)
+                wrapped_lines.append(final_lines)
             total_lines = sum(len(lines) for lines in wrapped_lines)
             total_h = total_lines * line_h + (len(items) - 1) * item_spacing
             if total_h <= bottom_h:
