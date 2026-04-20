@@ -42,7 +42,7 @@ export default function QrScanScreen({ onScanned, onCancel }) {
     async function start() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         })
         if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
