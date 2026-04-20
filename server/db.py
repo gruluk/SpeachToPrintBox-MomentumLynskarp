@@ -118,12 +118,15 @@ def get_unprinted() -> list[dict]:
 
 # ── Users (unified: registration + face + demos) ─────────────────────────────
 
-def create_user(user_id: str, name: str, email: str) -> None:
+def create_user(user_id: str, name: str, email: str, short_code: str = "") -> None:
     """Insert a new user."""
+    data = {"name": name, "email": email, "created_at": int(time.time() * 1000)}
+    if short_code:
+        data["short_code"] = short_code
     payload = {
         "steps": [[
             "update", "users", user_id,
-            {"name": name, "email": email, "created_at": int(time.time() * 1000)},
+            data,
         ]]
     }
     r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=15)

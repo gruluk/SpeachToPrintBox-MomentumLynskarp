@@ -143,10 +143,11 @@ async def print_label(
 
     user["interest"] = interest
     user["label_printed"] = False
+    short_code = user.get("short_code", "")
 
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None, lambda: instant_db.update_user(user_id, interest=interest, label_printed=False),
+            None, lambda: instant_db.update_user(user_id, interest=interest, label_printed=False, short_code=short_code),
         )
     except Exception as e:
         print(f"[print-label] DB write failed: {e}")
@@ -430,7 +431,7 @@ async def admin_import_users(file: UploadFile = File(...), _=Depends(require_adm
 
         try:
             await asyncio.get_event_loop().run_in_executor(
-                None, instant_db.create_user, user_id, name, email
+                None, lambda uid=user_id, n=name, e=email, sc=user["short_code"]: instant_db.create_user(uid, n, e, sc),
             )
         except Exception as e:
             print(f"[import] DB write failed for {email}: {e}")
@@ -471,7 +472,7 @@ async def admin_add_user(body: dict, _=Depends(require_admin)):
     users.append(user)
     try:
         await asyncio.get_event_loop().run_in_executor(
-            None, instant_db.create_user, user_id, name, email
+            None, lambda: instant_db.create_user(user_id, name, email, user["short_code"]),
         )
     except Exception as e:
         print(f"[admin] create user failed: {e}")
