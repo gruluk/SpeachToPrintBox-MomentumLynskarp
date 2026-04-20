@@ -748,6 +748,15 @@ h2 {
 
 /* --- Interest screen --- */
 
+.interest-screen {
+  justify-content: flex-start;
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
 .interest-greeting {
   font-size: 1.4rem;
   font-weight: 500;

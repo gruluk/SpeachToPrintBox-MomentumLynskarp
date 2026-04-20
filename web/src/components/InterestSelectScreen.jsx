@@ -35,7 +35,7 @@ export default function InterestSelectScreen({ name, onSelect, onCancel }) {
   }
 
   return (
-    <div className="screen center">
+    <div className="screen center interest-screen">
       <p className="interest-greeting">Hyggelig å se deg, {name}!</p>
       <h2>Velg dine interesseområder</h2>
       <p className="status-sub">Velg 1–{MAX_COUNT} temaer. Valgt: {selected.length} av {MAX_COUNT}</p>
