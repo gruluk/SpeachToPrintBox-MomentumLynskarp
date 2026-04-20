@@ -161,7 +161,7 @@ async def print_label(
 
 _QR_BASE_URL = os.getenv("QR_BASE_URL", "https://lynskarp.soprasteria.no")
 _LABEL_W = round(103 * 300 / 25.4)   # 103mm at 300 DPI
-_LABEL_H = round(45 * 300 / 25.4)    # 45mm at 300 DPI
+_LABEL_H = round(60 * 300 / 25.4)    # 60mm at 300 DPI
 _ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
 
@@ -177,7 +177,32 @@ def _generate_label(user_name: str, interest: str, short_code: str) -> bytes:
     canvas = Image.new("RGB", (_LABEL_W, _LABEL_H), "white")
     draw = ImageDraw.Draw(canvas)
 
-    # Square QR code on the left — encode just the short code for maximum scannability
+    # --- Name across the full width at the top ---
+    name_font_size = 56
+    name_font = _find_font(name_font_size)
+    while name_font_size > 16:
+        name_font = _find_font(name_font_size)
+        bbox = name_font.getbbox(user_name)
+        if (bbox[2] - bbox[0]) <= _LABEL_W - PAD * 2:
+            break
+        name_font_size -= 4
+    name_bbox = name_font.getbbox(user_name)
+    name_text_w = name_bbox[2] - name_bbox[0]
+    name_text_h = name_bbox[3] - name_bbox[1]
+    # Center the name horizontally
+    name_x = (_LABEL_W - name_text_w) // 2 - name_bbox[0]
+    name_y = PAD - name_bbox[1]
+    draw.text((name_x, name_y), user_name, fill="black", font=name_font)
+
+    # Separator line below name
+    sep_y = PAD + name_text_h + 8
+    draw.line([(PAD, sep_y), (_LABEL_W - PAD, sep_y)], fill="#cccccc", width=2)
+
+    # --- Bottom area: QR left, interests right ---
+    bottom_top = sep_y + 10
+    bottom_h = _LABEL_H - bottom_top - PAD
+
+    # QR code on the left
     qr = qrcode.QRCode(
         version=None,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -187,39 +212,18 @@ def _generate_label(user_name: str, interest: str, short_code: str) -> bytes:
     qr.add_data(short_code or "NOCODE")
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-    qr_size = _LABEL_H - PAD * 2
+    qr_size = bottom_h
     qr_img = qr_img.resize((qr_size, qr_size), Image.NEAREST)
-    canvas.paste(qr_img, (PAD, PAD))
+    canvas.paste(qr_img, (PAD, bottom_top))
 
-    # Text area on the right
+    # --- Interests on the right ---
     text_left = PAD + qr_size + PAD * 2
     text_area_w = _LABEL_W - text_left - PAD
-    sep_x = PAD + qr_size + PAD
-    draw.line([(sep_x, PAD + 10), (sep_x, _LABEL_H - PAD - 10)], fill="#cccccc", width=2)
 
-    # Name (top-right, smaller)
-    name_font_size = 36
-    name_font = _find_font(name_font_size)
-    while name_font_size > 12:
-        name_font = _find_font(name_font_size)
-        bbox = name_font.getbbox(user_name)
-        if (bbox[2] - bbox[0]) <= text_area_w:
-            break
-        name_font_size -= 4
-    name_bbox = name_font.getbbox(user_name)
-    name_text_w = name_bbox[2] - name_bbox[0]
-    name_text_h = name_bbox[3] - name_bbox[1]
-    name_x = _LABEL_W - PAD - name_text_w - name_bbox[0]
-    draw.text((name_x, PAD + 10 - name_bbox[1]), user_name, fill="black", font=name_font)
-
-    # Interests (below name, left-aligned with word wrap)
     items = [s.strip() for s in (interest or "").split(",") if s.strip()]
-    interest_top = PAD + name_text_h + 16
-    interest_area_h = _LABEL_H - interest_top - PAD
-    item_spacing = 35  # space between interest items
+    item_spacing = 35
 
     if items:
-        # Find largest font where all wrapped text fits vertically
         interest_font_size = 60
         wrapped_lines = []
         while interest_font_size > 10:
@@ -242,7 +246,7 @@ def _generate_label(user_name: str, interest: str, short_code: str) -> bytes:
                 wrapped_lines.append(lines)
             total_lines = sum(len(lines) for lines in wrapped_lines)
             total_h = total_lines * line_h + (len(items) - 1) * item_spacing
-            if total_h <= interest_area_h:
+            if total_h <= bottom_h:
                 break
             interest_font_size -= 4
         interest_font = _find_font(interest_font_size)
@@ -250,7 +254,7 @@ def _generate_label(user_name: str, interest: str, short_code: str) -> bytes:
 
         total_lines = sum(len(lines) for lines in wrapped_lines)
         total_h = total_lines * line_h + (len(items) - 1) * item_spacing
-        y_cursor = interest_top + (interest_area_h - total_h) // 2
+        y_cursor = bottom_top + (bottom_h - total_h) // 2
 
         for idx, lines in enumerate(wrapped_lines):
             for line in lines:

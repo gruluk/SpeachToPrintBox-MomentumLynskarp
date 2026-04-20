@@ -38,7 +38,7 @@ POLL_INTERVAL = 5  # seconds between InstantDB polls
 
 ASSETS_DIR      = os.path.join(os.path.dirname(__file__), "assets")
 LABEL_W_MM      = 103
-CONTENT_H_MM    = 45
+CONTENT_H_MM    = 60
 QR_BASE_URL     = os.getenv("QR_BASE_URL", "https://lynskarp.soprasteria.no")
 
 
@@ -82,7 +82,7 @@ def _find_font(size: int) -> ImageFont.FreeTypeFont:
 
 
 def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.Image:
-    """Create a label with square QR code on the left and name + interests on the right."""
+    """Create a label with name on top, QR code bottom-left, interests bottom-right."""
     DPI = 300
     target_w  = round(LABEL_W_MM  * DPI / 25.4)
     content_h = round(CONTENT_H_MM * DPI / 25.4)
@@ -91,37 +91,14 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     canvas = Image.new("RGB", (target_w, content_h), "white")
     draw = ImageDraw.Draw(canvas)
 
-    # --- Square QR code on the left — short code for easy scanning ---
-    qr = qrcode.QRCode(
-        version=None,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=2,
-    )
-    qr.add_data(user_id or "NOCODE")  # user_id is actually short_code from caller
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-    qr_size = content_h - PAD * 2
-    qr_img = qr_img.resize((qr_size, qr_size), Image.NEAREST)
-    canvas.paste(qr_img, (PAD, PAD))
-
-    # --- Text area on the right ---
-    text_left = PAD + qr_size + PAD * 2
-    text_area_w = target_w - text_left - PAD
-    text_area_top = PAD
-
-    # Separator line
-    sep_x = PAD + qr_size + PAD
-    draw.line([(sep_x, PAD + 10), (sep_x, content_h - PAD - 10)], fill="#cccccc", width=2)
-
-    # Name (top-right aligned)
-    name_font_size = 36
+    # --- Name across the full width at the top ---
+    name_font_size = 56
     try:
         name_font = _find_font(name_font_size)
-        while name_font_size > 12:
+        while name_font_size > 16:
             name_font = _find_font(name_font_size)
             bbox = name_font.getbbox(user_name)
-            if (bbox[2] - bbox[0]) <= text_area_w:
+            if (bbox[2] - bbox[0]) <= target_w - PAD * 2:
                 break
             name_font_size -= 4
     except Exception:
@@ -130,14 +107,38 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
     name_bbox = name_font.getbbox(user_name)
     name_text_w = name_bbox[2] - name_bbox[0]
     name_text_h = name_bbox[3] - name_bbox[1]
-    name_x = target_w - PAD - name_text_w - name_bbox[0]
-    name_y = text_area_top + 10 - name_bbox[1]
+    # Center the name horizontally
+    name_x = (target_w - name_text_w) // 2 - name_bbox[0]
+    name_y = PAD - name_bbox[1]
     draw.text((name_x, name_y), user_name, fill="black", font=name_font)
 
-    # Interests (below name, left-aligned with word wrap)
+    # Separator line below name
+    sep_y = PAD + name_text_h + 8
+    draw.line([(PAD, sep_y), (target_w - PAD, sep_y)], fill="#cccccc", width=2)
+
+    # --- Bottom area: QR left, interests right ---
+    bottom_top = sep_y + 10
+    bottom_h = content_h - bottom_top - PAD
+
+    # QR code on the left
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(user_id or "NOCODE")
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    qr_size = bottom_h
+    qr_img = qr_img.resize((qr_size, qr_size), Image.NEAREST)
+    canvas.paste(qr_img, (PAD, bottom_top))
+
+    # --- Interests on the right ---
+    text_left = PAD + qr_size + PAD * 2
+    text_area_w = target_w - text_left - PAD
+
     items = [s.strip() for s in (interest or "").split(",") if s.strip()]
-    interest_top = text_area_top + name_text_h + 16
-    interest_area_h = content_h - interest_top - PAD
     item_spacing = 35
 
     if items:
@@ -163,7 +164,7 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
                 wrapped_lines.append(lines)
             total_lines = sum(len(lines) for lines in wrapped_lines)
             total_h = total_lines * line_h + (len(items) - 1) * item_spacing
-            if total_h <= interest_area_h:
+            if total_h <= bottom_h:
                 break
             interest_font_size -= 4
         interest_font = _find_font(interest_font_size)
@@ -171,7 +172,7 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
 
         total_lines = sum(len(lines) for lines in wrapped_lines)
         total_h = total_lines * line_h + (len(items) - 1) * item_spacing
-        y_cursor = interest_top + (interest_area_h - total_h) // 2
+        y_cursor = bottom_top + (bottom_h - total_h) // 2
 
         for idx, lines in enumerate(wrapped_lines):
             for line in lines:

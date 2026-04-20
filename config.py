@@ -33,7 +33,7 @@ PRINTER_PRODUCT = 0x20a8
 PRODUCTION_MODE     = os.getenv("PRODUCTION_MODE",     "false").lower() == "true"
 ENABLE_LOCAL_PRINT  = os.getenv("ENABLE_LOCAL_PRINT",  "false").lower() == "true"
 LABEL           = "103" if PRODUCTION_MODE else "103x164"
-PRINT_HEIGHT_MM = 45  # content height for both continuous and die-cut
+PRINT_HEIGHT_MM = 60  # content height for both continuous and die-cut
 
 # --- States ---
 START         = "start"
