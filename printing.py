@@ -89,8 +89,17 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
             interest_font = _find_font(font_path, interest_font_size)
             line_h = interest_font.getbbox("Ag")[3] - interest_font.getbbox("Ag")[1]
             wrapped_lines = []
+            words_fit = True
             for item in items:
                 words = item.split()
+                # Check that every single word fits at this font size
+                for word in words:
+                    ww = interest_font.getbbox(word)[2] - interest_font.getbbox(word)[0]
+                    if ww > text_area_w:
+                        words_fit = False
+                        break
+                if not words_fit:
+                    break
                 lines = []
                 current = words[0]
                 for word in words[1:]:
@@ -102,26 +111,10 @@ def composite_label(user_name: str, interest: str, user_id: str = "") -> Image.I
                         lines.append(current)
                         current = word
                 lines.append(current)
-                # Break any lines that are still too wide (long single words)
-                final_lines = []
-                for line in lines:
-                    lw = interest_font.getbbox(line)[2] - interest_font.getbbox(line)[0]
-                    if lw <= text_area_w:
-                        final_lines.append(line)
-                    else:
-                        # Character-level break
-                        part = ""
-                        for ch in line:
-                            test_part = part + ch
-                            pw = interest_font.getbbox(test_part)[2] - interest_font.getbbox(test_part)[0]
-                            if pw > text_area_w and part:
-                                final_lines.append(part)
-                                part = ch
-                            else:
-                                part = test_part
-                        if part:
-                            final_lines.append(part)
-                wrapped_lines.append(final_lines)
+                wrapped_lines.append(lines)
+            if not words_fit:
+                interest_font_size -= 4
+                continue
             total_lines = sum(len(lines) for lines in wrapped_lines)
             total_h = total_lines * line_h + (len(items) - 1) * item_spacing
             if total_h <= bottom_h:

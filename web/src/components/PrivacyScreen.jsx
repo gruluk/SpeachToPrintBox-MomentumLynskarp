@@ -5,9 +5,9 @@ export default function PrivacyScreen({ onAccept, onCancel }) {
         <h2 className="consent-title">Personvernserklæring</h2>
         <div className="consent-card" style={{ marginTop: '1.5rem' }}>
           <p style={{ fontSize: '1.1rem', lineHeight: '1.7', color: 'rgba(255,255,255,0.85)' }}>
-            Du velger selv hvilke temaer du er interessert i. Interessene trykkes på klistrelappen din
-            og brukes til å tilpasse foredrag og eventuelle demoer til dine interesser. Opplysningene
-            slettes senest 3 måneder etter arrangementet.
+            På neste side velger du hvilke temaer du er interessert i. Interessene trykkes på en
+            klistrelapp og brukes til å tilpasse foredrag og eventuelle demoer til dine interesser.
+            Opplysningene slettes senest 3 måneder etter arrangementet.
           </p>
         </div>
       </div>
