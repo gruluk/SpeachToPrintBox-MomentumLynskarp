@@ -12,7 +12,7 @@ export default function StartScreen({ mode = 'both', onRegister, onDemo, errorMs
             <button className="btn-start" onClick={onRegister}>Registrer deg</button>
           )}
           {(mode === 'both' || mode === 'demo') && (
-            <button className="btn-primary" onClick={onDemo}>Trykk her</button>
+            <button className="btn-primary" onClick={onDemo}>Sjekk ut her</button>
           )}
         </div>
       </div>

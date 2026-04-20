@@ -8,6 +8,7 @@ import DoneScreen from './components/DoneScreen'
 import QrScanScreen from './components/QrScanScreen'
 import DemoMatchedScreen from './components/DemoMatchedScreen'
 import DemoDoneScreen from './components/DemoDoneScreen'
+import CheckoutDoneScreen from './components/CheckoutDoneScreen'
 
 export default function App() {
   // Extract booth number from URL (e.g., /booth/2 → 2)
@@ -67,6 +68,10 @@ export default function App() {
     setState('DEMO_DONE')
   }, [matchedUser])
 
+  const handleNoDemo = useCallback(() => {
+    setState('CHECKOUT_DONE')
+  }, [])
+
   // --- Reset ---
 
   const handleDone = useCallback(() => {
@@ -110,10 +115,13 @@ export default function App() {
         />
       )}
       {state === 'DEMO_MATCHED' && (
-        <DemoMatchedScreen matchedUser={matchedUser} onWantsDemo={handleWantsDemo} onCancel={handleDone} />
+        <DemoMatchedScreen matchedUser={matchedUser} onWantsDemo={handleWantsDemo} onNoDemo={handleNoDemo} />
       )}
       {state === 'DEMO_DONE' && (
         <DemoDoneScreen name={matchedUser?.name} onDone={handleDone} />
+      )}
+      {state === 'CHECKOUT_DONE' && (
+        <CheckoutDoneScreen name={matchedUser?.name} onDone={handleDone} />
       )}
     </div>
   )
