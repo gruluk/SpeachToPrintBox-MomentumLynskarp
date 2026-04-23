@@ -366,6 +366,69 @@ def export_interests(_=Depends(require_admin)):
     )
 
 
+@app.get("/admin/api/export-users")
+def export_users(_=Depends(require_admin)):
+    """Export all users with all fields as an Excel file."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from datetime import datetime
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Brukere"
+
+    # Title
+    ws.append(["Brukeroversikt — Momentum Lynskarp"])
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.append([f"{len(users)} brukere totalt"])
+    ws["A2"].font = Font(size=11, color="666666")
+    ws.append([])
+
+    # Column headers
+    headers = ["Navn", "E-post", "Interesser", "Vil ha demo", "Etikett skrevet ut", "Kort-kode", "Registrert"]
+    ws.append(headers)
+    for cell in ws[4]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="E8E0F0", end_color="E8E0F0", fill_type="solid")
+
+    # Data rows
+    sorted_users = sorted(users, key=lambda u: u.get("name", "").lower())
+    for u in sorted_users:
+        created = u.get("created_at", 0)
+        if created:
+            created_str = datetime.fromtimestamp(created / 1000).strftime("%Y-%m-%d %H:%M")
+        else:
+            created_str = ""
+        ws.append([
+            u.get("name", ""),
+            u.get("email", ""),
+            u.get("interest", ""),
+            "Ja" if u.get("wants_demo") else "Nei",
+            "Ja" if u.get("label_printed") else "Nei",
+            u.get("short_code", ""),
+            created_str,
+        ])
+
+    # Column widths
+    ws.column_dimensions["A"].width = 25
+    ws.column_dimensions["B"].width = 30
+    ws.column_dimensions["C"].width = 40
+    ws.column_dimensions["D"].width = 14
+    ws.column_dimensions["E"].width = 20
+    ws.column_dimensions["F"].width = 12
+    ws.column_dimensions["G"].width = 18
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=brukeroversikt.xlsx"},
+    )
+
+
 # --- Users ---
 
 @app.get("/users")
