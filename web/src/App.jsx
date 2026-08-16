@@ -9,119 +9,197 @@ import QrScanScreen from './components/QrScanScreen'
 import DemoMatchedScreen from './components/DemoMatchedScreen'
 import DemoDoneScreen from './components/DemoDoneScreen'
 import CheckoutDoneScreen from './components/CheckoutDoneScreen'
+import { apiBase, hasAction, nextNodeId, nodeScreen, parseBoothLocation } from './flow'
 
 export default function App() {
-  // Extract booth number from URL (e.g., /booth/2 → 2)
-  const boothNumber = (() => {
-    const match = window.location.pathname.match(/\/booth\/(\d+)/)
-    return match ? parseInt(match[1], 10) : 1
-  })()
+  const { eventSlug, boothNumber } = parseBoothLocation()
+  const base = apiBase(eventSlug)
 
-  const [boothMode, setBoothMode] = useState('both') // 'both' | 'register' | 'demo'
-
-  useEffect(() => {
-    fetch(`/booth-config/${boothNumber}`)
-      .then(r => r.json())
-      .then(data => setBoothMode(data.mode || 'both'))
-      .catch(() => {})
-  }, [boothNumber])
-
-  const [state, setState] = useState('START')
-  const [flow, setFlow] = useState(null) // 'register' | 'demo'
+  const [boothMode, setBoothMode] = useState('both')
+  const [eventConfig, setEventConfig] = useState(null)
+  const [nodeId, setNodeId] = useState('start')
   const [userId, setUserId] = useState('')
   const [name, setName] = useState('')
   const [interest, setInterest] = useState('')
-
-  // Demo flow state
   const [matchedUser, setMatchedUser] = useState(null)
+  const [loadError, setLoadError] = useState('')
 
-  // --- Register flow ---
+  useEffect(() => {
+    fetch(`${base}/booth-config/${boothNumber}`)
+      .then((r) => {
+        if (!r.ok) throw new Error('config failed')
+        return r.json()
+      })
+      .then((data) => {
+        setBoothMode(data.mode || 'both')
+        setEventConfig(data.event || null)
+        setNodeId('start')
+      })
+      .catch((e) => {
+        console.error(e)
+        setLoadError('Kunne ikke laste arrangementet.')
+      })
+  }, [base, boothNumber])
 
-  const handleNameSubmit = useCallback((user) => {
-    setUserId(user.id)
-    setName(user.name)
-    setState('INTEREST_SELECT')
-  }, [])
+  const flow = eventConfig?.flow
+  const screen = nodeScreen(flow, nodeId) || (nodeId === 'start' ? 'start' : null)
 
-  const handleInterestSelect = useCallback(async (i) => {
-    setInterest(i)
-    setState('DONE')
+  const go = useCallback(
+    (action) => {
+      if (!flow) return
+      const next = nextNodeId(flow, nodeId, action)
+      if (next) {
+        const scr = nodeScreen(flow, next)
+        // Skip integration nodes when navigating guest flow
+        if (scr) setNodeId(next)
+        else {
+          // Follow through if target is integration — stay put for print side-effect
+        }
+      }
+    },
+    [flow, nodeId],
+  )
 
-    // Print label (fire and forget)
-    const printFd = new FormData()
-    printFd.append('name', name)
-    printFd.append('interest', i)
-    printFd.append('user_id', userId)
-    fetch('/print-label', { method: 'POST', body: printFd }).catch(e => console.error('[print-label]', e))
-  }, [userId, name])
-
-  // --- Demo flow ---
-
-  const handleWantsDemo = useCallback(async () => {
-    if (matchedUser) {
-      fetch('/demo-choice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: matchedUser.id, wants_demo: true }),
-      }).catch(e => console.error('[demo-choice]', e))
-    }
-    setState('DEMO_DONE')
-  }, [matchedUser])
-
-  const handleNoDemo = useCallback(() => {
-    setState('CHECKOUT_DONE')
-  }, [])
-
-  // --- Reset ---
-
-  const handleDone = useCallback(() => {
+  const reset = useCallback(() => {
     setUserId('')
     setName('')
     setInterest('')
-    setFlow(null)
     setMatchedUser(null)
-    setState('START')
+    setNodeId('start')
   }, [])
+
+  const handleNameSubmit = useCallback(
+    (user) => {
+      setUserId(user.id)
+      setName(user.name)
+      go('next')
+    },
+    [go],
+  )
+
+  const handleInterestSelect = useCallback(
+    async (i) => {
+      setInterest(i)
+      const printFd = new FormData()
+      printFd.append('name', name)
+      printFd.append('interest', i)
+      printFd.append('user_id', userId)
+      fetch(`${base}/print-label`, { method: 'POST', body: printFd }).catch((e) =>
+        console.error('[print-label]', e),
+      )
+      // Prefer done screen via flow; print edge is side-effect
+      const done = nextNodeId(flow, nodeId, 'next')
+      if (done) setNodeId(done)
+    },
+    [base, name, userId, flow, nodeId],
+  )
+
+  const handleWantsDemo = useCallback(async () => {
+    if (matchedUser) {
+      fetch(`${base}/demo-choice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: matchedUser.id, wants_demo: true }),
+      }).catch((e) => console.error('[demo-choice]', e))
+    }
+    go('wants_demo')
+  }, [matchedUser, base, go])
+
+  const handleNoDemo = useCallback(() => {
+    go('no_demo')
+  }, [go])
+
+  if (loadError) {
+    return (
+      <div className="app">
+        <div className="screen center">
+          <p className="error">{loadError}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!eventConfig) {
+    return (
+      <div className="app">
+        <div className="screen center">
+          <p className="subtitle">Laster...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="app">
-      {state === 'START' && (
+      {screen === 'start' && (
         <StartScreen
           mode={boothMode}
-          onRegister={() => { setFlow('register'); setState('PRIVACY') }}
-          onDemo={() => { setFlow('demo'); setState('QR_SCAN') }}
+          showRegister={hasAction(flow, 'start', 'register') && boothMode !== 'demo'}
+          showCheckout={hasAction(flow, 'start', 'checkout') && boothMode !== 'register'}
+          onRegister={() => go('register')}
+          onDemo={() => go('checkout')}
         />
       )}
 
-      {/* Register flow */}
-      {state === 'PRIVACY' && (
-        <PrivacyScreen onAccept={() => setState('NAME_INPUT')} onCancel={handleDone} />
-      )}
-      {state === 'NAME_INPUT' && (
-        <NameInputScreen onSubmit={handleNameSubmit} onCancel={handleDone} />
-      )}
-      {state === 'INTEREST_SELECT' && (
-        <InterestSelectScreen name={name} onSelect={handleInterestSelect} onCancel={handleDone} />
-      )}
-      {state === 'DONE' && (
-        <DoneScreen name={name} interest={interest} userId={userId} onDone={handleDone} />
+      {screen === 'privacy' && (
+        <PrivacyScreen
+          title={eventConfig.privacy_title}
+          bullets={eventConfig.privacy_bullets}
+          checkboxLabel={eventConfig.privacy_checkbox_label}
+          onAccept={() => go('next')}
+          onCancel={reset}
+        />
       )}
 
-      {/* Demo flow */}
-      {state === 'QR_SCAN' && (
+      {screen === 'name_input' && (
+        <NameInputScreen
+          apiBase={base}
+          lookupMode={eventConfig.lookup_mode}
+          allowWalkup={eventConfig.allow_walkup_registration}
+          onSubmit={handleNameSubmit}
+          onCancel={reset}
+        />
+      )}
+
+      {screen === 'interest_select' && (
+        <InterestSelectScreen
+          name={name}
+          interests={eventConfig.interests}
+          maxCount={eventConfig.max_interests}
+          onSelect={handleInterestSelect}
+          onCancel={reset}
+        />
+      )}
+
+      {screen === 'done' && (
+        <DoneScreen name={name} interest={interest} userId={userId} onDone={reset} />
+      )}
+
+      {screen === 'qr_scan' && (
         <QrScanScreen
-          onScanned={(user) => { setMatchedUser(user); setState('DEMO_MATCHED') }}
-          onCancel={handleDone}
+          apiBase={base}
+          onScanned={(user) => {
+            setMatchedUser(user)
+            go('next')
+          }}
+          onCancel={reset}
         />
       )}
-      {state === 'DEMO_MATCHED' && (
-        <DemoMatchedScreen matchedUser={matchedUser} onWantsDemo={handleWantsDemo} onNoDemo={handleNoDemo} />
+
+      {screen === 'demo_matched' && (
+        <DemoMatchedScreen
+          matchedUser={matchedUser}
+          onWantsDemo={handleWantsDemo}
+          onNoDemo={handleNoDemo}
+        />
       )}
-      {state === 'DEMO_DONE' && (
-        <DemoDoneScreen name={matchedUser?.name} onDone={handleDone} />
+
+      {screen === 'demo_done' && (
+        <DemoDoneScreen name={matchedUser?.name} onDone={reset} />
       )}
-      {state === 'CHECKOUT_DONE' && (
-        <CheckoutDoneScreen name={matchedUser?.name} onDone={handleDone} />
+
+      {screen === 'checkout_done' && (
+        <CheckoutDoneScreen name={matchedUser?.name} onDone={reset} />
       )}
     </div>
   )

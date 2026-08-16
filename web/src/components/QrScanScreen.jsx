@@ -4,7 +4,7 @@ import jsQR from 'jsqr'
 const ZOOM = 2.5
 const SCAN_INTERVAL = 150 // ms between scans
 
-export default function QrScanScreen({ onScanned, onCancel }) {
+export default function QrScanScreen({ apiBase = '', onScanned, onCancel }) {
   const videoRef = useRef(null)
   const bgCanvasRef = useRef(null)
   const zoomCanvasRef = useRef(null)
@@ -21,7 +21,7 @@ export default function QrScanScreen({ onScanned, onCancel }) {
     setError('')
 
     try {
-      const res = await fetch(`/users/by-code/${encodeURIComponent(code)}`)
+      const res = await fetch(`${apiBase}/users/by-code/${encodeURIComponent(code)}`)
       if (!res.ok) {
         setError('Bruker ikke funnet. Prøv igjen.')
         busyRef.current = false
@@ -34,7 +34,7 @@ export default function QrScanScreen({ onScanned, onCancel }) {
       setError('Noe gikk galt. Prøv igjen.')
       busyRef.current = false
     }
-  }, [onScanned])
+  }, [onScanned, apiBase])
 
   useEffect(() => {
     let stopped = false

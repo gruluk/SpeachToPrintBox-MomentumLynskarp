@@ -739,10 +739,19 @@ h2 {
 }
 
 .name-help-text {
-  margin: 0.75rem 0 0;
   font-size: 1rem;
   color: var(--text-secondary);
-  text-align: center;
+  margin-top: 0.75rem;
+}
+
+button.linkish {
+  background: none;
+  border: none;
+  color: var(--pink);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
 }
 
 /* --- QR Scanner --- */

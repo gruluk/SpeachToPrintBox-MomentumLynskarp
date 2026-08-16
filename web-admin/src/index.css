@@ -1,0 +1,199 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&display=swap");
+
+:root {
+  --purple: #4D1D82;
+  --purple-light: #8C1D82;
+  --purple-dark: #1a0830;
+  --pink: #EA5599;
+  --orange: #F07D00;
+  --bg: #1a0830;
+  --surface: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #fff;
+  --muted: rgba(255, 255, 255, 0.6);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "DM Sans", system-ui, sans-serif;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 55% 50%, rgba(140, 29, 130, 0.35) 0%, transparent 70%),
+    linear-gradient(160deg, #1a0830 0%, #2a0e4a 50%, #1a0830 100%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+a { color: var(--pink); }
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+.btn {
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--purple-light), var(--pink));
+}
+
+.btn-ghost {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.input, .select, .textarea {
+  width: 100%;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #fff;
+  padding: 0.65rem 0.8rem;
+}
+
+.textarea { min-height: 100px; resize: vertical; }
+
+label.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.9rem;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+}
+
+.topbar h1 {
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tab.active {
+  color: #fff;
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.content {
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.event-card h3 { margin-bottom: 0.4rem; }
+.event-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 0.25rem; }
+.event-card .actions { margin-top: 1rem; display: flex; gap: 0.5rem; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th, .table td {
+  text-align: left;
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th { color: var(--muted); font-weight: 600; }
+
+.canvas-wrap {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1rem;
+  height: calc(100vh - 160px);
+  min-height: 480px;
+}
+
+.canvas-main {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #12061f;
+}
+
+.canvas-side {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1rem;
+  overflow: auto;
+}
+
+.flow-node {
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #2a0e4a;
+  min-width: 120px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.flow-node.integration {
+  background: #1a2030;
+  border-color: rgba(240, 125, 0, 0.5);
+}
+
+.flow-node.selected {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 2px rgba(234, 85, 153, 0.35);
+}
+
+.muted { color: var(--muted); }
+.row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+.stack { display: flex; flex-direction: column; gap: 0.75rem; }

@@ -7,4 +7,5 @@ generated_images/
 .venv/
 venv/
 web/node_modules/
+web-admin/node_modules/
 *.pptx

@@ -1,23 +1,22 @@
 import { useState } from 'react'
 
-const BULLETS = [
-  'Vi lagrer navn, epost, telefonnummer og valgte interesseområder for å administrere din deltakelse på Lynskarp.',
-  'Opplysningene brukes til å bekrefte registrering, lage navneskilt og eventuell oppfølging etter arrangementet.',
-  'Du kan når som helst trekke samtykke tilbake ved å kontakte oss.',
-  'All data slettes senest 90 dager etter at arrangementet er avsluttet.',
-]
-
-export default function PrivacyScreen({ onAccept, onCancel }) {
+export default function PrivacyScreen({
+  title = 'Samtykke til bruk av dine opplysninger',
+  bullets = [],
+  checkboxLabel = 'Jeg samtykker til at Sopra Steria lagrer og behandler opplysningene mine slik det er beskrevet over.',
+  onAccept,
+  onCancel,
+}) {
   const [accepted, setAccepted] = useState(false)
 
   return (
     <div className="screen center">
       <div className="consent-screen">
-        <h2 className="consent-title">Samtykke til bruk av dine opplysninger</h2>
+        <h2 className="consent-title">{title}</h2>
 
         <div className="consent-card" style={{ marginTop: '1.5rem' }}>
           <ul className="consent-list">
-            {BULLETS.map((text) => (
+            {bullets.map((text) => (
               <li key={text}>{text}</li>
             ))}
           </ul>
@@ -29,10 +28,7 @@ export default function PrivacyScreen({ onAccept, onCancel }) {
             checked={accepted}
             onChange={(e) => setAccepted(e.target.checked)}
           />
-          <span>
-            Jeg samtykker til at Sopra Steria lagrer og behandler opplysningene mine slik det er
-            beskrevet over.
-          </span>
+          <span>{checkboxLabel}</span>
         </label>
       </div>
 

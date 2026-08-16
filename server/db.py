@@ -118,11 +118,16 @@ def get_unprinted() -> list[dict]:
 
 # ── Users (unified: registration + face + demos) ─────────────────────────────
 
-def create_user(user_id: str, name: str, email: str, short_code: str = "") -> None:
+def create_user(user_id: str, name: str, email: str, short_code: str = "",
+                event_id: str = "", phone: str = "") -> None:
     """Insert a new user."""
     data = {"name": name, "email": email, "created_at": int(time.time() * 1000)}
     if short_code:
         data["short_code"] = short_code
+    if event_id:
+        data["event_id"] = event_id
+    if phone:
+        data["phone"] = phone
     payload = {
         "steps": [[
             "update", "users", user_id,
@@ -159,15 +164,53 @@ def delete_user(user_id: str) -> None:
     r.raise_for_status()
 
 
+# ── Events ─────────────────────────────────────────────────────────────────────
+
+def create_event(event_id: str, fields: dict) -> None:
+    """Insert an event record."""
+    data = {**fields, "created_at": int(time.time() * 1000)}
+    payload = {"steps": [["update", "events", event_id, data]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=15)
+    r.raise_for_status()
+
+
+def get_all_events() -> list[dict]:
+    """Return all events, sorted by created_at."""
+    payload = {"query": {"events": {}}}
+    r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=15)
+    r.raise_for_status()
+    events = r.json().get("events", [])
+    events.sort(key=lambda e: e.get("created_at", 0))
+    return events
+
+
+def update_event(event_id: str, **fields) -> None:
+    """Update arbitrary fields on an event."""
+    if not fields:
+        return
+    payload = {"steps": [["update", "events", event_id, fields]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=15)
+    r.raise_for_status()
+
+
+def delete_event(event_id: str) -> None:
+    """Delete an event."""
+    payload = {"steps": [["delete", "events", event_id]]}
+    r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
+    r.raise_for_status()
+
+
 # ── Booths ─────────────────────────────────────────────────────────────────────
 
-def create_booth(booth_id: str, name: str, number: int, mode: str) -> None:
+def create_booth(booth_id: str, name: str, number: int, mode: str, event_id: str = "") -> None:
     """Insert a booth config record."""
+    data = {"name": name, "number": number, "mode": mode,
+            "created_at": int(time.time() * 1000)}
+    if event_id:
+        data["event_id"] = event_id
     payload = {
         "steps": [[
-            "update", "booths", booth_id,
-            {"name": name, "number": number, "mode": mode,
-             "created_at": int(time.time() * 1000)},
+            "update", "booths", booth_id, data,
         ]]
     }
     r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
@@ -180,13 +223,15 @@ def get_all_booths() -> list[dict]:
     r = httpx.post(f"{_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
     booths = r.json().get("booths", [])
-    booths.sort(key=lambda b: b.get("number", 0))
+    booths.sort(key=lambda b: (b.get("event_id", ""), b.get("number", 0)))
     return booths
 
 
-def update_booth(booth_id: str, mode: str) -> None:
-    """Update booth mode."""
-    payload = {"steps": [["update", "booths", booth_id, {"mode": mode}]]}
+def update_booth(booth_id: str, **fields) -> None:
+    """Update booth fields (mode, name, event_id, etc.)."""
+    if not fields:
+        return
+    payload = {"steps": [["update", "booths", booth_id, fields]]}
     r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
 
@@ -200,12 +245,14 @@ def delete_booth(booth_id: str) -> None:
 
 # ── Presentations ──────────────────────────────────────────────────────────────
 
-def create_presentation(pres_id: str, name: str) -> None:
+def create_presentation(pres_id: str, name: str, event_id: str = "") -> None:
     """Insert a presentation."""
+    data = {"name": name, "created_at": int(time.time() * 1000)}
+    if event_id:
+        data["event_id"] = event_id
     payload = {
         "steps": [[
-            "update", "presentations", pres_id,
-            {"name": name, "created_at": int(time.time() * 1000)},
+            "update", "presentations", pres_id, data,
         ]]
     }
     r = httpx.post(f"{_BASE}/admin/transact", json=payload, headers=_headers(), timeout=10)

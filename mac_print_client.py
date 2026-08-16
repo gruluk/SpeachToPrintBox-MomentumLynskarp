@@ -36,6 +36,9 @@ PRINTER_NAME = "Brother_QL_1110NWB"
 
 POLL_INTERVAL = 5  # seconds between InstantDB polls
 
+# Optional: only print labels for one event (InstantDB event id)
+# EVENT_ID=...
+
 ASSETS_DIR      = os.path.join(os.path.dirname(__file__), "assets")
 LABEL_W_MM      = 103
 CONTENT_H_MM    = 60
@@ -58,11 +61,15 @@ def _headers() -> dict:
 
 
 def get_users_to_print() -> list[dict]:
-    """Return users where label_printed == false."""
+    """Return users where label_printed == false, optionally scoped by EVENT_ID."""
+    event_id = os.getenv("EVENT_ID", "").strip()
     payload = {"query": {"users": {"$": {"where": {"label_printed": False}}}}}
     r = requests.post(f"{_INSTANT_BASE}/admin/query", json=payload, headers=_headers(), timeout=10)
     r.raise_for_status()
-    return r.json().get("users", [])
+    users = r.json().get("users", [])
+    if event_id:
+        users = [u for u in users if u.get("event_id") == event_id]
+    return users
 
 
 def mark_label_printed(user_id: str) -> None:
