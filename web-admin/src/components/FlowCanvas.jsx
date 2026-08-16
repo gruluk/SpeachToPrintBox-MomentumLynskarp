@@ -66,7 +66,19 @@ function toRfEdges(flow) {
     markerEnd: { type: MarkerType.ArrowClosed },
     data: e.data || {},
     style: { stroke: 'rgba(234,85,153,0.55)' },
-    labelStyle: { fill: 'rgba(255,255,255,0.65)', fontSize: 10 },
+    labelStyle: {
+      fill: '#f5e9ff',
+      fontSize: 10,
+      fontWeight: 600,
+    },
+    labelBgStyle: {
+      fill: '#2a1048',
+      fillOpacity: 0.95,
+      stroke: 'rgba(234,85,153,0.35)',
+      strokeWidth: 1,
+    },
+    labelBgPadding: [4, 6],
+    labelBgBorderRadius: 4,
   }))
 }
 
