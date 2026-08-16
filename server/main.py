@@ -281,6 +281,21 @@ def _generate_label(user_name: str, interest: str, short_code: str) -> bytes:
     return buf.getvalue()
 
 
+def _generate_qr_png(data: str) -> bytes:
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(data or "NOCODE")
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    buf = io.BytesIO()
+    qr_img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
 @app.get("/label-preview/{user_id}")
 def label_preview(user_id: str, name: str = "", interest: str = ""):
     """Generate and return the label image as PNG.
@@ -530,6 +545,7 @@ def admin_list_users(_=Depends(require_admin)):
             "name": u.get("name", ""),
             "email": u.get("email", ""),
             "interest": u.get("interest", ""),
+            "short_code": u.get("short_code", ""),
             "label_printed": u.get("label_printed"),
             "wants_demo": bool(u.get("wants_demo")),
             "created_at": u.get("created_at", 0),
@@ -577,6 +593,25 @@ async def admin_patch_user(user_id: str, body: dict, _=Depends(require_admin)):
         user["interest"] = body["interest"]
         db_updates["interest"] = body["interest"]
 
+    if "name" in body:
+        name = (body.get("name") or "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="name required")
+        user["name"] = name
+        db_updates["name"] = name
+
+    if "email" in body:
+        email = (body.get("email") or "").strip()
+        if not email:
+            raise HTTPException(status_code=400, detail="email required")
+        if any(
+            u.get("email", "").lower() == email.lower() and u["id"] != user_id
+            for u in users
+        ):
+            raise HTTPException(status_code=409, detail="email already exists")
+        user["email"] = email
+        db_updates["email"] = email
+
     if body.get("reprint"):
         user["label_printed"] = False
         db_updates["label_printed"] = False
@@ -594,6 +629,18 @@ async def admin_patch_user(user_id: str, body: dict, _=Depends(require_admin)):
             print(f"[admin] patch user failed: {e}")
 
     return {"ok": True}
+
+
+@app.get("/admin/api/users/{user_id}/qr")
+def admin_user_qr(user_id: str, _=Depends(require_admin)):
+    """Return a QR code PNG encoding the user's short code."""
+    user = next((u for u in users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="not found")
+    short_code = user.get("short_code", "")
+    if not short_code:
+        raise HTTPException(status_code=404, detail="no short code")
+    return Response(content=_generate_qr_png(short_code), media_type="image/png")
 
 
 @app.delete("/admin/api/users/{user_id}")

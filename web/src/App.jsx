@@ -40,7 +40,7 @@ export default function App() {
   const handleNameSubmit = useCallback((user) => {
     setUserId(user.id)
     setName(user.name)
-    setState('PRIVACY')
+    setState('INTEREST_SELECT')
   }, [])
 
   const handleInterestSelect = useCallback(async (i) => {
@@ -88,17 +88,17 @@ export default function App() {
       {state === 'START' && (
         <StartScreen
           mode={boothMode}
-          onRegister={() => { setFlow('register'); setState('NAME_INPUT') }}
+          onRegister={() => { setFlow('register'); setState('PRIVACY') }}
           onDemo={() => { setFlow('demo'); setState('QR_SCAN') }}
         />
       )}
 
       {/* Register flow */}
+      {state === 'PRIVACY' && (
+        <PrivacyScreen onAccept={() => setState('NAME_INPUT')} onCancel={handleDone} />
+      )}
       {state === 'NAME_INPUT' && (
         <NameInputScreen onSubmit={handleNameSubmit} onCancel={handleDone} />
-      )}
-      {state === 'PRIVACY' && (
-        <PrivacyScreen onAccept={() => setState('INTEREST_SELECT')} onCancel={handleDone} />
       )}
       {state === 'INTEREST_SELECT' && (
         <InterestSelectScreen name={name} onSelect={handleInterestSelect} onCancel={handleDone} />

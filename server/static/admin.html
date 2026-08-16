@@ -212,6 +212,31 @@
     .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
     .empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
 
+    .qr-modal-body { text-align: center; }
+    .qr-modal-body img {
+      width: 220px; height: 220px; background: #fff;
+      border-radius: var(--radius); padding: 0.75rem; margin: 0 auto 1rem;
+      display: block;
+    }
+    .qr-code-text {
+      font-family: monospace; font-size: 1.4rem; font-weight: 700;
+      letter-spacing: 0.15em; color: #fff; margin-bottom: 0.5rem;
+    }
+    .qr-hint { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 1rem; }
+    .label-preview-wrap {
+      margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);
+    }
+    .label-preview-wrap img {
+      width: 100%; max-width: 360px; height: auto; background: #fff;
+      border-radius: var(--radius); padding: 0.5rem;
+    }
+    .code-pill {
+      display: inline-block; font-family: monospace; font-size: 0.75rem;
+      font-weight: 700; letter-spacing: 0.08em; color: var(--pink);
+      background: rgba(234,85,153,0.12); border: 1px solid rgba(234,85,153,0.25);
+      border-radius: 6px; padding: 0.2rem 0.45rem;
+    }
+
     /* Booth cards */
     .booth-list { display: flex; flex-direction: column; gap: 0.75rem; }
     .booth-card {
@@ -317,13 +342,14 @@
           <tr>
             <th>Name</th>
             <th>Email</th>
+            <th>Code</th>
             <th>Interest</th>
             <th>Label</th>
             <th>Demo</th>
-            <th style="width:160px">Actions</th>
+            <th style="width:220px">Actions</th>
           </tr>
         </thead>
-        <tbody id="user-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+        <tbody id="user-tbody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -346,6 +372,45 @@
     <div class="booth-list" id="pres-list"></div>
   </div>
 </main>
+
+<!-- Edit user modal -->
+<div class="modal-backdrop" id="user-edit-modal">
+  <div class="modal">
+    <h3>Edit user</h3>
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="edit-user-name" maxlength="80" />
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="edit-user-email" maxlength="120" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeUserEditModal()">Cancel</button>
+      <button class="btn btn-purple" onclick="saveUserEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR modal -->
+<div class="modal-backdrop" id="qr-modal">
+  <div class="modal" style="width:420px">
+    <h3 id="qr-modal-title">QR code</h3>
+    <div class="qr-modal-body">
+      <img id="qr-modal-image" alt="QR code" />
+      <div class="qr-code-text" id="qr-modal-code"></div>
+      <p class="qr-hint">Scan this at the demo booth, or show it on another screen.</p>
+      <button class="btn btn-ghost btn-sm" onclick="copyQrCode()">Copy code</button>
+      <div class="label-preview-wrap" id="qr-label-preview-wrap" style="display:none">
+        <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.75rem">Label preview</p>
+        <img id="qr-label-preview" alt="Label preview" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-purple" onclick="closeQrModal()">Close</button>
+    </div>
+  </div>
+</div>
 
 <!-- Edit modal (presentations) -->
 <div class="modal-backdrop" id="modal">
@@ -393,6 +458,8 @@
   let boothList = []
   let presList = []
   let editingPresId = null
+  let editingUserId = null
+  let qrUserId = null
   let currentSection = null
 
   // ── Navigation ────────────────────────────────────────────
@@ -476,7 +543,7 @@
       renderUserTable()
     } catch (e) {
       document.getElementById('user-tbody').innerHTML =
-        '<tr><td colspan="6" class="empty">Failed to load</td></tr>'
+        '<tr><td colspan="7" class="empty">Failed to load</td></tr>'
     }
   }
 
@@ -486,7 +553,7 @@
     const rows = mergedUsers.filter(u => !q || (u.name || '').toLowerCase().includes(q))
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">No users found</td></tr>'
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No users found</td></tr>'
       return
     }
     tbody.innerHTML = rows.map(u => {
@@ -495,10 +562,14 @@
       const labelStatus = printed ? '<span class="badge badge-green">Printed</span>'
         : queued ? '<span class="badge" style="background:rgba(240,125,0,0.15);color:var(--orange)">Queued</span>'
         : '<span class="badge badge-muted">—</span>'
+      const codeCell = u.short_code
+        ? `<span class="code-pill">${esc(u.short_code)}</span>`
+        : '<span class="badge badge-muted">—</span>'
       return `
       <tr>
         <td>${esc(u.name)}</td>
         <td style="color:var(--muted)">${esc(u.email)}</td>
+        <td>${codeCell}</td>
         <td style="color:var(--muted)">
           ${esc(u.interest || '—')}
           <button class="btn btn-ghost btn-sm" style="margin-left:0.25rem;padding:0.3rem 0.5rem" onclick="editInterest('${u.id}')">✎</button>
@@ -511,6 +582,8 @@
         </td>
         <td>
           <div class="action-row">
+            <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Edit</button>
+            ${u.short_code ? `<button class="btn btn-purple btn-sm" onclick="showQr('${u.id}')">QR</button>` : ''}
             ${printed ? `<button class="btn btn-ghost btn-sm" onclick="reprintLabel('${u.id}')">Reprint</button>` : ''}
             ${u.interest ? `<button class="btn btn-orange btn-sm" onclick="clearInterest('${u.id}')">Clear</button>` : ''}
             <button class="btn btn-red btn-sm" onclick="deleteUser('${u.id}')">Delete</button>
@@ -625,6 +698,73 @@
     const res = await fetch(`/admin/api/users/${id}`, { method: 'DELETE' })
     if (res.ok) loadUsers()
     else alert('Delete failed')
+  }
+
+  function editUser(id) {
+    const user = mergedUsers.find(u => u.id === id)
+    if (!user) return
+    editingUserId = id
+    document.getElementById('edit-user-name').value = user.name || ''
+    document.getElementById('edit-user-email').value = user.email || ''
+    document.getElementById('user-edit-modal').classList.add('open')
+    document.getElementById('edit-user-name').focus()
+  }
+
+  function closeUserEditModal() {
+    editingUserId = null
+    document.getElementById('user-edit-modal').classList.remove('open')
+  }
+
+  async function saveUserEdit() {
+    if (!editingUserId) return
+    const name = document.getElementById('edit-user-name').value.trim()
+    const email = document.getElementById('edit-user-email').value.trim()
+    if (!name || !email) { alert('Name and email required'); return }
+    const res = await fetch(`/admin/api/users/${editingUserId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email }),
+    })
+    if (res.status === 409) { alert('Email already exists'); return }
+    if (res.ok) {
+      closeUserEditModal()
+      loadUsers()
+    } else alert('Failed to update user')
+  }
+
+  function showQr(id) {
+    const user = mergedUsers.find(u => u.id === id)
+    if (!user || !user.short_code) {
+      alert('This user has no QR code yet')
+      return
+    }
+    qrUserId = id
+    document.getElementById('qr-modal-title').textContent = user.name ? `QR — ${user.name}` : 'QR code'
+    document.getElementById('qr-modal-code').textContent = user.short_code
+    document.getElementById('qr-modal-image').src = `/admin/api/users/${id}/qr?t=${Date.now()}`
+    const previewWrap = document.getElementById('qr-label-preview-wrap')
+    const previewImg = document.getElementById('qr-label-preview')
+    if (user.interest) {
+      previewWrap.style.display = ''
+      previewImg.src = `/label-preview/${id}?name=${encodeURIComponent(user.name || '')}&interest=${encodeURIComponent(user.interest)}&t=${Date.now()}`
+    } else {
+      previewWrap.style.display = 'none'
+      previewImg.removeAttribute('src')
+    }
+    document.getElementById('qr-modal').classList.add('open')
+  }
+
+  function closeQrModal() {
+    qrUserId = null
+    document.getElementById('qr-modal').classList.remove('open')
+    document.getElementById('qr-modal-image').removeAttribute('src')
+    document.getElementById('qr-label-preview').removeAttribute('src')
+  }
+
+  function copyQrCode() {
+    const code = document.getElementById('qr-modal-code').textContent
+    if (!code) return
+    navigator.clipboard.writeText(code).then(() => alert('Copied code: ' + code))
   }
 
   async function addUser() {
@@ -797,8 +937,19 @@
   document.getElementById('interest-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeInterestModal()
   })
+  document.getElementById('user-edit-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeUserEditModal()
+  })
+  document.getElementById('qr-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeQrModal()
+  })
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal(); closeInterestModal() }
+    if (e.key === 'Escape') {
+      closeModal()
+      closeInterestModal()
+      closeUserEditModal()
+      closeQrModal()
+    }
   })
 
   // ── Init ──────────────────────────────────────────────────
