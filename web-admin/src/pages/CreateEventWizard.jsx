@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { emptyStartFlow } from '../flowCatalog'
+import { joinStartsAt } from '../datetime'
 import { ScreenPreview } from '../components/ScreenPreviews'
 
 const STEPS = ['basics', 'welcome']
@@ -13,8 +14,8 @@ export default function CreateEventWizard() {
   const [submitting, setSubmitting] = useState(false)
   const [answers, setAnswers] = useState({
     name: '',
-    starts_at: '',
-    ends_at: '',
+    startDate: '',
+    startTime: '',
   })
 
   const stepId = STEPS[step]
@@ -36,8 +37,8 @@ export default function CreateEventWizard() {
     try {
       const created = await api.createEvent({
         name: answers.name.trim(),
-        starts_at: answers.starts_at,
-        ends_at: answers.ends_at,
+        starts_at: joinStartsAt(answers.startDate, answers.startTime),
+        ends_at: '',
         flow: emptyStartFlow(),
       })
       navigate(`/events/${created.id}`, { state: { guide: true } })
@@ -85,21 +86,21 @@ export default function CreateEventWizard() {
               </label>
               <div className="row">
                 <label className="field" style={{ flex: 1 }}>
-                  Startdato (valgfritt)
+                  Dato (valgfritt)
                   <input
                     className="input"
                     type="date"
-                    value={answers.starts_at}
-                    onChange={(e) => patch({ starts_at: e.target.value })}
+                    value={answers.startDate}
+                    onChange={(e) => patch({ startDate: e.target.value })}
                   />
                 </label>
                 <label className="field" style={{ flex: 1 }}>
-                  Sluttdato (valgfritt)
+                  Starttid (valgfritt)
                   <input
                     className="input"
-                    type="date"
-                    value={answers.ends_at}
-                    onChange={(e) => patch({ ends_at: e.target.value })}
+                    type="time"
+                    value={answers.startTime}
+                    onChange={(e) => patch({ startTime: e.target.value })}
                   />
                 </label>
               </div>

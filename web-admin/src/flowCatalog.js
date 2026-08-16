@@ -2,6 +2,8 @@
 
 export const LABELS = {
   start: 'Start',
+  register_entry: 'Registrering',
+  checkout_entry: 'Utsjekk',
   privacy: 'Personvern',
   name_input: 'Navneoppslag',
   interest_select: 'Interesser',
@@ -9,13 +11,15 @@ export const LABELS = {
   qr_scan: 'QR-skanning',
   demo_matched: 'Demo',
   demo_done: 'Demo ferdig',
-  checkout_done: 'Utsjekk',
+  checkout_done: 'Utsjekk ferdig',
   printer: 'Printer',
   attendees: 'Deltakere',
 }
 
 export const ICONS = {
   start: '🏠',
+  register_entry: '✍️',
+  checkout_entry: '🚪',
   privacy: '🔒',
   name_input: '👤',
   interest_select: '✨',
@@ -40,9 +44,29 @@ export const CATALOG = [
     screen: 'start',
     category: 'page',
     label: 'Start / Velkommen',
-    description: 'Første side gjesten ser. Kan ikke fjernes.',
+    description: 'Felles velkomstside. Knappene styres av Registrering- og Utsjekk-modulene.',
     unique: true,
     locked: true,
+    dependsOn: [],
+  },
+  {
+    key: 'register_entry',
+    type: 'integration',
+    kind: 'register_entry',
+    category: 'module',
+    label: 'Registrering',
+    description: 'Aktiverer «Registrer deg» på startsiden. Uten denne finnes ikke registreringsflyten.',
+    unique: true,
+    dependsOn: [],
+  },
+  {
+    key: 'checkout_entry',
+    type: 'integration',
+    kind: 'checkout_entry',
+    category: 'module',
+    label: 'Utsjekk',
+    description: 'Aktiverer «Sjekk ut her» på startsiden. Uten denne finnes ikke utsjekk-/demo-flyten.',
+    unique: true,
     dependsOn: [],
   },
   {
@@ -73,7 +97,7 @@ export const CATALOG = [
     label: 'Personvern',
     description: 'Samtykkeside før registrering.',
     unique: true,
-    dependsOn: [],
+    dependsOn: ['register_entry'],
   },
   {
     key: 'name_input',
@@ -83,7 +107,7 @@ export const CATALOG = [
     label: 'Navneoppslag',
     description: 'Gjesten finner seg selv i listen.',
     unique: true,
-    dependsOn: ['attendees'],
+    dependsOn: ['register_entry', 'attendees'],
   },
   {
     key: 'interest_select',
@@ -113,7 +137,7 @@ export const CATALOG = [
     label: 'QR-skanning',
     description: 'Utsjekk: skann QR på navneskiltet.',
     unique: true,
-    dependsOn: ['attendees'],
+    dependsOn: ['checkout_entry', 'attendees'],
   },
   {
     key: 'demo_matched',
@@ -150,6 +174,16 @@ export const CATALOG = [
 /** Guided order: suggest the next missing step once dependencies are met. */
 const SUGGESTIONS = [
   {
+    key: 'register_entry',
+    title: 'Vil dere ha registrering?',
+    body: 'Lar gjesten trykke «Registrer deg» på startsiden. Hopp over hvis booth kun skal brukes til utsjekk/demo.',
+  },
+  {
+    key: 'checkout_entry',
+    title: 'Vil dere ha utsjekk?',
+    body: 'Lar gjesten trykke «Sjekk ut her» på startsiden. Hopp over hvis booth kun skal brukes til registrering.',
+  },
+  {
     key: 'attendees',
     title: 'Legg til Deltakere-modul?',
     body: 'Navneoppslag og QR-utsjekk trenger en deltakerliste. Uten denne modulen kan du ikke legge til de sidene.',
@@ -181,8 +215,8 @@ const SUGGESTIONS = [
   },
   {
     key: 'qr_scan',
-    title: 'Utsjekk med QR?',
-    body: 'Andre knapp på startsiden: skann QR på navneskiltet for demo/utsjekk.',
+    title: 'QR-skanning?',
+    body: 'Skann QR på navneskiltet for demo/utsjekk.',
   },
   {
     key: 'demo_matched',
@@ -289,24 +323,38 @@ export function fullDefaultFlow() {
   return {
     nodes: [
       { id: 'start', type: 'screen', position: { x: 80, y: 200 }, data: { screen: 'start', label: LABELS.start } },
+      {
+        id: 'entry_register',
+        type: 'integration',
+        position: { x: 80, y: 40 },
+        data: { kind: 'register_entry', label: LABELS.register_entry },
+      },
+      {
+        id: 'entry_checkout',
+        type: 'integration',
+        position: { x: 80, y: 360 },
+        data: { kind: 'checkout_entry', label: LABELS.checkout_entry },
+      },
       { id: 'privacy', type: 'screen', position: { x: 320, y: 80 }, data: { screen: 'privacy', label: LABELS.privacy } },
       { id: 'name', type: 'screen', position: { x: 560, y: 80 }, data: { screen: 'name_input', label: LABELS.name_input } },
       { id: 'interests', type: 'screen', position: { x: 800, y: 80 }, data: { screen: 'interest_select', label: LABELS.interest_select } },
       { id: 'done', type: 'screen', position: { x: 1040, y: 80 }, data: { screen: 'done', label: LABELS.done } },
-      { id: 'qr', type: 'screen', position: { x: 320, y: 320 }, data: { screen: 'qr_scan', label: LABELS.qr_scan } },
-      { id: 'demo_matched', type: 'screen', position: { x: 560, y: 320 }, data: { screen: 'demo_matched', label: LABELS.demo_matched } },
-      { id: 'demo_done', type: 'screen', position: { x: 800, y: 280 }, data: { screen: 'demo_done', label: LABELS.demo_done } },
-      { id: 'checkout_done', type: 'screen', position: { x: 800, y: 400 }, data: { screen: 'checkout_done', label: LABELS.checkout_done } },
+      { id: 'qr', type: 'screen', position: { x: 320, y: 360 }, data: { screen: 'qr_scan', label: LABELS.qr_scan } },
+      { id: 'demo_matched', type: 'screen', position: { x: 560, y: 360 }, data: { screen: 'demo_matched', label: LABELS.demo_matched } },
+      { id: 'demo_done', type: 'screen', position: { x: 800, y: 320 }, data: { screen: 'demo_done', label: LABELS.demo_done } },
+      { id: 'checkout_done', type: 'screen', position: { x: 800, y: 440 }, data: { screen: 'checkout_done', label: LABELS.checkout_done } },
       { id: 'printer', type: 'integration', position: { x: 1040, y: 280 }, data: { kind: 'printer', label: LABELS.printer } },
-      { id: 'db', type: 'integration', position: { x: 80, y: 400 }, data: { kind: 'attendees', label: LABELS.attendees } },
+      { id: 'db', type: 'integration', position: { x: -160, y: 200 }, data: { kind: 'attendees', label: LABELS.attendees } },
     ],
     edges: [
-      { id: 'e1', source: 'start', target: 'privacy', data: { action: 'register' } },
+      { id: 'e0a', source: 'start', target: 'entry_register', data: { action: 'register' } },
+      { id: 'e0b', source: 'entry_register', target: 'privacy', data: { action: 'next' } },
       { id: 'e2', source: 'privacy', target: 'name', data: { action: 'next' } },
       { id: 'e3', source: 'name', target: 'interests', data: { action: 'next' } },
       { id: 'e4', source: 'interests', target: 'done', data: { action: 'next' } },
       { id: 'e5', source: 'interests', target: 'printer', data: { action: 'print_label' } },
-      { id: 'e6', source: 'start', target: 'qr', data: { action: 'checkout' } },
+      { id: 'e0c', source: 'start', target: 'entry_checkout', data: { action: 'checkout' } },
+      { id: 'e0d', source: 'entry_checkout', target: 'qr', data: { action: 'next' } },
       { id: 'e7', source: 'qr', target: 'demo_matched', data: { action: 'next' } },
       { id: 'e8', source: 'demo_matched', target: 'demo_done', data: { action: 'wants_demo' } },
       { id: 'e9', source: 'demo_matched', target: 'checkout_done', data: { action: 'no_demo' } },
@@ -315,30 +363,113 @@ export function fullDefaultFlow() {
   }
 }
 
+/**
+ * Upgrade older flows that used start→page edges without entry modules.
+ */
+export function migrateFlowEntries(flow) {
+  if (!flow?.nodes) return flow
+  let nodes = [...flow.nodes]
+  let edges = [...(flow.edges || [])]
+  const keys = presentKeys(nodes)
+
+  const start = findNodeByKey(nodes, 'start')
+  if (!start) return flow
+
+  const hasRegEdge = edges.some(
+    (e) => e.source === start.id && (e.data?.action || e.label) === 'register',
+  )
+  const hasCheckEdge = edges.some(
+    (e) => e.source === start.id && (e.data?.action || e.label) === 'checkout',
+  )
+
+  const ensure = (key, id, position) => {
+    if (findNodeByKey(nodes, key)) return findNodeByKey(nodes, key)
+    const item = catalogByKey(key)
+    const node = {
+      id,
+      type: 'integration',
+      position,
+      data: { kind: item.kind, label: item.label },
+    }
+    nodes.push(node)
+    return node
+  }
+
+  if ((hasRegEdge || keys.has('privacy') || keys.has('name_input')) && !keys.has('register_entry')) {
+    const entry = ensure('register_entry', 'entry_register', { x: 80, y: 40 })
+    // Rewire: start -register-> entry -next-> former register target
+    const direct = edges.filter(
+      (e) => e.source === start.id && (e.data?.action || e.label) === 'register',
+    )
+    edges = edges.filter((e) => !direct.includes(e))
+    edges.push({
+      id: `mig_reg_${entry.id}`,
+      source: start.id,
+      target: entry.id,
+      data: { action: 'register' },
+    })
+    for (const e of direct) {
+      edges.push({
+        id: `mig_reg_next_${e.target}`,
+        source: entry.id,
+        target: e.target,
+        data: { action: 'next' },
+      })
+    }
+  }
+
+  if ((hasCheckEdge || keys.has('qr_scan')) && !keys.has('checkout_entry')) {
+    const entry = ensure('checkout_entry', 'entry_checkout', { x: 80, y: 360 })
+    const direct = edges.filter(
+      (e) => e.source === start.id && (e.data?.action || e.label) === 'checkout',
+    )
+    edges = edges.filter((e) => !direct.includes(e))
+    edges.push({
+      id: `mig_chk_${entry.id}`,
+      source: start.id,
+      target: entry.id,
+      data: { action: 'checkout' },
+    })
+    for (const e of direct) {
+      edges.push({
+        id: `mig_chk_next_${e.target}`,
+        source: entry.id,
+        target: e.target,
+        data: { action: 'next' },
+      })
+    }
+  }
+
+  return { ...flow, nodes, edges }
+}
+
 export function isMinimalFlow(nodes) {
-  return (nodes || []).length <= 1 && presentKeys(nodes).has('start')
+  const keys = presentKeys(nodes)
+  return (nodes || []).length <= 1 && keys.has('start')
 }
 
 function uid(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 8)}`
 }
 
-function nextEdgeId(edges) {
+function nextEdgeId() {
   return uid('e')
 }
 
 function defaultPosition(key, nodes) {
   const byKey = {
-    attendees: { x: 80, y: 400 },
+    register_entry: { x: 80, y: 40 },
+    checkout_entry: { x: 80, y: 360 },
+    attendees: { x: -160, y: 200 },
     privacy: { x: 320, y: 80 },
     name_input: { x: 560, y: 80 },
     interest_select: { x: 800, y: 80 },
     done: { x: 1040, y: 80 },
     printer: { x: 1040, y: 280 },
-    qr_scan: { x: 320, y: 340 },
-    demo_matched: { x: 560, y: 340 },
-    demo_done: { x: 800, y: 300 },
-    checkout_done: { x: 800, y: 420 },
+    qr_scan: { x: 320, y: 360 },
+    demo_matched: { x: 560, y: 360 },
+    demo_done: { x: 800, y: 320 },
+    checkout_done: { x: 800, y: 440 },
   }
   if (byKey[key]) return byKey[key]
   const maxX = Math.max(80, ...(nodes || []).map((n) => n.position?.x || 0))
@@ -347,12 +478,18 @@ function defaultPosition(key, nodes) {
 
 function nodeIdFor(item) {
   const map = {
+    register_entry: 'entry_register',
+    checkout_entry: 'entry_checkout',
     attendees: 'db',
     name_input: 'name',
     interest_select: 'interests',
     qr_scan: 'qr',
   }
   return map[item.key] || item.key
+}
+
+function removeEdges(edges, pred) {
+  return edges.filter((e) => !pred(e))
 }
 
 /**
@@ -392,7 +529,7 @@ export function addItemToFlow(nodes, edges, key) {
     )
     if (exists) return
     nextEdges.push({
-      id: nextEdgeId(nextEdges),
+      id: nextEdgeId(),
       source: source.id,
       target: target.id,
       data: { action },
@@ -400,6 +537,8 @@ export function addItemToFlow(nodes, edges, key) {
   }
 
   const start = byKey('start')
+  const regEntry = byKey('register_entry')
+  const chkEntry = byKey('checkout_entry')
   const privacy = byKey('privacy')
   const name = byKey('name_input')
   const interests = byKey('interest_select')
@@ -411,12 +550,28 @@ export function addItemToFlow(nodes, edges, key) {
   const demoDone = byKey('demo_done')
   const checkoutDone = byKey('checkout_done')
 
+  if (item.key === 'register_entry') {
+    pushEdge(start, regEntry, 'register')
+    if (privacy) pushEdge(regEntry, privacy, 'next')
+    else if (name) pushEdge(regEntry, name, 'next')
+  }
+
+  if (item.key === 'checkout_entry') {
+    pushEdge(start, chkEntry, 'checkout')
+    if (qr) pushEdge(chkEntry, qr, 'next')
+  }
+
   if (item.key === 'privacy') {
-    // start → privacy (register); if name exists, privacy → name and drop start→name register
-    pushEdge(start, privacy, 'register')
+    // entry → privacy; drop any direct start→privacy register
+    nextEdges = removeEdges(
+      nextEdges,
+      (e) => e.source === start?.id && e.target === privacy.id && (e.data?.action || e.label) === 'register',
+    )
+    pushEdge(regEntry, privacy, 'next')
     if (name) {
-      nextEdges = nextEdges.filter(
-        (e) => !(e.source === start?.id && e.target === name.id && (e.data?.action || e.label) === 'register'),
+      nextEdges = removeEdges(
+        nextEdges,
+        (e) => e.source === regEntry?.id && e.target === name.id && (e.data?.action || e.label) === 'next',
       )
       pushEdge(privacy, name, 'next')
     }
@@ -426,17 +581,17 @@ export function addItemToFlow(nodes, edges, key) {
     if (privacy) {
       pushEdge(privacy, name, 'next')
     } else {
-      pushEdge(start, name, 'register')
+      pushEdge(regEntry, name, 'next')
     }
     pushEdge(name, attendees, 'lookup')
   }
 
   if (item.key === 'interest_select') {
     pushEdge(name, interests, 'next')
-    // If done was wired from name, rewire through interests
     if (done) {
-      nextEdges = nextEdges.filter(
-        (e) => !(e.source === name?.id && e.target === done.id && (e.data?.action || e.label) === 'next'),
+      nextEdges = removeEdges(
+        nextEdges,
+        (e) => e.source === name?.id && e.target === done.id && (e.data?.action || e.label) === 'next',
       )
       pushEdge(interests, done, 'next')
     }
@@ -452,7 +607,11 @@ export function addItemToFlow(nodes, edges, key) {
   }
 
   if (item.key === 'qr_scan') {
-    pushEdge(start, qr, 'checkout')
+    nextEdges = removeEdges(
+      nextEdges,
+      (e) => e.source === start?.id && e.target === qr.id && (e.data?.action || e.label) === 'checkout',
+    )
+    pushEdge(chkEntry, qr, 'next')
   }
 
   if (item.key === 'demo_matched') {

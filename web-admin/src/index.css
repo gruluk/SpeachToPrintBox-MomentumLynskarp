@@ -172,6 +172,46 @@ label.field {
   height: 100%;
 }
 
+/* Zoom +/- controls: dark icons on light buttons */
+.canvas-main .react-flow__controls {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.canvas-main .react-flow__controls-button {
+  background: #f4ecff;
+  border-bottom: 1px solid rgba(42, 16, 72, 0.15);
+  width: 32px;
+  height: 32px;
+}
+
+.canvas-main .react-flow__controls-button:hover {
+  background: #fff;
+}
+
+.canvas-main .react-flow__controls-button svg {
+  fill: #2a1048;
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.canvas-main .react-flow__controls-button path {
+  fill: #2a1048;
+}
+
+.flow-world-bounds {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border: 1.5px dashed rgba(234, 85, 153, 0.4);
+  border-radius: 16px;
+  background: rgba(234, 85, 153, 0.03);
+  z-index: -1;
+}
+
 .canvas-toolbar {
   display: flex;
   gap: 0.5rem;
@@ -271,6 +311,11 @@ label.field {
 .flow-node.integration {
   background: linear-gradient(145deg, #2a3348, #1a2030);
   border-color: rgba(240, 125, 0, 0.55);
+}
+
+.flow-node.entry {
+  background: linear-gradient(145deg, #1e3a5f, #152844);
+  border-color: rgba(100, 180, 255, 0.55);
 }
 
 .flow-node.selected {

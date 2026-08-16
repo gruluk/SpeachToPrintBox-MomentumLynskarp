@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
+import { formatStartsAt } from '../datetime'
 
 export default function EventList() {
   const [events, setEvents] = useState([])
@@ -44,7 +45,7 @@ export default function EventList() {
           <div className="card" style={{ maxWidth: 480 }}>
             <h3 style={{ marginBottom: '0.5rem' }}>Ingen arrangementer ennå</h3>
             <p className="muted" style={{ marginBottom: '1rem' }}>
-              Start veiviseren — vi spør deg steg for steg hva booth skal gjøre, og bygger flyten for deg.
+              Start med navn og velkomstsiden — deretter bygger du flyten steg for steg på canvas.
             </p>
             <Link className="btn btn-primary" to="/new">
               Kom i gang
@@ -52,25 +53,24 @@ export default function EventList() {
           </div>
         )}
         <div className="grid">
-          {events.map((ev) => (
-            <div className="card event-card" key={ev.id}>
-              <h3>{ev.name}</h3>
-              <p>Slug: /e/{ev.slug}</p>
-              <p>
-                {ev.attendee_count} deltakere · {ev.booth_count} booths
-              </p>
-              {(ev.starts_at || ev.ends_at) && (
+          {events.map((ev) => {
+            const when = formatStartsAt(ev.starts_at)
+            return (
+              <div className="card event-card" key={ev.id}>
+                <h3>{ev.name}</h3>
+                <p>Slug: /e/{ev.slug}</p>
                 <p>
-                  {ev.starts_at || '—'} → {ev.ends_at || '—'}
+                  {ev.attendee_count} deltakere · {ev.booth_count} booths
                 </p>
-              )}
-              <div className="actions">
-                <Link className="btn btn-primary" to={`/events/${ev.id}`}>
-                  Åpne
-                </Link>
+                {when && <p>{when}</p>}
+                <div className="actions">
+                  <Link className="btn btn-primary" to={`/events/${ev.id}`}>
+                    Åpne
+                  </Link>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </main>
     </>

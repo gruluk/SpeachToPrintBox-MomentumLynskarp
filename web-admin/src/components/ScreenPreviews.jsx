@@ -87,13 +87,20 @@ export function ScreenPreview({ screen, event, draft }) {
   }
 
   if (screen === 'start') {
+    const kinds = new Set((cfg.flow?.nodes || []).map((n) => n.data?.kind).filter(Boolean))
+    const hasLegacyEntries = !kinds.has('register_entry') && !kinds.has('checkout_entry')
+    const showRegister = hasLegacyEntries || kinds.has('register_entry')
+    const showCheckout = hasLegacyEntries || kinds.has('checkout_entry')
     return (
       <div className="preview-screen preview-start">
         <div className="preview-logo">Sopra Steria</div>
         <p className="preview-sub">Velkommen!</p>
         <div className="preview-btns col">
-          <span className="preview-btn start">Registrer deg</span>
-          <span className="preview-btn primary">Sjekk ut her</span>
+          {showRegister && <span className="preview-btn start">Registrer deg</span>}
+          {showCheckout && <span className="preview-btn primary">Sjekk ut her</span>}
+          {!showRegister && !showCheckout && (
+            <span className="preview-muted">Ingen knapper — legg til Registrering eller Utsjekk</span>
+          )}
         </div>
       </div>
     )

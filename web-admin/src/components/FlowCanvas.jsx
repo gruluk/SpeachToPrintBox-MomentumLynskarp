@@ -4,13 +4,14 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   Handle,
   Position,
   useEdgesState,
   useNodesState,
   MarkerType,
   Panel,
+  ViewportPortal,
+  getNodesBounds,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import NodeEditOverlay from './NodeEditOverlay'
@@ -22,29 +23,83 @@ import {
   canRemoveNode,
   fullDefaultFlow,
   isMinimalFlow,
+  migrateFlowEntries,
   nextSuggestion,
-  nodeKey,
 } from '../flowCatalog'
 
 const nodeTypes = { screen: FlowNode, integration: FlowNode }
 
+/** Extra room around nodes; grows as the flow grows. */
+const EXTENT_PAD = 280
+const EXTENT_MIN = 1000
+const NODE_W = 180
+const NODE_H = 72
+
 function FlowNode({ data, selected }) {
   const isIntegration = Boolean(data.kind)
+  const isEntry = data.kind === 'register_entry' || data.kind === 'checkout_entry'
   const icon = ICONS[data.screen] || ICONS[data.kind] || '▢'
+  const sub = isEntry
+    ? 'Inngang · styrer startknapp'
+    : isIntegration
+      ? 'Modul · klikk for info'
+      : 'Side · klikk for å redigere'
   return (
-    <div className={`flow-node${isIntegration ? ' integration' : ''}${selected ? ' selected' : ''}`}>
+    <div
+      className={`flow-node${isIntegration ? ' integration' : ''}${isEntry ? ' entry' : ''}${selected ? ' selected' : ''}`}
+    >
       <Handle type="target" position={Position.Left} />
       <div className="flow-node-inner">
         <span className="flow-node-icon">{icon}</span>
         <div>
           <div className="flow-node-title">{data.label || data.screen || data.kind}</div>
-          <div className="flow-node-sub">
-            {isIntegration ? 'Modul · klikk for info' : 'Side · klikk for å redigere'}
-          </div>
+          <div className="flow-node-sub">{sub}</div>
         </div>
       </div>
       <Handle type="source" position={Position.Right} />
     </div>
+  )
+}
+
+function nodesForBounds(nodes) {
+  return (nodes || []).map((n) => ({
+    ...n,
+    width: n.measured?.width ?? n.width ?? NODE_W,
+    height: n.measured?.height ?? n.height ?? NODE_H,
+  }))
+}
+
+/** Bounded canvas area that expands with content. */
+function computeExtent(nodes) {
+  const sized = nodesForBounds(nodes)
+  if (!sized.length) {
+    return [
+      [-EXTENT_PAD, -EXTENT_PAD],
+      [EXTENT_MIN, EXTENT_MIN],
+    ]
+  }
+  const b = getNodesBounds(sized)
+  const maxX = Math.max(b.x + b.width + EXTENT_PAD, b.x + EXTENT_MIN * 0.5)
+  const maxY = Math.max(b.y + b.height + EXTENT_PAD, b.y + EXTENT_MIN * 0.5)
+  return [
+    [b.x - EXTENT_PAD, b.y - EXTENT_PAD],
+    [maxX, maxY],
+  ]
+}
+
+function WorldBounds({ extent }) {
+  const [[x0, y0], [x1, y1]] = extent
+  return (
+    <ViewportPortal>
+      <div
+        className="flow-world-bounds"
+        style={{
+          transform: `translate(${x0}px, ${y0}px)`,
+          width: Math.max(0, x1 - x0),
+          height: Math.max(0, y1 - y0),
+        }}
+      />
+    </ViewportPortal>
   )
 }
 
@@ -116,13 +171,15 @@ export default function FlowCanvas({ event, onSaveFlow, onSaveSettings }) {
     Boolean(location.state?.guide) || isMinimalFlow(event.flow?.nodes ? event.flow.nodes : [])
 
   useEffect(() => {
-    const flow = event.flow?.nodes ? event.flow : fullDefaultFlow()
+    const raw = event.flow?.nodes ? event.flow : fullDefaultFlow()
+    const flow = migrateFlowEntries(raw)
     setNodes(toRfNodes(flow))
     setEdges(toRfEdges(flow))
   }, [event.id, event.flow, setNodes, setEdges])
 
   const suggestion = useMemo(() => nextSuggestion(nodes, skippedKeys), [nodes, skippedKeys])
   const showGuide = !guideDismissed && !overlayOpen && !addOpen && Boolean(suggestion || startGuided)
+  const extent = useMemo(() => computeExtent(nodes), [nodes])
 
   const onNodeClick = useCallback((_evt, node) => {
     setSelected(node)
@@ -249,12 +306,17 @@ export default function FlowCanvas({ event, onSaveFlow, onSaveSettings }) {
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           fitView
+          fitViewOptions={{ padding: 0.2 }}
           deleteKeyCode={null}
           proOptions={{ hideAttribution: true }}
+          translateExtent={extent}
+          nodeExtent={extent}
+          minZoom={0.35}
+          maxZoom={1.75}
         >
           <Background gap={18} color="#3a1a55" />
-          <Controls />
-          <MiniMap pannable zoomable />
+          <WorldBounds extent={extent} />
+          <Controls showInteractive={false} />
           <Panel position="top-left" className="canvas-toolbar">
             <button className="btn btn-primary" onClick={() => save()} disabled={saving}>
               {saving ? 'Lagrer…' : 'Lagre flyt'}
@@ -362,6 +424,7 @@ export default function FlowCanvas({ event, onSaveFlow, onSaveSettings }) {
         <NodeEditOverlay
           selected={selected}
           event={event}
+          flow={fromRf(nodes, edges)}
           onClose={closeOverlay}
           onRemove={removeSelected}
           onSaveSettings={onSaveSettings}

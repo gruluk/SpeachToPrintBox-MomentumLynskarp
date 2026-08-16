@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ReorderList, ScreenPreview } from './ScreenPreviews'
 
 const SCREEN_HELP = {
-  start: 'Første side gjesten ser. Knappene «Registrer» og «Sjekk ut» følger pilene i canvas.',
+  start: 'Felles velkomstside. Knappene «Registrer deg» og «Sjekk ut» styres av Registrering- og Utsjekk-modulene i canvas.',
   privacy: 'Samtykkeside før registrering. Endre teksten og se forhåndsvisningen til venstre.',
   name_input: 'Gjesten finner seg selv i listen — eller registrerer ny hvis walk-up er på.',
   interest_select: 'Temaene som trykkes på navneskiltet. Dra for å endre rekkefølge.',
@@ -16,6 +16,7 @@ const SCREEN_HELP = {
 export default function NodeEditOverlay({
   selected,
   event,
+  flow,
   onClose,
   onRemove,
   onSaveSettings,
@@ -57,8 +58,12 @@ export default function NodeEditOverlay({
   const help = SCREEN_HELP[screen] || (kind === 'printer'
     ? 'Kobling til etikettprinteren. Når interesser er valgt, køes en utskrift.'
     : kind === 'attendees'
-      ? 'Kobling til deltakerlisten for dette arrangementet.'
-      : 'Denne noden er en del av booth-flyten.')
+    ? 'Kobling til deltakerlisten for dette arrangementet.'
+    : kind === 'register_entry'
+    ? 'Aktiverer «Registrer deg» på startsiden. Fjern denne hvis booth ikke skal ha registrering.'
+    : kind === 'checkout_entry'
+    ? 'Aktiverer «Sjekk ut her» på startsiden. Fjern denne hvis booth ikke skal ha utsjekk/demo.'
+    : 'Denne noden er en del av booth-flyten.')
 
   return (
     <div className="overlay-backdrop" onClick={onClose}>
@@ -81,7 +86,11 @@ export default function NodeEditOverlay({
               <div className="phone-frame">
                 <div className="phone-notch" />
                 <div className="phone-screen">
-                  <ScreenPreview screen={screen} event={event} draft={draft} />
+                  <ScreenPreview
+                    screen={screen}
+                    event={event}
+                    draft={{ ...draft, flow: flow || draft.flow || event.flow }}
+                  />
                 </div>
               </div>
             </div>
@@ -101,6 +110,24 @@ export default function NodeEditOverlay({
               <div className="stack">
                 <p className="muted">
                   Navn-/telefonoppslag bruker listen under fanen «Deltakere». Importer Excel/CSV der.
+                </p>
+              </div>
+            )}
+
+            {kind === 'register_entry' && (
+              <div className="stack">
+                <p className="muted">
+                  Denne modulen skrur på registreringsknappen på startsiden. Registrerings-sider
+                  (personvern, navn, …) krever at den finnes.
+                </p>
+              </div>
+            )}
+
+            {kind === 'checkout_entry' && (
+              <div className="stack">
+                <p className="muted">
+                  Denne modulen skrur på utsjekk-knappen på startsiden. QR-/demo-sider krever at den
+                  finnes.
                 </p>
               </div>
             )}
@@ -228,9 +255,9 @@ export default function NodeEditOverlay({
             {screen === 'start' && (
               <div className="stack">
                 <p className="muted">
-                  Startskjermen styres av pilene i canvas: «register» går til registreringsflyten,
-                  «checkout» til QR-utsjekk. Booth-modus (Begge / Kun registrering / Kun utsjekk)
-                  settes under fanen Booths.
+                  Startsiden er felles. Legg til modulene <strong>Registrering</strong> og/eller{' '}
+                  <strong>Utsjekk</strong> via + for å styre hvilke knapper gjesten ser. Booth-modus
+                  under fanen Booths kan fortsatt begrense til kun én funksjon per iPad.
                 </p>
                 <button className="btn btn-primary" disabled={saving} onClick={() => onSaveFlow?.()}>
                   Lagre flyt

@@ -9,7 +9,7 @@ import QrScanScreen from './components/QrScanScreen'
 import DemoMatchedScreen from './components/DemoMatchedScreen'
 import DemoDoneScreen from './components/DemoDoneScreen'
 import CheckoutDoneScreen from './components/CheckoutDoneScreen'
-import { apiBase, hasAction, nextNodeId, nodeScreen, parseBoothLocation } from './flow'
+import { apiBase, hasAction, hasModule, resolveActionTarget, nodeScreen, parseBoothLocation } from './flow'
 
 export default function App() {
   const { eventSlug, boothNumber } = parseBoothLocation()
@@ -47,15 +47,8 @@ export default function App() {
   const go = useCallback(
     (action) => {
       if (!flow) return
-      const next = nextNodeId(flow, nodeId, action)
-      if (next) {
-        const scr = nodeScreen(flow, next)
-        // Skip integration nodes when navigating guest flow
-        if (scr) setNodeId(next)
-        else {
-          // Follow through if target is integration — stay put for print side-effect
-        }
-      }
+      const next = resolveActionTarget(flow, nodeId, action)
+      if (next) setNodeId(next)
     },
     [flow, nodeId],
   )
@@ -88,7 +81,7 @@ export default function App() {
         console.error('[print-label]', e),
       )
       // Prefer done screen via flow; print edge is side-effect
-      const done = nextNodeId(flow, nodeId, 'next')
+      const done = resolveActionTarget(flow, nodeId, 'next')
       if (done) setNodeId(done)
     },
     [base, name, userId, flow, nodeId],
@@ -134,8 +127,16 @@ export default function App() {
       {screen === 'start' && (
         <StartScreen
           mode={boothMode}
-          showRegister={hasAction(flow, 'start', 'register') && boothMode !== 'demo'}
-          showCheckout={hasAction(flow, 'start', 'checkout') && boothMode !== 'register'}
+          showRegister={
+            hasModule(flow, 'register_entry') &&
+            hasAction(flow, 'start', 'register') &&
+            boothMode !== 'demo'
+          }
+          showCheckout={
+            hasModule(flow, 'checkout_entry') &&
+            hasAction(flow, 'start', 'checkout') &&
+            boothMode !== 'register'
+          }
           onRegister={() => go('register')}
           onDemo={() => go('checkout')}
         />

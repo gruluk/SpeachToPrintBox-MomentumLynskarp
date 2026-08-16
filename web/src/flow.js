@@ -7,14 +7,39 @@ export function nextNodeId(flow, currentId, action) {
   return edge?.target || null
 }
 
+export function nodeById(flow, nodeId) {
+  return flow?.nodes?.find((n) => n.id === nodeId) || null
+}
+
 export function nodeScreen(flow, nodeId) {
-  const node = flow?.nodes?.find((n) => n.id === nodeId)
+  const node = nodeById(flow, nodeId)
   if (!node || node.type === 'integration') return null
   return node.data?.screen || null
 }
 
+export function nodeKind(flow, nodeId) {
+  const node = nodeById(flow, nodeId)
+  return node?.data?.kind || null
+}
+
+/** Follow action, skipping integration/entry modules via their `next` edge. */
+export function resolveActionTarget(flow, currentId, action) {
+  let id = nextNodeId(flow, currentId, action)
+  for (let i = 0; i < 8 && id; i += 1) {
+    const scr = nodeScreen(flow, id)
+    if (scr) return id
+    // Integration / entry module — continue along next
+    id = nextNodeId(flow, id, 'next') || nextNodeId(flow, id, action)
+  }
+  return null
+}
+
 export function hasAction(flow, currentId, action) {
-  return Boolean(nextNodeId(flow, currentId, action))
+  return Boolean(resolveActionTarget(flow, currentId, action))
+}
+
+export function hasModule(flow, kind) {
+  return Boolean(flow?.nodes?.some((n) => n.data?.kind === kind))
 }
 
 /** Parse /e/{slug}/booth/{n} or legacy /booth/{n} */

@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { joinStartsAt, splitStartsAt } from '../datetime'
 
 export default function EventSettings({ event, onSave, onReload }) {
-  const [form, setForm] = useState({ ...event })
+  const initial = splitStartsAt(event.starts_at)
+  const [form, setForm] = useState({ ...event, startDate: initial.date, startTime: initial.time })
   const [msg, setMsg] = useState('')
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    const next = splitStartsAt(event.starts_at)
+    setForm({ ...event, startDate: next.date, startTime: next.time })
+  }, [event])
 
   async function submit(e) {
     e.preventDefault()
@@ -14,8 +21,8 @@ export default function EventSettings({ event, onSave, onReload }) {
       await onSave({
         name: form.name,
         slug: form.slug,
-        starts_at: form.starts_at,
-        ends_at: form.ends_at,
+        starts_at: joinStartsAt(form.startDate, form.startTime),
+        ends_at: '',
         lookup_mode: form.lookup_mode,
         allow_walkup_registration: form.allow_walkup_registration,
         interests: form.interests,
@@ -56,12 +63,22 @@ export default function EventSettings({ event, onSave, onReload }) {
       </label>
       <div className="row">
         <label className="field" style={{ flex: 1 }}>
-          Starter
-          <input className="input" type="date" value={(form.starts_at || '').slice(0, 10)} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} />
+          Dato
+          <input
+            className="input"
+            type="date"
+            value={form.startDate || ''}
+            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+          />
         </label>
         <label className="field" style={{ flex: 1 }}>
-          Slutter
-          <input className="input" type="date" value={(form.ends_at || '').slice(0, 10)} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
+          Starttid
+          <input
+            className="input"
+            type="time"
+            value={form.startTime || ''}
+            onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+          />
         </label>
       </div>
       <label className="field">
