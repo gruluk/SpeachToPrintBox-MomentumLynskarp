@@ -256,7 +256,7 @@ export function findNodeByKey(nodes, key) {
   return (nodes || []).find((n) => nodeKey(n) === key) || null
 }
 
-export function canAddItem(item, nodes) {
+export function canAddItem(item, nodes, { enforceDeps = false } = {}) {
   if (!item) return { ok: false, reason: 'Ukjent element' }
   if (item.locked) return { ok: false, reason: 'Allerede i flyten' }
   const present = presentKeys(nodes)
@@ -266,9 +266,12 @@ export function canAddItem(item, nodes) {
   const missing = (item.dependsOn || []).filter((d) => !present.has(d))
   if (missing.length) {
     const labels = missing.map((k) => LABELS[k] || k).join(', ')
+    if (enforceDeps) {
+      return { ok: false, reason: `Krever først: ${labels}`, missing }
+    }
     return {
-      ok: false,
-      reason: `Krever først: ${labels}`,
+      ok: true,
+      warning: `Tips: fungerer best med ${labels}`,
       missing,
     }
   }
@@ -284,12 +287,57 @@ export function canRemoveNode(node, nodes) {
   if (dependents.length) {
     const labels = dependents.map((d) => d.label).join(', ')
     return {
-      ok: false,
-      reason: `Fjern først: ${labels}`,
+      ok: true,
+      warning: `Andre noder bruker dette (${labels}). Koblinger slettes.`,
       dependents,
     }
   }
   return { ok: true }
+}
+
+/** Actions the booth runtime understands, with Norwegian labels for the editor. */
+export const FLOW_ACTIONS = [
+  { value: 'register', label: 'Registrer (startknapp)' },
+  { value: 'checkout', label: 'Sjekk ut (startknapp)' },
+  { value: 'next', label: 'Neste' },
+  { value: 'lookup', label: 'Oppslag (deltakere)' },
+  { value: 'print_label', label: 'Print etikett' },
+  { value: 'wants_demo', label: 'Vil ha demo' },
+  { value: 'no_demo', label: 'Ingen demo' },
+]
+
+export function suggestedActionsForNode(node) {
+  const key = nodeKey(node)
+  const map = {
+    start: ['register', 'checkout'],
+    register_entry: ['next'],
+    checkout_entry: ['next'],
+    privacy: ['next'],
+    name_input: ['next', 'lookup'],
+    interest_select: ['next', 'print_label'],
+    done: ['next'],
+    qr_scan: ['next'],
+    demo_matched: ['wants_demo', 'no_demo'],
+    demo_done: ['next'],
+    checkout_done: ['next'],
+    attendees: ['next'],
+    printer: ['next'],
+  }
+  return map[key] || ['next']
+}
+
+export function inferEdgeAction(sourceNode, targetNode) {
+  const sk = nodeKey(sourceNode)
+  const tk = nodeKey(targetNode)
+  if (sk === 'start' && tk === 'register_entry') return 'register'
+  if (sk === 'start' && tk === 'checkout_entry') return 'checkout'
+  if (sk === 'start' && (tk === 'privacy' || tk === 'name_input')) return 'register'
+  if (sk === 'start' && tk === 'qr_scan') return 'checkout'
+  if (sk === 'name_input' && tk === 'attendees') return 'lookup'
+  if (sk === 'interest_select' && tk === 'printer') return 'print_label'
+  if (sk === 'demo_matched' && tk === 'demo_done') return 'wants_demo'
+  if (sk === 'demo_matched' && tk === 'checkout_done') return 'no_demo'
+  return 'next'
 }
 
 export function nextSuggestion(nodes, excludeKeys = []) {
@@ -493,12 +541,13 @@ function removeEdges(edges, pred) {
 }
 
 /**
- * Add a catalog item to the flow and wire sensible default edges.
- * @returns {{ nodes, edges } | { error: string }}
+ * Add a catalog item. By default does NOT auto-wire edges — user connects manually.
+ * Pass { wire: true } to apply template auto-connections.
+ * @returns {{ nodes, edges, warning? } | { error: string }}
  */
-export function addItemToFlow(nodes, edges, key) {
+export function addItemToFlow(nodes, edges, key, { wire = false, position } = {}) {
   const item = catalogByKey(key)
-  const check = canAddItem(item, nodes)
+  const check = canAddItem(item, nodes, { enforceDeps: false })
   if (!check.ok) return { error: check.reason }
 
   let nextNodes = [...(nodes || [])]
@@ -517,9 +566,13 @@ export function addItemToFlow(nodes, edges, key) {
   nextNodes.push({
     id,
     type: item.type === 'integration' ? 'integration' : 'screen',
-    position: defaultPosition(item.key, nextNodes),
+    position: position || defaultPosition(item.key, nextNodes),
     data,
   })
+
+  if (!wire) {
+    return { nodes: nextNodes, edges: nextEdges, warning: check.warning }
+  }
 
   const byKey = (k) => findNodeByKey(nextNodes, k)
   const pushEdge = (source, target, action) => {
@@ -562,7 +615,6 @@ export function addItemToFlow(nodes, edges, key) {
   }
 
   if (item.key === 'privacy') {
-    // entry → privacy; drop any direct start→privacy register
     nextEdges = removeEdges(
       nextEdges,
       (e) => e.source === start?.id && e.target === privacy.id && (e.data?.action || e.label) === 'register',
@@ -578,11 +630,8 @@ export function addItemToFlow(nodes, edges, key) {
   }
 
   if (item.key === 'name_input') {
-    if (privacy) {
-      pushEdge(privacy, name, 'next')
-    } else {
-      pushEdge(regEntry, name, 'next')
-    }
+    if (privacy) pushEdge(privacy, name, 'next')
+    else pushEdge(regEntry, name, 'next')
     pushEdge(name, attendees, 'lookup')
   }
 
@@ -626,5 +675,5 @@ export function addItemToFlow(nodes, edges, key) {
     pushEdge(demo, checkoutDone, 'no_demo')
   }
 
-  return { nodes: nextNodes, edges: nextEdges }
+  return { nodes: nextNodes, edges: nextEdges, warning: check.warning }
 }
