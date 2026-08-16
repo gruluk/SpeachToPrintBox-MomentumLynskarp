@@ -137,6 +137,89 @@ label.field {
 .event-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 0.25rem; }
 .event-card .actions { margin-top: 1rem; display: flex; gap: 0.5rem; }
 
+.attendee-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: flex-end;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.attendee-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.attendee-action-group.upload {
+  margin-left: auto;
+}
+
+.attendee-action-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0;
+}
+
+.import-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(8, 2, 18, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.import-panel {
+  width: min(520px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: linear-gradient(160deg, #24103f 0%, #1a0830 100%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+.import-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.import-panel-header h3 {
+  margin: 0 0 0.3rem;
+}
+
+.import-sample {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.85rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  overflow: auto;
+  color: #e8d9ff;
+  white-space: pre;
+}
+
+@media (max-width: 640px) {
+  .attendee-action-group.upload {
+    margin-left: 0;
+  }
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

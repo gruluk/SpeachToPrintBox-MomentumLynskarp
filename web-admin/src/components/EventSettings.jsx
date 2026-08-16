@@ -2,15 +2,26 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { joinStartsAt, splitStartsAt } from '../datetime'
 
+/** Event-level settings only. Booth content (privacy, interests, lookup) is edited on the canvas. */
 export default function EventSettings({ event, onSave, onReload }) {
   const initial = splitStartsAt(event.starts_at)
-  const [form, setForm] = useState({ ...event, startDate: initial.date, startTime: initial.time })
+  const [form, setForm] = useState({
+    name: event.name || '',
+    slug: event.slug || '',
+    startDate: initial.date,
+    startTime: initial.time,
+  })
   const [msg, setMsg] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const next = splitStartsAt(event.starts_at)
-    setForm({ ...event, startDate: next.date, startTime: next.time })
+    setForm({
+      name: event.name || '',
+      slug: event.slug || '',
+      startDate: next.date,
+      startTime: next.time,
+    })
   }, [event])
 
   async function submit(e) {
@@ -23,13 +34,6 @@ export default function EventSettings({ event, onSave, onReload }) {
         slug: form.slug,
         starts_at: joinStartsAt(form.startDate, form.startTime),
         ends_at: '',
-        lookup_mode: form.lookup_mode,
-        allow_walkup_registration: form.allow_walkup_registration,
-        interests: form.interests,
-        max_interests: form.max_interests,
-        privacy_title: form.privacy_title,
-        privacy_bullets: form.privacy_bullets,
-        privacy_checkbox_label: form.privacy_checkbox_label,
       })
       setMsg('Lagret')
       onReload?.()
@@ -52,14 +56,26 @@ export default function EventSettings({ event, onSave, onReload }) {
 
   return (
     <form className="card" style={{ maxWidth: 720 }} onSubmit={submit}>
-      <h2 style={{ marginBottom: '1rem' }}>Innstillinger</h2>
+      <h2 style={{ marginBottom: '0.5rem' }}>Innstillinger</h2>
+      <p className="muted" style={{ marginBottom: '1.25rem' }}>
+        Arrangementets navn, URL og tidspunkt. Personvern, interesser og oppslag redigeres på canvas
+        — klikk på den aktuelle siden der.
+      </p>
       <label className="field">
         Navn
-        <input className="input" value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input
+          className="input"
+          value={form.name || ''}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
       </label>
       <label className="field">
         Slug (URL)
-        <input className="input" value={form.slug || ''} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+        <input
+          className="input"
+          value={form.slug || ''}
+          onChange={(e) => setForm({ ...form, slug: e.target.value })}
+        />
       </label>
       <div className="row">
         <label className="field" style={{ flex: 1 }}>
@@ -81,55 +97,19 @@ export default function EventSettings({ event, onSave, onReload }) {
           />
         </label>
       </div>
-      <label className="field">
-        Oppslagsmodus
-        <select className="select" value={form.lookup_mode || 'name'} onChange={(e) => setForm({ ...form, lookup_mode: e.target.value })}>
-          <option value="name">Kun navn</option>
-          <option value="phone">Kun telefon</option>
-          <option value="both">Navn og telefon</option>
-        </select>
-      </label>
-      <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-        <input
-          type="checkbox"
-          checked={Boolean(form.allow_walkup_registration)}
-          onChange={(e) => setForm({ ...form, allow_walkup_registration: e.target.checked })}
-        />
-        Tillat walk-up registrering
-      </label>
-      <label className="field">
-        Interesser (én per linje)
-        <textarea
-          className="textarea"
-          value={(form.interests || []).join('\n')}
-          onChange={(e) => setForm({ ...form, interests: e.target.value.split('\n').map((l) => l.trim()).filter(Boolean) })}
-        />
-      </label>
-      <label className="field">
-        Maks interesser
-        <input className="input" type="number" min={1} max={10} value={form.max_interests || 3} onChange={(e) => setForm({ ...form, max_interests: Number(e.target.value) })} />
-      </label>
-      <label className="field">
-        Personvern-tittel
-        <input className="input" value={form.privacy_title || ''} onChange={(e) => setForm({ ...form, privacy_title: e.target.value })} />
-      </label>
-      <label className="field">
-        Personvern-punkter
-        <textarea
-          className="textarea"
-          value={(form.privacy_bullets || []).join('\n')}
-          onChange={(e) => setForm({ ...form, privacy_bullets: e.target.value.split('\n').filter((l) => l.trim()) })}
-        />
-      </label>
-      <label className="field">
-        Avkrysningstekst
-        <textarea className="textarea" value={form.privacy_checkbox_label || ''} onChange={(e) => setForm({ ...form, privacy_checkbox_label: e.target.value })} />
-      </label>
       <div className="row">
-        <button className="btn btn-primary" disabled={saving}>Lagre</button>
-        <button className="btn btn-ghost" type="button" onClick={removeEvent}>Slett arrangement</button>
+        <button className="btn btn-primary" disabled={saving}>
+          Lagre
+        </button>
+        <button className="btn btn-ghost" type="button" onClick={removeEvent}>
+          Slett arrangement
+        </button>
       </div>
-      {msg && <p className="muted" style={{ marginTop: '0.75rem' }}>{msg}</p>}
+      {msg && (
+        <p className="muted" style={{ marginTop: '0.75rem' }}>
+          {msg}
+        </p>
+      )}
     </form>
   )
 }
