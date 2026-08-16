@@ -292,7 +292,7 @@ label.field {
 }
 
 .overlay-panel {
-  width: min(980px, 100%);
+  width: min(1120px, 100%);
   max-height: calc(100% - 1rem);
   overflow: auto;
   background: linear-gradient(160deg, #24103f 0%, #1a0830 100%);
@@ -327,9 +327,10 @@ label.field {
 
 .overlay-body {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: minmax(460px, 1.2fr) minmax(280px, 1fr);
   gap: 1.25rem;
   padding: 1.25rem;
+  align-items: start;
 }
 
 .overlay-body.integration-only {
@@ -344,38 +345,47 @@ label.field {
   letter-spacing: 0.04em;
 }
 
+/* Landscape iPad bezel */
 .phone-frame {
   background: #0d0618;
   border: 3px solid rgba(255, 255, 255, 0.18);
-  border-radius: 22px;
-  padding: 10px 8px 14px;
+  border-radius: 18px;
+  padding: 8px 12px 10px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  flex-direction: column;
 }
 
 .phone-notch {
-  width: 36%;
-  height: 8px;
-  margin: 0 auto 8px;
+  width: 14%;
+  height: 5px;
+  margin: 0 auto 6px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
 }
 
 .phone-screen {
   background:
     radial-gradient(ellipse 80% 60% at 55% 50%, rgba(140, 29, 130, 0.4) 0%, transparent 70%),
     linear-gradient(160deg, #1a0830 0%, #2a0e4a 50%, #4D1D82 100%);
-  border-radius: 14px;
-  min-height: 420px;
-  padding: 1rem 0.85rem;
-  overflow: hidden;
+  border-radius: 10px;
+  flex: 1;
+  min-height: 0;
+  padding: 0.85rem 1rem;
+  overflow: auto;
 }
 
 .preview-screen {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.55rem;
   color: #fff;
   font-size: 0.72rem;
+  height: 100%;
 }
 
 .preview-screen.preview-center,
@@ -383,7 +393,7 @@ label.field {
   align-items: center;
   text-align: center;
   justify-content: center;
-  min-height: 380px;
+  min-height: 100%;
 }
 
 .preview-title {
@@ -616,9 +626,13 @@ label.field {
   color: #ffb0bd;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .overlay-body {
     grid-template-columns: 1fr;
+  }
+
+  .overlay-preview-col .phone-frame {
+    max-width: 100%;
   }
 }
 
@@ -713,14 +727,14 @@ label.field {
 
 .wizard-split {
   display: grid;
-  grid-template-columns: 1fr 240px;
+  grid-template-columns: 1fr minmax(280px, 360px);
   gap: 1.25rem;
   align-items: start;
 }
 
 .wizard-preview .phone-frame.compact {
-  transform: scale(0.92);
-  transform-origin: top center;
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
 }
 
 .wizard-booth-picker {
@@ -768,4 +782,166 @@ label.field {
   .wizard-split {
     grid-template-columns: 1fr;
   }
+}
+
+/* Canvas: add menu + guided next step */
+.canvas-add-fab {
+  position: absolute;
+  right: 1.1rem;
+  bottom: 1.1rem;
+  z-index: 6;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(234, 85, 153, 0.55);
+  background: linear-gradient(145deg, #ea5599, #9b3dbf);
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.canvas-add-fab.open {
+  background: rgba(40, 16, 64, 0.95);
+  border-color: var(--border);
+}
+
+.canvas-add-menu {
+  position: absolute;
+  right: 1.1rem;
+  bottom: 4.6rem;
+  z-index: 6;
+  width: min(340px, calc(100% - 2rem));
+  max-height: min(420px, calc(100% - 6rem));
+  overflow: auto;
+  background: rgba(26, 8, 48, 0.97);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0.9rem 0.85rem 0.75rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+.canvas-add-header h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1.05rem;
+}
+
+.canvas-add-header .muted {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+}
+
+.canvas-add-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.canvas-add-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0.15rem 0 0.2rem;
+}
+
+.canvas-add-item {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  cursor: pointer;
+}
+
+.canvas-add-item:hover:not(:disabled) {
+  border-color: rgba(234, 85, 153, 0.4);
+  background: rgba(234, 85, 153, 0.1);
+}
+
+.canvas-add-item.locked,
+.canvas-add-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.canvas-add-item-icon {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.canvas-add-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.canvas-add-item-text strong {
+  font-size: 0.9rem;
+}
+
+.canvas-add-item-text .muted {
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.canvas-guide {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 5;
+  width: min(380px, calc(100% - 5.5rem));
+  background: rgba(26, 8, 48, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.1rem 1.15rem 1rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.canvas-guide-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pink);
+}
+
+.canvas-guide h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1.1rem;
+}
+
+.canvas-guide .muted {
+  margin: 0 0 0.9rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.canvas-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.canvas-guide-pill {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 5;
+  border: 1px solid var(--border);
+  background: rgba(26, 8, 48, 0.92);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
 }
