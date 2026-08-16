@@ -19,6 +19,15 @@ export default function EventList() {
     load()
   }, [])
 
+  const sorted = [...events].sort((a, b) => {
+    const da = a.starts_at || ''
+    const db = b.starts_at || ''
+    if (da && db) return da < db ? 1 : da > db ? -1 : 0
+    if (da) return -1
+    if (db) return 1
+    return (a.name || '').localeCompare(b.name || '', 'nb')
+  })
+
   return (
     <>
       <header className="topbar">
@@ -53,22 +62,19 @@ export default function EventList() {
           </div>
         )}
         <div className="grid">
-          {events.map((ev) => {
+          {sorted.map((ev) => {
             const when = formatStartsAt(ev.starts_at)
             return (
-              <div className="card event-card" key={ev.id}>
+              <Link key={ev.id} className="card event-card" to={`/events/${ev.id}`}>
+                <p className={`event-card-date${when ? '' : ' empty'}`}>
+                  {when || 'Ingen dato satt'}
+                </p>
                 <h3>{ev.name}</h3>
-                <p>Slug: /e/{ev.slug}</p>
-                <p>
+                <p className="event-card-meta">
                   {ev.attendee_count} deltakere · {ev.booth_count} booths
                 </p>
-                {when && <p>{when}</p>}
-                <div className="actions">
-                  <Link className="btn btn-primary" to={`/events/${ev.id}`}>
-                    Åpne
-                  </Link>
-                </div>
-              </div>
+                <p className="event-card-slug">/e/{ev.slug}</p>
+              </Link>
             )
           })}
         </div>
