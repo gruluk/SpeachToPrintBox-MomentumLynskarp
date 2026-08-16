@@ -5,8 +5,6 @@ import { api } from '../api'
 export default function EventList() {
   const [events, setEvents] = useState([])
   const [error, setError] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [name, setName] = useState('')
 
   async function load() {
     try {
@@ -20,20 +18,6 @@ export default function EventList() {
     load()
   }, [])
 
-  async function createEvent(e) {
-    e.preventDefault()
-    setCreating(true)
-    try {
-      await api.createEvent({ name: name.trim() || 'Nytt arrangement' })
-      setName('')
-      await load()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setCreating(false)
-    }
-  }
-
   return (
     <>
       <header className="topbar">
@@ -41,21 +25,32 @@ export default function EventList() {
       </header>
       <main className="content">
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h2>Arrangementer</h2>
-          <form className="row" onSubmit={createEvent}>
-            <input
-              className="input"
-              style={{ width: 220 }}
-              placeholder="Navn på arrangement"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <button className="btn btn-primary" disabled={creating}>
-              Opprett
-            </button>
-          </form>
+          <div>
+            <h2>Arrangementer</h2>
+            <p className="muted" style={{ marginTop: '0.35rem' }}>
+              Hvert arrangement har egen deltakerliste, booth-flyt og innstillinger.
+            </p>
+          </div>
+          <Link className="btn btn-primary" to="/new">
+            + Nytt arrangement
+          </Link>
         </div>
-        {error && <p className="muted" style={{ color: '#ff9aa8', marginBottom: '1rem' }}>{error}</p>}
+        {error && (
+          <p className="muted" style={{ color: '#ff9aa8', marginBottom: '1rem' }}>
+            {error}
+          </p>
+        )}
+        {events.length === 0 && !error && (
+          <div className="card" style={{ maxWidth: 480 }}>
+            <h3 style={{ marginBottom: '0.5rem' }}>Ingen arrangementer ennå</h3>
+            <p className="muted" style={{ marginBottom: '1rem' }}>
+              Start veiviseren — vi spør deg steg for steg hva booth skal gjøre, og bygger flyten for deg.
+            </p>
+            <Link className="btn btn-primary" to="/new">
+              Kom i gang
+            </Link>
+          </div>
+        )}
         <div className="grid">
           {events.map((ev) => (
             <div className="card event-card" key={ev.id}>
